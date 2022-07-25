@@ -13,28 +13,30 @@ def get_options():
     IO.add_argument('--aln-core',
                     type=int,
                     default=1140000,
-                    help='Size of core genome alignment (in bases)')
+                    help='Size of core genome alignment (in bases). Default = 1140000 ')
     IO.add_argument('--num-core',
                     type=int,
                     default=1194,
-                    help='Number of core genes. ')
+                    help='Number of core genes. Default = 1194 ')
     IO.add_argument('--num-pan',
                     type=int,
                     default=5442,
-                    help='Number of genes in pangenome. ')
+                    help='Number of genes in pangenome. Default = 5442')
     IO.add_argument('--core-mu',
                     default="0,2,0.2",
-                    help='Range of core genome mutation rate values (mutations per site per genome) in form start,stop,step. ')
+                    help='Range of core genome mutation rate values (mutations per site per genome) in form start,stop,step. '
+                         'Default = "0,2,0.2"')
     IO.add_argument('--acc-mu',
                     default="0,2,0.2",
-                    help='Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. ')
+                    help='Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. '
+                         'Default = "0,2,0.2"')
     IO.add_argument('--outpref',
                     default="./",
-                    help='Output prefix. ')
+                    help='Output prefix. Default = "./"')
     IO.add_argument('--threads',
                     type=int,
                     default=1,
-                    help='Number of threads. ')
+                    help='Number of threads. Default = 1')
 
     return parser.parse_args()
 
