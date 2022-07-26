@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 
+from multiprocessing import Pool
+from functools import partial
+import tqdm
+
 
 def sim_divergence(query, mu, num_letters, core):
     choices = []
@@ -64,107 +68,135 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
 
         #plt.style.use('_mpl-gallery')
 
-        # make data
-        x = np.array(var1)
-        y = np.array(var2)
-
         # plot
         fig, ax = plt.subplots()
 
-        ax.plot(x, y, linewidth=2.0)
+        # make data
+        x = np.array(var1)
+        for j in range(len(var2)):
+            y = np.array(var2[j])
+
+            ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
 
         lims = [
             np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
             np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
         ]
 
-        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
         ax.set_aspect('equal')
         ax.set_xlim(lims)
         ax.set_ylim(0, 1)
         ax.set_xlabel(name1)
         ax.set_ylabel(name2)
+        ax.legend()
 
         fig.savefig(outpref + name2 + ".png")
 
         plt.clf
 
-if __name__ == "__main__":
-    threads = 4
-    size_core = 1140000
-    num_core = 1194
-    num_pangenome = 5442
-
-    # base frequencies are alphabetical, A, C, G, T
-    base_freq = [0.25, 0.25, 0.25, 0.25]
-    base_choices = [1, 2, 3, 4]
-
-    # gene presence/absence frequencies are in order 0, 1
-    gene_freq = [0.5, 0.5]
-    gene_choices = [0, 1]
-
-    # core mu is number of differences per base of alignment
-    core_mu = [0.1 * i for i in range(0, 21, 2)]
-
-    # acc mu is number of differences per gene in accessory genome
-    acc_mu = [0.1 * i for i in range(0, 11)]
-
-    hamming_core = [None] * len(core_mu)
-    hamming_acc = [None] * len(core_mu)
-    jaccard_core = [None] * len(core_mu)
-    jaccard_acc = [None] * len(core_mu)
-
-    # generate references
-    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-    size_acc = num_pangenome - num_core
-    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-    with Pool(processes=threads) as pool:
-        for ind, hcore, hacc, jcore, jacc in pool.map(
-            partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref,
-                    num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
-                range(0, len(core_mu))):
-            hamming_core[ind] = hcore
-            hamming_acc[ind] = hacc
-            jaccard_core[ind] = jcore
-            jaccard_acc[ind] = jacc
-
-
-    # for ind, val in enumerate(core_mu):
-    #     ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_ref, acc_ref, num_core, core_mu, acc_mu)
-    #     hamming_core[ind] = hcore
-    #     hamming_acc[ind] = hacc
-    #     jaccard_core[ind] = jcore
-    #     jaccard_acc[ind] = jacc
-
-    for var1, var2, name1, name2 in zip((core_mu, acc_mu, core_mu, acc_mu),
-                                        (hamming_core, hamming_acc, jaccard_core, jaccard_acc),
-                                        ("core_mu", "acc_mu", "core_mu", "acc_mu"),
-                                        ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")):
-
-        #plt.style.use('_mpl-gallery')
-
-        # make data
-        x = np.array(var1)
-        y = np.array(var2)
-
-        # plot
-        fig, ax = plt.subplots()
-
-        ax.plot(x, y, linewidth=2.0)
-
-        lims = [
-            np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-            np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
-        ]
-
-        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
-        ax.set_aspect('equal')
-        ax.set_xlim(lims)
-        ax.set_ylim(lims)
-        ax.set_xlabel(name1)
-        ax.set_ylabel(name2)
-
-        fig.savefig(name2 + ".png")
-
-        plt.clf
+# if __name__ == "__main__":
+#     threads = 4
+#     size_core = 1140000
+#     num_core = 1194
+#     num_pangenome = 5442
+#     num_sim = 2
+#
+#     # base frequencies are alphabetical, A, C, G, T
+#     base_freq = [0.25, 0.25, 0.25, 0.25]
+#     base_choices = [1, 2, 3, 4]
+#
+#     # gene presence/absence frequencies are in order 0, 1
+#     gene_freq = [0.5, 0.5]
+#     gene_choices = [0, 1]
+#
+#     # core mu is number of differences per base of alignment
+#     core_mu = [0.1 * i for i in range(0, 21, 2)]
+#
+#     # acc mu is number of differences per gene in accessory genome
+#     acc_mu = [0.1 * i for i in range(0, 11)]
+#
+#     hamming_core = [None] * len(core_mu)
+#     hamming_acc = [None] * len(core_mu)
+#     jaccard_core = [None] * len(core_mu)
+#     jaccard_acc = [None] * len(core_mu)
+#
+#     # generate references
+#     core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+#     size_acc = num_pangenome - num_core
+#     acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+#
+#     hamming_core_sims = [None] * num_sim
+#     hamming_acc_sims = [None] * num_sim
+#     jaccard_core_sims = [None] * num_sim
+#     jaccard_acc_sims = [None] * num_sim
+#
+#     with Pool(processes=threads) as pool:
+#         for i in range(num_sim):
+#             print("Simulation " + str(i + 1))
+#
+#             hamming_core = [None] * len(core_mu)
+#             hamming_acc = [None] * len(acc_mu)
+#             jaccard_core = [None] * len(core_mu)
+#             jaccard_acc = [None] * len(acc_mu)
+#
+#
+#             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
+#                     partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref,
+#                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
+#                     range(0, len(core_mu))), total=len(core_mu)):
+#                 hamming_core[ind] = hcore
+#                 hamming_acc[ind] = hacc
+#                 jaccard_core[ind] = jcore
+#                 jaccard_acc[ind] = jacc
+#
+#             hamming_core_sims[i] = hamming_core
+#             hamming_acc_sims[i] = hamming_acc
+#             jaccard_core_sims[i] = jaccard_core
+#             jaccard_acc_sims[i] = jaccard_acc
+#
+#     # for ind, val in enumerate(core_mu):
+#     #     ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_ref, acc_ref, num_core, core_mu, acc_mu)
+#     #     hamming_core[ind] = hcore
+#     #     hamming_acc[ind] = hacc
+#     #     jaccard_core[ind] = jcore
+#     #     jaccard_acc[ind] = jacc
+#
+#     mu_rates = (core_mu, acc_mu, core_mu, acc_mu)
+#     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
+#     mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
+#     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
+#
+#     generate_graph(mu_rates, distances, mu_names, distance_names, "./")
+#
+#     # for var1, var2, name1, name2 in zip((core_mu, acc_mu, core_mu, acc_mu),
+#     #                                     (hamming_core, hamming_acc, jaccard_core, jaccard_acc),
+#     #                                     ("core_mu", "acc_mu", "core_mu", "acc_mu"),
+#     #                                     ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")):
+#     #
+#     #     #plt.style.use('_mpl-gallery')
+#     #
+#     #     # make data
+#     #     x = np.array(var1)
+#     #     y = np.array(var2)
+#     #
+#     #     # plot
+#     #     fig, ax = plt.subplots()
+#     #
+#     #     ax.plot(x, y, linewidth=2.0)
+#     #
+#     #     lims = [
+#     #         np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+#     #         np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+#     #     ]
+#     #
+#     #     ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
+#     #     ax.set_aspect('equal')
+#     #     ax.set_xlim(lims)
+#     #     ax.set_ylim(lims)
+#     #     ax.set_xlabel(name1)
+#     #     ax.set_ylabel(name2)
+#     #
+#     #     fig.savefig(name2 + ".png")
+#     #
+#     #     plt.clf
