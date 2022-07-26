@@ -14,6 +14,12 @@ def get_options():
                     type=int,
                     default=1140000,
                     help='Size of core genome alignment (in bases). Default = 1140000 ')
+    IO.add_argument('--base-freq',
+                    default="0.25,0.25,0.25,0.25",
+                    help='Base frequencies in starting core genome in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
+    IO.add_argument('--gene-freq',
+                    default="0.5,0.5",
+                    help='Gene frequencies in starting accessory genome in order "0,1". Default = "0.5,0.5" ')
     IO.add_argument('--num-core',
                     type=int,
                     default=1194,
@@ -76,6 +82,27 @@ if __name__ == "__main__":
     print("Accessory per-gene mutation rate values: ")
     print(acc_mu)
 
+    # parse base frequencies and generate core_ref
+    base_freq = [float(i) for i in options.base_freq.split(",")]
+    base_choices = [1, 2, 3, 4]
+    # round to 6 dp
+    base_freq = [round(i, 6) for i in base_freq]
+    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+
+    print("Core base frequencies [A, C, G, T]: ")
+    print(base_freq)
+
+    # parse gene frequencies and generate acc_ref
+    gene_freq = [float(i) for i in options.gene_freq.split(",")]
+    gene_choices = [0, 1]
+    # round to 6 dp
+    gene_freq = [round(i, 6) for i in gene_freq]
+    size_acc = num_pangenome - num_core
+    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+
+    print("Accessory gene frequencies [0, 1]: ")
+    print(gene_freq)
+
     hamming_core = [None] * len(core_mu)
     hamming_acc = [None] * len(acc_mu)
     jaccard_core = [None] * len(core_mu)
@@ -85,8 +112,8 @@ if __name__ == "__main__":
 
     with Pool(processes=threads) as pool:
         for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-            partial(gen_distances, size_core=size_core, num_core=num_core,
-                    num_pangenome=num_pangenome, core_mu=core_mu, acc_mu=acc_mu),
+                partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref,
+                        num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
                 range(0, len(core_mu))), total = len(core_mu)):
             hamming_core[ind] = hcore
             hamming_acc[ind] = hacc
