@@ -89,8 +89,13 @@ if __name__ == "__main__":
     # parse base frequencies and generate core_ref
     base_freq = [float(i) for i in options.base_freq.split(",")]
     base_choices = [1, 2, 3, 4]
+
     # round to 6 dp
     base_freq = [round(i, 6) for i in base_freq]
+
+    # ensure probabilities sum to 1
+    if sum(base_freq) != 1:
+        base_freq[-1] = 1 - sum(base_freq[0:3])
 
     print("Core base frequencies [A, C, G, T]: ")
     print(base_freq)
@@ -98,8 +103,13 @@ if __name__ == "__main__":
     # parse gene frequencies and generate acc_ref
     gene_freq = [float(i) for i in options.gene_freq.split(",")]
     gene_choices = [0, 1]
+
     # round to 6 dp
     gene_freq = [round(i, 6) for i in gene_freq]
+
+    # ensure probabilities sum to 1
+    if sum(gene_freq) != 1:
+        base_freq[-1] = 1 - base_freq[0]
     size_acc = num_pangenome - num_core
 
 
