@@ -52,8 +52,8 @@ def gen_distances(index, core_ref, acc_ref, num_core, core_mu, acc_mu):
     acc_query = sim_divergence(np.copy(acc_ref), acc_mu[index], 2, False)
 
     # add core genes to accessory distances
-    #acc_ref = np.append(acc_ref, np.ones(num_core))
-    #acc_query = np.append(acc_query, np.ones(num_core))
+    acc_ref = np.append(acc_ref, np.ones(num_core))
+    acc_query = np.append(acc_query, np.ones(num_core))
 
     hamming_core = distance.hamming(core_ref, core_query)
     hamming_acc = distance.hamming(acc_ref, acc_query)
