@@ -179,7 +179,8 @@ if __name__ == "__main__":
     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
     mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
+    lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
-    generate_graph(mu_rates, distances, mu_names, distance_names, options.outpref)
+    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref)
 
     print("Done.")

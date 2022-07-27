@@ -2,10 +2,7 @@ from scipy.spatial import distance
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-
-from multiprocessing import Pool
-from functools import partial
-import tqdm
+from math import e
 
 
 def sim_divergence(query, mu, num_letters, core):
@@ -67,8 +64,8 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)
 
 
-def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
-    for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
+def generate_graph(mu_rates, distances, mu_names, distance_names, lengths, outpref):
+    for var1, var2, name1, name2, length in zip(mu_rates, distances, mu_names, distance_names, lengths):
 
         #plt.style.use('_mpl-gallery')
 
@@ -86,6 +83,14 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
             np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
             np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
         ]
+
+        # plot Jukes-cantor relationship
+        if "core" in name1:
+            y = 3/4 * (1 - e ** (-(4/3) * x))
+        else:
+            y = 1/2 * (1 - e ** (-(2/1) * x))
+
+        ax.plot(x, y, linewidth=2.0, label="Jukes-Cantor")
 
         ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
         ax.set_aspect('equal')
