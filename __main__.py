@@ -10,10 +10,14 @@ def get_options():
                                      prog='distance_sim')
 
     IO = parser.add_argument_group('Input/Output options')
-    IO.add_argument('--aln-core',
+    IO.add_argument('--core-size',
                     type=int,
                     default=1140000,
                     help='Size of core genome alignment (in bases). Default = 1140000 ')
+    IO.add_argument('--core-var',
+                    type=int,
+                    default=106196,
+                    help='Number of variant sites in core. Default = 106196 ')
     IO.add_argument('--base-freq',
                     default="0.25,0.25,0.25,0.25",
                     help='Base frequencies in starting core genome in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
@@ -54,9 +58,13 @@ def get_options():
 if __name__ == "__main__":
     options = get_options()
     threads = options.threads
-    size_core = options.aln_core
+    size_core = options.core_size
     num_core = options.num_core
     num_pangenome = options.num_pan
+    core_num_var = options.core_var
+
+    # calculate number of core invariant sites
+    core_num_invar = size_core - core_num_var
 
     # core mu is number of differences per base of alignment
     core_mu = []
@@ -68,6 +76,10 @@ if __name__ == "__main__":
 
     # round to 6 dp
     core_mu = [round(i, 6) for i in core_mu]
+    core_mu_ori = core_mu.copy()
+
+    # adjust core mutation rate in variable sites to match overall core_mu
+    #core_mu = [(i * (size_core / core_num_var)) for i in core_mu]
 
     print("Core per-base mutation rate values: ")
     print(core_mu)
@@ -82,6 +94,13 @@ if __name__ == "__main__":
 
     #round to 6 dp
     acc_mu = [round(i, 6) for i in acc_mu]
+
+    # get number of accessory genes
+    size_acc = num_pangenome - num_core
+    acc_mu_ori = acc_mu.copy()
+
+    # adjust acc_mu by factor of total pangenome / accessory pangenome size.
+    #acc_mu = [(i * (num_pangenome / size_acc)) for i in acc_mu]
 
     print("Accessory per-gene mutation rate values: ")
     print(acc_mu)
@@ -110,8 +129,6 @@ if __name__ == "__main__":
     # ensure probabilities sum to 1
     if sum(gene_freq) != 1:
         base_freq[-1] = 1 - base_freq[0]
-    size_acc = num_pangenome - num_core
-
 
     print("Accessory gene frequencies [0, 1]: ")
     print(gene_freq)
@@ -128,6 +145,13 @@ if __name__ == "__main__":
         core_ref = np.random.choice(base_choices, size_core, p=base_freq)
         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 
+        # pull out variable sites in core_ref
+        sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
+        present = np.full(core_ref.size, False)
+        present[sites] = True
+        core_var = core_ref[present]
+        core_invar = core_ref[np.invert(present)]
+
         hamming_core = [None] * len(core_mu)
         hamming_acc = [None] * len(acc_mu)
         jaccard_core = [None] * len(core_mu)
@@ -135,7 +159,7 @@ if __name__ == "__main__":
 
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-                    partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref,
+                    partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
@@ -151,7 +175,7 @@ if __name__ == "__main__":
 
     print("Generating graphs...")
 
-    mu_rates = (core_mu, acc_mu, core_mu, acc_mu)
+    mu_rates = (core_mu_ori, acc_mu_ori, core_mu_ori, acc_mu_ori)
     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
     mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")

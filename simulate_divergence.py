@@ -46,14 +46,18 @@ def sim_divergence(query, mu, num_letters, core):
 
     return query
 
-def gen_distances(index, core_ref, acc_ref, num_core, core_mu, acc_mu):
+def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu):
     # mutate genomes
-    core_query = sim_divergence(np.copy(core_ref), core_mu[index], 4, True)
+    core_query = sim_divergence(np.copy(core_var), core_mu[index], 4, True)
     acc_query = sim_divergence(np.copy(acc_ref), acc_mu[index], 2, False)
 
     # add core genes to accessory distances
     acc_ref = np.append(acc_ref, np.ones(num_core))
     acc_query = np.append(acc_query, np.ones(num_core))
+
+    # add core invariant sites to core alignments
+    core_ref = np.append(core_var, core_invar)
+    core_query = np.append(core_query, core_invar)
 
     hamming_core = distance.hamming(core_ref, core_query)
     hamming_acc = distance.hamming(acc_ref, acc_query)
@@ -101,6 +105,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
 #     num_core = 1194
 #     num_pangenome = 5442
 #     num_sim = 2
+#     core_invar = 106196
 #
 #     # base frequencies are alphabetical, A, C, G, T
 #     base_freq = [0.25, 0.25, 0.25, 0.25]
@@ -142,7 +147,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
 #
 #
 #             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-#                     partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref,
+#                     partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref, core_invar=core_invar,
 #                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
 #                     range(0, len(core_mu))), total=len(core_mu)):
 #                 hamming_core[ind] = hcore
@@ -156,7 +161,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref):
 #             jaccard_acc_sims[i] = jaccard_acc
 #
 #     # for ind, val in enumerate(core_mu):
-#     #     ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_ref, acc_ref, num_core, core_mu, acc_mu)
+#     #     ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_ref, acc_ref, core_invar, num_core, core_mu, acc_mu)
 #     #     hamming_core[ind] = hcore
 #     #     hamming_acc[ind] = hacc
 #     #     jaccard_core[ind] = jcore
