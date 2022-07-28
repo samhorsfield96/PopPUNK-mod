@@ -44,6 +44,10 @@ def get_options():
                     type=int,
                     default=1,
                     help='Number of simulations to run. Default = 1')
+    IO.add_argument('--adjust',
+                    default=False,
+                    action="store_true",
+                    help='Adjust core and accessory distances for invariant sites. Default = False')
     IO.add_argument('--outpref',
                     default="./",
                     help='Output prefix. Default = "./"')
@@ -62,6 +66,7 @@ if __name__ == "__main__":
     num_core = options.num_core
     num_pangenome = options.num_pan
     core_num_var = options.core_var
+    adjusted = options.adjust
 
     # calculate number of core invariant sites
     core_num_invar = size_core - core_num_var
@@ -160,7 +165,7 @@ if __name__ == "__main__":
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
-                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
+                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc

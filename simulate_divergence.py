@@ -43,22 +43,23 @@ def sim_divergence(query, mu, num_letters, core):
 
     return query
 
-def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu):
+def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj):
     # mutate genomes
     core_query = sim_divergence(np.copy(core_var), core_mu[index], 4, True)
     acc_query = sim_divergence(np.copy(acc_ref), acc_mu[index], 2, False)
 
-    # add core genes to accessory distances
-    acc_ref = np.append(acc_ref, np.ones(num_core))
-    acc_query = np.append(acc_query, np.ones(num_core))
+    if adj == True:
+        # add core genes to accessory distances
+        acc_ref = np.append(acc_ref, np.ones(num_core))
+        acc_query = np.append(acc_query, np.ones(num_core))
 
-    # add core invariant sites to core alignments
-    core_ref = np.append(core_var, core_invar)
-    core_query = np.append(core_query, core_invar)
+        # add core invariant sites to core alignments
+        core_var = np.append(core_var, core_invar)
+        core_query = np.append(core_query, core_invar)
 
-    hamming_core = distance.hamming(core_ref, core_query)
+    hamming_core = distance.hamming(core_var, core_query)
     hamming_acc = distance.hamming(acc_ref, acc_query)
-    jaccard_core = distance.jaccard(core_ref, core_query)
+    jaccard_core = distance.jaccard(core_var, core_query)
     jaccard_acc = distance.jaccard(acc_ref, acc_query)
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)

@@ -14,7 +14,7 @@ usage: python __main__.py [-h] [--core-size CORE_SIZE] [--core-var CORE_VAR]
                           [--base-freq BASE_FREQ] [--gene-freq GENE_FREQ]
                           [--num-core NUM_CORE] [--num-pan NUM_PAN]
                           [--core-mu CORE_MU] [--acc-mu ACC_MU] [--num-sim NUM_SIM]
-                          [--outpref OUTPREF] [--threads THREADS]
+                          [--adjust] [--outpref OUTPREF] [--threads THREADS]
 
 Calculate relationship between Hamming/Jaccard distances and core/accessory
 divergence
@@ -42,6 +42,8 @@ Input/Output options:
                         gene per genome) in form start,stop,step. Default =
                         "0,2,0.2"
   --num-sim NUM_SIM     Number of simulations to run. Default = 1
+  --adjust              Adjust core and accessory distances for invariant
+                        sites. Default = False
   --outpref OUTPREF     Output prefix. Default = "./"
   --threads THREADS     Number of threads. Default = 1
 ```
