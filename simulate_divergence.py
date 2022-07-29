@@ -65,7 +65,7 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)
 
 
-def generate_graph(mu_rates, distances, mu_names, distance_names, lengths, outpref, core_adj, adjusted):
+def generate_graph(mu_rates, distances, mu_names, distance_names, lengths, outpref, core_adj, acc_adj, adjusted):
     for var1, var2, name1, name2, length in zip(mu_rates, distances, mu_names, distance_names, lengths):
 
         #plt.style.use('_mpl-gallery')
@@ -88,12 +88,14 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, lengths, outpr
         # plot Jukes-cantor relationship
         if "core" in name1:
             if adjusted:
-                y = (3/4 * (1 - e ** (-(4/3) * (x)))) / core_adj
+                y = (3/4 * (1 - e ** (-(4/3) * x))) / core_adj
             else:
                 y = 3 / 4 * (1 - e ** (-(4 / 3) * (x)))
         else:
-            y = 1/2 * (1 - e ** (-(2/1) * x))
-
+            if adjusted:
+                y = (1/2 * (1 - e ** (-(2/1) * x))) / acc_adj
+            else:
+                y = 1 / 2 * (1 - e ** (-(2 / 1) * x))
         ax.plot(x, y, linewidth=2.0, label="Jukes-Cantor")
 
         ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")

@@ -190,6 +190,6 @@ if __name__ == "__main__":
     core_adj = size_core / core_num_var
     acc_adj = num_pangenome / size_acc
 
-    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref, core_adj, adjusted)
+    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref, core_adj, acc_adj, adjusted)
 
     print("Done.")
