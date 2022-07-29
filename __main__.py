@@ -186,6 +186,10 @@ if __name__ == "__main__":
     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
     lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
-    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref)
+    # calculate proportion of invariable sites
+    core_adj = size_core / core_num_var
+    acc_adj = num_pangenome / size_acc
+
+    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref, core_adj, adjusted)
 
     print("Done.")
