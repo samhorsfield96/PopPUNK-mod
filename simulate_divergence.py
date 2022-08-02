@@ -1,9 +1,9 @@
 from scipy.spatial import distance
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import numpy as np
 import random
 from math import e
-
 
 def sim_divergence(query, mu, num_letters, core, avg_gene_freq=None):
     choices = []
@@ -98,12 +98,11 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)
 
+def model(x, c0, c1, c2, c3):
+    return c0 + c1 * x - c2 * np.exp(-c3 * x)
 
 def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_adj, acc_adj, adjusted):
     for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
-
-        #plt.style.use('_mpl-gallery')
-
         # plot
         fig, ax = plt.subplots()
 
@@ -143,6 +142,48 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         fig.savefig(outpref + name2 + ".png")
 
         plt.clf
+
+    # plot core hamming vs. accessory jaccard, predict relationship
+    fig, ax = plt.subplots()
+    sim = 1
+    reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
+    reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
+    for hamming_core, jaccard_accessory in zip(distances[0], distances[3]):
+        # make data, as comparing two diverged sequences, multiply by 2
+        x = np.array(hamming_core)
+        y = np.array(jaccard_accessory)
+
+        ax.plot(x, y, linewidth=2.0, label="Sim" + str(sim))
+
+        reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
+        reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
+
+        sim += 1
+
+    #reg_x = reg_x.reshape((-1, 1))
+    c, cov = curve_fit(model, reg_x, reg_y)
+
+    # predict using new model
+    x = np.array(distances[0][0])
+    y = np.array([model(j, c[0], c[1], c[2], c[3]) for j in x])
+    #ax.plot(x, y, linewidth=2.0, label="Model: " + str(c[0]) + " + " + str(c[1]) + " * x - " + str(c[2]) + " * e^(-" + str(c[3]) + " * x)")
+    ax.plot(x, y, linewidth=2.0, label="Model")
+    print("Model parameters:\n" + str(c[0]) + " + " + str(c[1]) + " * x - " + str(c[2]) + " * e^(-" + str(c[3]) + " * x)")
+
+    lims = [
+        np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
+        np.max([ax.get_xlim(), ax.get_xlim()]),  # max of both axes
+    ]
+
+    ax.set_ylim(0, 1)
+    ax.set_xlim(lims)
+    ax.set_xlabel("Core Hamming distance")
+    ax.set_ylabel("Accessory Jaccard Distance")
+    ax.legend()
+
+    fig.savefig(outpref + "core_vs_acc.png")
+
+    plt.clf
 
 # if __name__ == "__main__":
 #     threads = 4
