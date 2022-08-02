@@ -21,9 +21,13 @@ def get_options():
     IO.add_argument('--base-freq',
                     default="0.25,0.25,0.25,0.25",
                     help='Base frequencies in starting core genome in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
-    IO.add_argument('--gene-freq',
+    IO.add_argument('--start-gene-freq',
                     default="0.5,0.5",
                     help='Gene frequencies in starting accessory genome in order "0,1". Default = "0.5,0.5" ')
+    IO.add_argument('--avg-gene-freq',
+                    type=float,
+                    default=0.5,
+                    help='Average gene frequency in accessory genome. Default = "0.5" ')
     IO.add_argument('--num-core',
                     type=int,
                     default=1194,
@@ -67,13 +71,14 @@ if __name__ == "__main__":
     num_pangenome = options.num_pan
     core_num_var = options.core_var
     adjusted = options.adjust
+    avg_gene_freq = options.avg_gene_freq
 
     # calculate number of core invariant sites
     core_num_invar = size_core - core_num_var
 
-    # core mu is number of differences per base of alignment
+    # core mu is number of differences per base of alignment. Divide by two to account for using two diverging sequences
     core_mu = []
-    str_core_mu = [float(i) for i in options.core_mu.split(",")]
+    str_core_mu = [float(i) / 2 for i in options.core_mu.split(",")]
     mu = str_core_mu[0]
     while mu <= str_core_mu[1]:
         core_mu.append(mu)
@@ -86,12 +91,12 @@ if __name__ == "__main__":
     # adjust core mutation rate in variable sites to match overall core_mu
     #core_mu = [(i * (size_core / core_num_var)) for i in core_mu]
 
-    print("Core per-base mutation rate values: ")
+    print("Individual genome core per-base mutation rate values: ")
     print(core_mu)
 
-    # acc mu is number of differences per gene in accessory genome
+    # acc mu is number of differences per gene in accessory genome. Divide by two to account for using two diverging sequences
     acc_mu = []
-    str_acc_mu = [float(i) for i in options.acc_mu.split(",")]
+    str_acc_mu = [float(i) / 2 for i in options.acc_mu.split(",")]
     mu = str_acc_mu[0]
     while mu <= str_acc_mu[1]:
         acc_mu.append(mu)
@@ -107,7 +112,7 @@ if __name__ == "__main__":
     # adjust acc_mu by factor of total pangenome / accessory pangenome size.
     #acc_mu = [(i * (num_pangenome / size_acc)) for i in acc_mu]
 
-    print("Accessory per-gene mutation rate values: ")
+    print("Individual genome accessory per-gene mutation rate values: ")
     print(acc_mu)
 
     # parse base frequencies and generate core_ref
@@ -125,7 +130,7 @@ if __name__ == "__main__":
     print(base_freq)
 
     # parse gene frequencies and generate acc_ref
-    gene_freq = [float(i) for i in options.gene_freq.split(",")]
+    gene_freq = [float(i) for i in options.start_gene_freq.split(",")]
     gene_choices = [0, 1]
 
     # round to 6 dp
@@ -165,7 +170,7 @@ if __name__ == "__main__":
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
-                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted),
+                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc
@@ -190,6 +195,6 @@ if __name__ == "__main__":
     core_adj = size_core / core_num_var
     acc_adj = num_pangenome / size_acc
 
-    generate_graph(mu_rates, distances, mu_names, distance_names, lengths, options.outpref, core_adj, acc_adj, adjusted)
+    generate_graph(mu_rates, distances, mu_names, distance_names, options.outpref, core_adj, 1, adjusted)
 
     print("Done.")
