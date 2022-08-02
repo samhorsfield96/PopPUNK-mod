@@ -5,50 +5,50 @@ import numpy as np
 import random
 from math import e
 
-def sim_divergence(query, mu, num_letters, core, avg_gene_freq=None):
-    choices = []
-    # generate set of choices of alleles to choose from, dropping single allele each time
-    if core:
-        for k in range(1, num_letters + 1):
-            choices.append(np.array([v for v in range(1, num_letters + 1) if v != k]))
-    else:
-        choices = [0, 1]
-        gene_prob_freq = [1 - avg_gene_freq, avg_gene_freq]
-        # for k in range(0, num_letters):
-        #     choices.append(np.array([v for v in range(0, num_letters) if v != k]))
-
+def sim_divergence(query, mu, core, freq):
     num_sites = round(len(query) * mu)
 
-    # determine greatest number of sites re-mutated
-    max_counts = 1
+    # iterate until all required sites mutated for given mutation rate
     if num_sites > 0:
         if core:
-            # pick all sites to be mutated
-            sites = np.array(random.choices(range(query.size), k=num_sites))
+            total_sites = 0
 
-            # determine number of times each site can be mutated
-            unique, counts = np.unique(sites, return_counts=True)
+            choices = [1, 2, 3, 4]
 
-            max_counts = np.max(np.unique(counts))
+            while total_sites < num_sites:
+                to_sample = num_sites - total_sites
 
-            # iterate over
-            for i in range(1, max_counts + 1):
-                count_sites = counts >= i
+                # pick all sites to be mutated
+                sites = np.array(random.choices(range(query.size), k=to_sample))
+
+                # determine number of times each site can be mutated
+                unique, counts = np.unique(sites, return_counts=True)
+
+                # determine number of unique sites to mutate
+                #total_sites += unique.size
+
+                # determine where to sample
+                count_sites = counts == 1
                 sample_sites = unique[count_sites]
 
                 # randomly assign base based on element at that position
                 # core is 1 indexed, covert to 0 indexed
-                if core:
-                    changes = np.array([np.random.choice(choices[int(query[j]) - 1]) for j in sample_sites])
-                else:
-                    changes = np.array([np.random.choice(choices, p=gene_prob_freq) for _ in sample_sites])
+
+                changes = np.array([np.random.choice(choices, p=freq) for _ in sample_sites])
+
+                non_mutated = query[sample_sites] == changes
+
                 query[sample_sites] = changes
+
+                # determine number of actual changes
+                total_sites += changes.size - np.count_nonzero(non_mutated)
+
         #for accessory, mutate at rates given from avg_gene_freq of 1s
         else:
             total_sites = 0
 
-            mu_0 = avg_gene_freq
-            mu_1 = 1 - avg_gene_freq
+            mu_0 = freq
+            mu_1 = 1 - freq
 
             while total_sites < num_sites:
                 # randomly pick point in accessory
@@ -71,12 +71,12 @@ def sim_divergence(query, mu, num_letters, core, avg_gene_freq=None):
 
     return query
 
-def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq):
+def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu):
     # mutate genomes
-    core_query1 = sim_divergence(np.copy(core_var), core_mu[index], 4, True)
-    core_query2 = sim_divergence(np.copy(core_var), core_mu[index], 4, True)
-    acc_query1 = sim_divergence(np.copy(acc_ref), acc_mu[index], 2, False, avg_gene_freq)
-    acc_query2 = sim_divergence(np.copy(acc_ref), acc_mu[index], 2, False, avg_gene_freq)
+    core_query1 = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
+    core_query2 = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
+    acc_query1 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
+    acc_query2 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
 
     adj_acc_coeff = None
 
@@ -185,105 +185,107 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     plt.clf
 
-# if __name__ == "__main__":
-#     threads = 4
-#     size_core = 1140000
-#     num_core = 1194
-#     num_pangenome = 5442
-#     num_sim = 2
-#     core_invar = 106196
-#
-#     # base frequencies are alphabetical, A, C, G, T
-#     base_freq = [0.25, 0.25, 0.25, 0.25]
-#     base_choices = [1, 2, 3, 4]
-#
-#     # gene presence/absence frequencies are in order 0, 1
-#     gene_freq = [0.5, 0.5]
-#     gene_choices = [0, 1]
-#     avg_gene_freq = 0.9
-#
-#     # core mu is number of differences per base of alignment
-#     core_mu = [0.1 * i for i in range(0, 21, 2)]
-#
-#     # acc mu is number of differences per gene in accessory genome
-#     acc_mu = [0.1 * i for i in range(0, 11)]
-#
-#     adj = True
-#     core_num_var = 106196
-#
-#     hamming_core = [None] * len(core_mu)
-#     hamming_acc = [None] * len(core_mu)
-#     jaccard_core = [None] * len(core_mu)
-#     jaccard_acc = [None] * len(core_mu)
-#
-#     # generate references
-#     core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-#     size_acc = num_pangenome - num_core
-#     acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-#
-#     hamming_core_sims = [None] * num_sim
-#     hamming_acc_sims = [None] * num_sim
-#     jaccard_core_sims = [None] * num_sim
-#     jaccard_acc_sims = [None] * num_sim
-#
-#     # with Pool(processes=threads) as pool:
-#     #     for i in range(num_sim):
-#     #         print("Simulation " + str(i + 1))
-#     #
-#     #         hamming_core = [None] * len(core_mu)
-#     #         hamming_acc = [None] * len(acc_mu)
-#     #         jaccard_core = [None] * len(core_mu)
-#     #         jaccard_acc = [None] * len(acc_mu)
-#     #
-#     #
-#     #         for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-#     #                 partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref, core_invar=core_invar,
-#     #                         num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
-#     #                 range(0, len(core_mu))), total=len(core_mu)):
-#     #             hamming_core[ind] = hcore
-#     #             hamming_acc[ind] = hacc
-#     #             jaccard_core[ind] = jcore
-#     #             jaccard_acc[ind] = jacc
-#     #
-#     #         hamming_core_sims[i] = hamming_core
-#     #         hamming_acc_sims[i] = hamming_acc
-#     #         jaccard_core_sims[i] = jaccard_core
-#     #         jaccard_acc_sims[i] = jaccard_acc
-#
-#     for i in range(num_sim):
-#
-#         print("Simulation " + str(i + 1))
-#         core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-#         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-#
-#         # pull out variable sites in core_ref
-#         sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
-#         present = np.full(core_ref.size, False)
-#         present[sites] = True
-#         core_var = core_ref[present]
-#         core_invar = core_ref[np.invert(present)]
-#
-#         hamming_core = [None] * len(core_mu)
-#         hamming_acc = [None] * len(acc_mu)
-#         jaccard_core = [None] * len(core_mu)
-#         jaccard_acc = [None] * len(acc_mu)
-#
-#         hamming_core = [None] * len(core_mu)
-#         hamming_acc = [None] * len(acc_mu)
-#         jaccard_core = [None] * len(core_mu)
-#         jaccard_acc = [None] * len(acc_mu)
-#
-#         for ind, val in enumerate(core_mu):
-#             ind, hcore, hacc, jcore, jacc, adj_acc_coeff = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq)
-#             hamming_core[ind] = hcore
-#             hamming_acc[ind] = hacc
-#             jaccard_core[ind] = jcore
-#             jaccard_acc[ind] = jacc
-#
-#         hamming_core_sims[i] = hamming_core
-#         hamming_acc_sims[i] = hamming_acc
-#         jaccard_core_sims[i] = jaccard_core
-#         jaccard_acc_sims[i] = jaccard_acc
+if __name__ == "__main__":
+    threads = 4
+    size_core = 1140000
+    num_core = 1194
+    num_pangenome = 5442
+    num_sim = 2
+    core_invar = 106196
+
+    # base frequencies are alphabetical, A, C, G, T
+    base_freq = [0.25, 0.25, 0.25, 0.25]
+    base_choices = [1, 2, 3, 4]
+
+    base_mu = [0.925, 0.025, 0.025, 0.025]
+
+    # gene presence/absence frequencies are in order 0, 1
+    gene_freq = [0.5, 0.5]
+    gene_choices = [0, 1]
+    avg_gene_freq = 0.9
+
+    # core mu is number of differences per base of alignment
+    core_mu = [0.1 * i for i in range(0, 21, 2)]
+
+    # acc mu is number of differences per gene in accessory genome
+    acc_mu = [0.1 * i for i in range(0, 11)]
+
+    adj = True
+    core_num_var = 106196
+
+    hamming_core = [None] * len(core_mu)
+    hamming_acc = [None] * len(core_mu)
+    jaccard_core = [None] * len(core_mu)
+    jaccard_acc = [None] * len(core_mu)
+
+    # generate references
+    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+    size_acc = num_pangenome - num_core
+    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+
+    hamming_core_sims = [None] * num_sim
+    hamming_acc_sims = [None] * num_sim
+    jaccard_core_sims = [None] * num_sim
+    jaccard_acc_sims = [None] * num_sim
+
+    # with Pool(processes=threads) as pool:
+    #     for i in range(num_sim):
+    #         print("Simulation " + str(i + 1))
+    #
+    #         hamming_core = [None] * len(core_mu)
+    #         hamming_acc = [None] * len(acc_mu)
+    #         jaccard_core = [None] * len(core_mu)
+    #         jaccard_acc = [None] * len(acc_mu)
+    #
+    #
+    #         for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
+    #                 partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref, core_invar=core_invar,
+    #                         num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
+    #                 range(0, len(core_mu))), total=len(core_mu)):
+    #             hamming_core[ind] = hcore
+    #             hamming_acc[ind] = hacc
+    #             jaccard_core[ind] = jcore
+    #             jaccard_acc[ind] = jacc
+    #
+    #         hamming_core_sims[i] = hamming_core
+    #         hamming_acc_sims[i] = hamming_acc
+    #         jaccard_core_sims[i] = jaccard_core
+    #         jaccard_acc_sims[i] = jaccard_acc
+
+    for i in range(num_sim):
+
+        print("Simulation " + str(i + 1))
+        core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+        acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+
+        # pull out variable sites in core_ref
+        sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
+        present = np.full(core_ref.size, False)
+        present[sites] = True
+        core_var = core_ref[present]
+        core_invar = core_ref[np.invert(present)]
+
+        hamming_core = [None] * len(core_mu)
+        hamming_acc = [None] * len(acc_mu)
+        jaccard_core = [None] * len(core_mu)
+        jaccard_acc = [None] * len(acc_mu)
+
+        hamming_core = [None] * len(core_mu)
+        hamming_acc = [None] * len(acc_mu)
+        jaccard_core = [None] * len(core_mu)
+        jaccard_acc = [None] * len(acc_mu)
+
+        for ind, val in enumerate(core_mu):
+            ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu)
+            hamming_core[ind] = hcore
+            hamming_acc[ind] = hacc
+            jaccard_core[ind] = jcore
+            jaccard_acc[ind] = jacc
+
+        hamming_core_sims[i] = hamming_core
+        hamming_acc_sims[i] = hamming_acc
+        jaccard_core_sims[i] = jaccard_core
+        jaccard_acc_sims[i] = jaccard_acc
 #
 #     mu_rates = (core_mu, acc_mu, core_mu, acc_mu)
 #     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)

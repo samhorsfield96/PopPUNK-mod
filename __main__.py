@@ -21,6 +21,9 @@ def get_options():
     IO.add_argument('--base-freq',
                     default="0.25,0.25,0.25,0.25",
                     help='Base frequencies in starting core genome in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
+    IO.add_argument('--base-mu',
+                    default="0.25,0.25,0.25,0.25",
+                    help='Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
     IO.add_argument('--start-gene-freq',
                     default="0.5,0.5",
                     help='Gene frequencies in starting accessory genome in order "0,1". Default = "0.5,0.5" ')
@@ -129,6 +132,16 @@ if __name__ == "__main__":
     print("Core base frequencies [A, C, G, T]: ")
     print(base_freq)
 
+    # parse individual base mutation rates
+    base_mu = [float(i) for i in options.base_freq.split(",")]
+
+    # round to 6 dp
+    base_mu = [round(i, 6) for i in base_mu]
+
+    # ensure probabilities sum to 1
+    if sum(base_mu) != 1:
+        base_mu[-1] = 1 - sum(base_mu[0:3])
+
     # parse gene frequencies and generate acc_ref
     gene_freq = [float(i) for i in options.start_gene_freq.split(",")]
     gene_choices = [0, 1]
@@ -170,7 +183,8 @@ if __name__ == "__main__":
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
-                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq),
+                            num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
+                            base_mu=base_mu),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc
