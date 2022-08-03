@@ -1,3 +1,5 @@
+import math
+
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
@@ -96,8 +98,8 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)
 
-def model(x, c0, c1, c2, c3):
-    return c0 + c1 * x - c2 * np.exp(-c3 * x)
+def model(x, c0, c1):
+    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
 
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     sim = 0
@@ -186,10 +188,9 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     # predict using new model
     x = np.array(distances[0][0])
-    y = np.array([model(j, c[0], c[1], c[2], c[3]) for j in x])
-    #ax.plot(x, y, linewidth=2.0, label="Model: " + str(c[0]) + " + " + str(c[1]) + " * x - " + str(c[2]) + " * e^(-" + str(c[3]) + " * x)")
+    y = np.array([model(j, c[0], c[1]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Model parameters:\n" + str(c[0]) + " + " + str(c[1]) + " * x - " + str(c[2]) + " * e^(-" + str(c[3]) + " * x)")
+    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\n01s, 10s and 11s over pangenome size: " + str(c[1]))
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes

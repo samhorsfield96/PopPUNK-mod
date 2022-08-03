@@ -138,7 +138,7 @@ if __name__ == "__main__":
     RMSE_results = [None] * len(a_vs_c_rates)
     for index, entry in enumerate(curve_coefficents):
         c = entry
-        pred_y = model_vec(true_x, c[0], c[1], c[2], c[3])
+        pred_y = model_vec(true_x, c[0], c[1])
         MSE = mean_squared_error(true_y, pred_y)
         RMSE_results[index] = math.sqrt(MSE)
 
@@ -152,8 +152,7 @@ if __name__ == "__main__":
         c = curve_coefficents[index]
         rate = a_vs_c_rates[index]
         print("Rate: " + str(rate))
-        print("Model parameters:\n" + str(c[0]) + " + " + str(c[1]) + " * x - " + str(c[2]) + " * e^(-" + str(
-            c[3]) + " * x)")
+        print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\n01s, 10s and 11s over pangenome size: " + str(c[1]))
         print("RMSE: " + str(RMSE_results[index]))
 
         # sample 10 even point across 0 and max core value
@@ -164,7 +163,7 @@ if __name__ == "__main__":
             x.append(i * step)
 
         x = np.array(x)
-        y = model_vec(x, c[0], c[1], c[2], c[3])
+        y = model_vec(x, c[0], c[1])
 
         ax.plot(x, y, linewidth=2.0, label="Rate: " + str(rate))
 
