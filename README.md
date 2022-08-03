@@ -7,6 +7,7 @@ Simulates core and accessory genome divergence and calculates Hamming and Jaccar
 - numpy
 - matplotlib
 - scikit-learn
+- pandas
 
 ### Usage
 

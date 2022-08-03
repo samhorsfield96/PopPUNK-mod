@@ -78,8 +78,6 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
     acc_query1 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
     acc_query2 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
 
-    adj_acc_coeff = None
-
     if adj == True:
         # add core genes to accessory distances
         #acc_ref = np.append(acc_ref, np.ones(num_core))
@@ -100,6 +98,29 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 
 def model(x, c0, c1, c2, c3):
     return c0 + c1 * x - c2 * np.exp(-c3 * x)
+
+def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
+    sim = 0
+    reg_x = np.zeros(len(hamming_core_sim) * len(hamming_core_sim[0]))
+    reg_y = np.zeros(len(jaccard_accessory_sim) * len(jaccard_accessory_sim[0]))
+
+    for hamming_core, jaccard_accessory in zip(hamming_core_sim, jaccard_accessory_sim):
+        # make data, as comparing two diverged sequences, multiply by 2
+        x = np.array(hamming_core)
+        y = np.array(jaccard_accessory)
+
+        reg_x[sim * x.size : (sim * x.size) + x.size] = x
+        reg_y[sim * y.size : (sim * y.size) + y.size] = y
+
+        sim += 1
+
+    #reg_x = reg_x.reshape((-1, 1))
+    try:
+        c, cov = curve_fit(model, reg_x, reg_y)
+    except RuntimeError:
+        c = [0,0,0,0]
+
+    return c
 
 def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_adj, acc_adj, adjusted):
     for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
