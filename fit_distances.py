@@ -24,7 +24,9 @@ def read_files(in_dir, prefix=""):
 
         # drop first two columns
         df['Species'] = name
-        df['Sample'] = sample
+        df['Sample'] = int(sample)
+        df['Core'] = pd.to_numeric(df['Core'])
+        df['Accessory'] = pd.to_numeric(df['Accessory'])
 
         li.append(df)
 
@@ -61,118 +63,167 @@ if __name__ == "__main__":
     adj = True
     core_num_var = 106196
 
-    hamming_core = [None] * len(core_mu)
-    hamming_acc = [None] * len(core_mu)
-    jaccard_core = [None] * len(core_mu)
-    jaccard_acc = [None] * len(core_mu)
-
-    # generate references
-    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-    size_acc = num_pangenome - num_core
-    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-
-    # specify range of accesory vs. core rates
-    a_vs_c_rates = [0.25, 0.5, 0.75, 1, 1.5, 2, 4, 6, 8, 10]
-    #a_vs_c_rates = [1]
-
-    # hold coefficients
-    curve_coefficents = [None] * len(a_vs_c_rates)
-
-    for index, rate in enumerate(a_vs_c_rates):
-        print("Accessory vs. core rate: " + str(rate))
-        # determine acc_mu as a function of core_mu
-        acc_mu = [x * rate for x in core_mu]
-
-        hamming_core_sims = [None] * num_sim
-        hamming_acc_sims = [None] * num_sim
-        jaccard_core_sims = [None] * num_sim
-        jaccard_acc_sims = [None] * num_sim
-
-        for i in range(num_sim):
-            print("Simulation " + str(i + 1))
-            core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-            acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-            # pull out variable sites in core_ref
-            sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
-            present = np.full(core_ref.size, False)
-            present[sites] = True
-            core_var = core_ref[present]
-            core_invar = core_ref[np.invert(present)]
-
-            hamming_core = [None] * len(core_mu)
-            hamming_acc = [None] * len(acc_mu)
-            jaccard_core = [None] * len(core_mu)
-            jaccard_acc = [None] * len(acc_mu)
-
-            with Pool(processes=threads) as pool:
-                for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-                        partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
-                                num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
-                                base_mu=base_mu),
-                        range(0, len(core_mu))), total=len(core_mu)):
-                    hamming_core[ind] = hcore
-                    hamming_acc[ind] = hacc
-                    jaccard_core[ind] = jcore
-                    jaccard_acc[ind] = jacc
-
-            hamming_core_sims[i] = hamming_core
-            hamming_acc_sims[i] = hamming_acc
-            jaccard_core_sims[i] = jaccard_core
-            jaccard_acc_sims[i] = jaccard_acc
-
-        # generate a fit for model
-        c = fit_cvsa_curve(hamming_core_sims, jaccard_acc_sims)
-
-        curve_coefficents[index] = c
+    # if fit == false, will increment through chosen values of accessory vs. core
+    # if fit == true, will fit given model to real data
+    fit = True
 
     # create vectorised version of model
     model_vec = np.vectorize(model)
 
-    # create numpy arrays of inputs
-    true_x = df['Core'].to_numpy()
-    true_y = df['Accessory'].to_numpy()
+    if not fit:
+        hamming_core = [None] * len(core_mu)
+        hamming_acc = [None] * len(core_mu)
+        jaccard_core = [None] * len(core_mu)
+        jaccard_acc = [None] * len(core_mu)
 
-    # fit to real data, calculate RMSE
-    RMSE_results = [None] * len(a_vs_c_rates)
-    for index, entry in enumerate(curve_coefficents):
-        c = entry
-        pred_y = model_vec(true_x, c[0], c[1])
-        MSE = mean_squared_error(true_y, pred_y)
-        RMSE_results[index] = math.sqrt(MSE)
+        # generate references
+        core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+        size_acc = num_pangenome - num_core
+        acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 
-    # overlap plots
-    fig, ax = plt.subplots()
-    x = true_x
-    y = true_y
-    ax.scatter(x, y, alpha=0.15)
 
-    for index in range(len(a_vs_c_rates)):
-        c = curve_coefficents[index]
-        rate = a_vs_c_rates[index]
-        print("Rate: " + str(rate))
-        print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\n01s, 10s and 11s over pangenome size: " + str(c[1]))
-        print("RMSE: " + str(RMSE_results[index]))
+        # specify range of accesory vs. core rates
+        a_vs_c_rates = [0.25, 0.5, 0.75, 1, 1.5, 2, 4, 6, 8, 10]
+        #a_vs_c_rates = [1]
 
-        # sample 10 even point across 0 and max core value
-        step = np.max(true_x) / 10
-        start = 0
-        x = []
-        for i in range(11):
-            x.append(i * step)
+        # hold coefficients
+        curve_coefficents = [None] * len(a_vs_c_rates)
 
-        x = np.array(x)
-        y = model_vec(x, c[0], c[1])
+        for index, rate in enumerate(a_vs_c_rates):
+            print("Accessory vs. core rate: " + str(rate))
+            # determine acc_mu as a function of core_mu
+            acc_mu = [x * rate for x in core_mu]
 
-        ax.plot(x, y, linewidth=2.0, label="Rate: " + str(rate))
+            hamming_core_sims = [None] * num_sim
+            hamming_acc_sims = [None] * num_sim
+            jaccard_core_sims = [None] * num_sim
+            jaccard_acc_sims = [None] * num_sim
 
-    ax.set_xlabel("Core")
-    ax.set_ylabel("Accessory")
-    ax.legend()
+            for i in range(num_sim):
+                print("Simulation " + str(i + 1))
+                core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+                acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 
-    fig.savefig(outpref + "core_vs_accesory_fit.png")
+                # pull out variable sites in core_ref
+                sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
+                present = np.full(core_ref.size, False)
+                present[sites] = True
+                core_var = core_ref[present]
+                core_invar = core_ref[np.invert(present)]
 
-    plt.clf
+                hamming_core = [None] * len(core_mu)
+                hamming_acc = [None] * len(acc_mu)
+                jaccard_core = [None] * len(core_mu)
+                jaccard_acc = [None] * len(acc_mu)
 
-    test = 1
+                with Pool(processes=threads) as pool:
+                    for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
+                            partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
+                                    num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
+                                    base_mu=base_mu),
+                            range(0, len(core_mu))), total=len(core_mu)):
+                        hamming_core[ind] = hcore
+                        hamming_acc[ind] = hacc
+                        jaccard_core[ind] = jcore
+                        jaccard_acc[ind] = jacc
+
+                hamming_core_sims[i] = hamming_core
+                hamming_acc_sims[i] = hamming_acc
+                jaccard_core_sims[i] = jaccard_core
+                jaccard_acc_sims[i] = jaccard_acc
+
+            # generate a fit for model
+            c = fit_cvsa_curve(hamming_core_sims, jaccard_acc_sims)
+
+            curve_coefficents[index] = c
+
+        # create numpy arrays of inputs
+        true_x = df['Core'].to_numpy()
+        true_y = df['Accessory'].to_numpy()
+
+        # fit to real data, calculate RMSE
+        RMSE_results = [None] * len(a_vs_c_rates)
+        for index, entry in enumerate(curve_coefficents):
+            c = entry
+            pred_y = model_vec(true_x, c[0], c[1])
+            MSE = mean_squared_error(true_y, pred_y)
+            RMSE_results[index] = math.sqrt(MSE)
+
+        # overlap plots
+        fig, ax = plt.subplots()
+        x = true_x
+        y = true_y
+        ax.scatter(x, y, alpha=0.15)
+
+        for index in range(len(a_vs_c_rates)):
+            c = curve_coefficents[index]
+            rate = a_vs_c_rates[index]
+            print("Rate: " + str(rate))
+            print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\n01s, 10s and 11s over pangenome size: " + str(c[1]))
+            print("RMSE: " + str(RMSE_results[index]))
+
+            # sample 10 even point across 0 and max core value
+            step = np.max(true_x) / 10
+            start = 0
+            x = []
+            for i in range(11):
+                x.append(i * step)
+
+            x = np.array(x)
+            y = model_vec(x, c[0], c[1])
+
+            ax.plot(x, y, linewidth=2.0, label="Rate: " + str(rate))
+
+        ax.set_xlabel("Core")
+        ax.set_ylabel("Accessory")
+        ax.legend()
+
+        fig.savefig(outpref + "core_vs_accesory_fit.png")
+
+        plt.clf
+    else:
+        # get number of samples in poppunk fit
+        species = df["Species"].unique()
+
+        with open(outpref + "fit_parameters.txt", "w") as f:
+            f.write("Species\tSample\tA_c_ratio\tPangenome_fraction\tRMSE\n")
+            for element in species:
+                new_df = df[df["Species"] == element]
+
+                max_value = int(new_df["Sample"].max())
+
+                fig, ax = plt.subplots()
+
+                # iterate over each sample and generate a fit
+                for i in range(1, max_value + 1):
+                    sample_df = new_df[new_df["Sample"] == i]
+
+                    true_x = sample_df['Core'].to_numpy()
+                    true_y = sample_df['Accessory'].to_numpy()
+
+                    ax.scatter(true_x, true_y, alpha=0.15)
+
+                    c, cov = curve_fit(model, true_x, true_y)
+
+                    step = np.max(true_x) / 10
+                    start = 0
+                    x = []
+                    for j in range(11):
+                        x.append(j * step)
+
+                    y = model_vec(x, c[0], c[1])
+
+                    ax.plot(x, y, linewidth=2.0, label="Sample: " + str(i))
+
+                    pred_y = model_vec(true_x, c[0], c[1])
+                    MSE = mean_squared_error(true_y, pred_y)
+                    RMSE = math.sqrt(MSE)
+
+                    f.write(element + "\t" + str(i) + "\t" + str(c[0]) + "\t" + str(c[1]) + "\t" + str(RMSE) + "\n")
+
+                ax.set_xlabel("Core")
+                ax.set_ylabel("Accessory")
+                ax.legend()
+
+                fig.savefig(outpref + element + "_core_vs_accesory_fit.png")
+                plt.clf

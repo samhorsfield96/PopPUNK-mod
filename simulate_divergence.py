@@ -207,107 +207,108 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     plt.clf
 
-if __name__ == "__main__":
-    threads = 4
-    size_core = 1140000
-    num_core = 1194
-    num_pangenome = 5442
-    num_sim = 2
-    core_invar = 106196
-
-    # base frequencies are alphabetical, A, C, G, T
-    base_freq = [0.25, 0.25, 0.25, 0.25]
-    base_choices = [1, 2, 3, 4]
-
-    base_mu = [0.925, 0.025, 0.025, 0.025]
-
-    # gene presence/absence frequencies are in order 0, 1
-    gene_freq = [0.5, 0.5]
-    gene_choices = [0, 1]
-    avg_gene_freq = 0.9
-
-    # core mu is number of differences per base of alignment
-    core_mu = [0.1 * i for i in range(0, 21, 2)]
-
-    # acc mu is number of differences per gene in accessory genome
-    acc_mu = [0.1 * i for i in range(0, 11)]
-
-    adj = True
-    core_num_var = 106196
-
-    hamming_core = [None] * len(core_mu)
-    hamming_acc = [None] * len(core_mu)
-    jaccard_core = [None] * len(core_mu)
-    jaccard_acc = [None] * len(core_mu)
-
-    # generate references
-    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-    size_acc = num_pangenome - num_core
-    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-    hamming_core_sims = [None] * num_sim
-    hamming_acc_sims = [None] * num_sim
-    jaccard_core_sims = [None] * num_sim
-    jaccard_acc_sims = [None] * num_sim
-
-    # with Pool(processes=threads) as pool:
-    #     for i in range(num_sim):
-    #         print("Simulation " + str(i + 1))
-    #
-    #         hamming_core = [None] * len(core_mu)
-    #         hamming_acc = [None] * len(acc_mu)
-    #         jaccard_core = [None] * len(core_mu)
-    #         jaccard_acc = [None] * len(acc_mu)
-    #
-    #
-    #         for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-    #                 partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref, core_invar=core_invar,
-    #                         num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
-    #                 range(0, len(core_mu))), total=len(core_mu)):
-    #             hamming_core[ind] = hcore
-    #             hamming_acc[ind] = hacc
-    #             jaccard_core[ind] = jcore
-    #             jaccard_acc[ind] = jacc
-    #
-    #         hamming_core_sims[i] = hamming_core
-    #         hamming_acc_sims[i] = hamming_acc
-    #         jaccard_core_sims[i] = jaccard_core
-    #         jaccard_acc_sims[i] = jaccard_acc
-
-    for i in range(num_sim):
-
-        print("Simulation " + str(i + 1))
-        core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-        acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-        # pull out variable sites in core_ref
-        sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
-        present = np.full(core_ref.size, False)
-        present[sites] = True
-        core_var = core_ref[present]
-        core_invar = core_ref[np.invert(present)]
-
-        hamming_core = [None] * len(core_mu)
-        hamming_acc = [None] * len(acc_mu)
-        jaccard_core = [None] * len(core_mu)
-        jaccard_acc = [None] * len(acc_mu)
-
-        hamming_core = [None] * len(core_mu)
-        hamming_acc = [None] * len(acc_mu)
-        jaccard_core = [None] * len(core_mu)
-        jaccard_acc = [None] * len(acc_mu)
-
-        for ind, val in enumerate(core_mu):
-            ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu)
-            hamming_core[ind] = hcore
-            hamming_acc[ind] = hacc
-            jaccard_core[ind] = jcore
-            jaccard_acc[ind] = jacc
-
-        hamming_core_sims[i] = hamming_core
-        hamming_acc_sims[i] = hamming_acc
-        jaccard_core_sims[i] = jaccard_core
-        jaccard_acc_sims[i] = jaccard_acc
+# for testing
+# if __name__ == "__main__":
+#     threads = 4
+#     size_core = 1140000
+#     num_core = 1194
+#     num_pangenome = 5442
+#     num_sim = 2
+#     core_invar = 106196
+#
+#     # base frequencies are alphabetical, A, C, G, T
+#     base_freq = [0.25, 0.25, 0.25, 0.25]
+#     base_choices = [1, 2, 3, 4]
+#
+#     base_mu = [0.925, 0.025, 0.025, 0.025]
+#
+#     # gene presence/absence frequencies are in order 0, 1
+#     gene_freq = [0.5, 0.5]
+#     gene_choices = [0, 1]
+#     avg_gene_freq = 0.9
+#
+#     # core mu is number of differences per base of alignment
+#     core_mu = [0.1 * i for i in range(0, 21, 2)]
+#
+#     # acc mu is number of differences per gene in accessory genome
+#     acc_mu = [0.1 * i for i in range(0, 11)]
+#
+#     adj = True
+#     core_num_var = 106196
+#
+#     hamming_core = [None] * len(core_mu)
+#     hamming_acc = [None] * len(core_mu)
+#     jaccard_core = [None] * len(core_mu)
+#     jaccard_acc = [None] * len(core_mu)
+#
+#     # generate references
+#     core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+#     size_acc = num_pangenome - num_core
+#     acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+#
+#     hamming_core_sims = [None] * num_sim
+#     hamming_acc_sims = [None] * num_sim
+#     jaccard_core_sims = [None] * num_sim
+#     jaccard_acc_sims = [None] * num_sim
+#
+#     # with Pool(processes=threads) as pool:
+#     #     for i in range(num_sim):
+#     #         print("Simulation " + str(i + 1))
+#     #
+#     #         hamming_core = [None] * len(core_mu)
+#     #         hamming_acc = [None] * len(acc_mu)
+#     #         jaccard_core = [None] * len(core_mu)
+#     #         jaccard_acc = [None] * len(acc_mu)
+#     #
+#     #
+#     #         for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
+#     #                 partial(gen_distances, core_ref=core_ref, acc_ref=acc_ref, core_invar=core_invar,
+#     #                         num_core=num_core, core_mu=core_mu, acc_mu=acc_mu),
+#     #                 range(0, len(core_mu))), total=len(core_mu)):
+#     #             hamming_core[ind] = hcore
+#     #             hamming_acc[ind] = hacc
+#     #             jaccard_core[ind] = jcore
+#     #             jaccard_acc[ind] = jacc
+#     #
+#     #         hamming_core_sims[i] = hamming_core
+#     #         hamming_acc_sims[i] = hamming_acc
+#     #         jaccard_core_sims[i] = jaccard_core
+#     #         jaccard_acc_sims[i] = jaccard_acc
+#
+#     for i in range(num_sim):
+#
+#         print("Simulation " + str(i + 1))
+#         core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+#         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+#
+#         # pull out variable sites in core_ref
+#         sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
+#         present = np.full(core_ref.size, False)
+#         present[sites] = True
+#         core_var = core_ref[present]
+#         core_invar = core_ref[np.invert(present)]
+#
+#         hamming_core = [None] * len(core_mu)
+#         hamming_acc = [None] * len(acc_mu)
+#         jaccard_core = [None] * len(core_mu)
+#         jaccard_acc = [None] * len(acc_mu)
+#
+#         hamming_core = [None] * len(core_mu)
+#         hamming_acc = [None] * len(acc_mu)
+#         jaccard_core = [None] * len(core_mu)
+#         jaccard_acc = [None] * len(acc_mu)
+#
+#         for ind, val in enumerate(core_mu):
+#             ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu)
+#             hamming_core[ind] = hcore
+#             hamming_acc[ind] = hacc
+#             jaccard_core[ind] = jcore
+#             jaccard_acc[ind] = jacc
+#
+#         hamming_core_sims[i] = hamming_core
+#         hamming_acc_sims[i] = hamming_acc
+#         jaccard_core_sims[i] = jaccard_core
+#         jaccard_acc_sims[i] = jaccard_acc
 #
 #     mu_rates = (core_mu, acc_mu, core_mu, acc_mu)
 #     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
