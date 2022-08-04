@@ -282,7 +282,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 #         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 #
 #         # pull out variable sites in core_ref
-#         sites = np.array(random.choices(range(core_ref.size), k=core_num_var))
+#         sites = np.array(random.sample(range(core_ref.size), k=core_num_var))
 #         present = np.full(core_ref.size, False)
 #         present[sites] = True
 #         core_var = core_ref[present]
