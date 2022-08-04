@@ -162,6 +162,8 @@ if __name__ == "__main__":
     hamming_acc_sims = [None] * options.num_sim
     jaccard_core_sims = [None] * options.num_sim
     jaccard_acc_sims = [None] * options.num_sim
+    acc_vs_core_sims = [None] * options.num_sim
+    pangenome_frac_sims = [None] * options.num_sim
 
     for i in range(options.num_sim):
         print("Simulation " + str(i + 1))
@@ -179,9 +181,11 @@ if __name__ == "__main__":
         hamming_acc = [None] * len(acc_mu)
         jaccard_core = [None] * len(core_mu)
         jaccard_acc = [None] * len(acc_mu)
+        acc_vs_core = [None] * len(acc_mu)
+        pangenome_frac = [None] * len(acc_mu)
 
         with Pool(processes=threads) as pool:
-            for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
+            for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
                             base_mu=base_mu),
@@ -190,12 +194,21 @@ if __name__ == "__main__":
                 hamming_acc[ind] = hacc
                 jaccard_core[ind] = jcore
                 jaccard_acc[ind] = jacc
+                acc_vs_core[ind] = avc
+                pangenome_frac[ind] = p_frac
 
         hamming_core_sims[i] = hamming_core
         hamming_acc_sims[i] = hamming_acc
         jaccard_core_sims[i] = jaccard_core
         jaccard_acc_sims[i] = jaccard_acc
+        acc_vs_core_sims[i] = acc_vs_core
+        pangenome_frac_sims[i] = pangenome_frac
 
+    print("Actual accessory : core rates")
+    print(acc_vs_core_sims)
+
+    print("Actual pangenome fractions")
+    print(pangenome_frac_sims)
 
     print("Generating graphs...")
 

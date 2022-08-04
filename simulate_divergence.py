@@ -10,10 +10,11 @@ from math import e
 def sim_divergence(query, mu, core, freq):
     num_sites = round(len(query) * mu)
 
+    total_sites = 0
+
     # iterate until all required sites mutated for given mutation rate
     if num_sites > 0:
         if core:
-            total_sites = 0
 
             choices = [1, 2, 3, 4]
 
@@ -47,7 +48,6 @@ def sim_divergence(query, mu, core, freq):
 
         #for accessory, mutate at rates given from avg_gene_freq of 1s
         else:
-            total_sites = 0
 
             mu_0 = freq
             mu_1 = 1 - freq
@@ -71,14 +71,20 @@ def sim_divergence(query, mu, core, freq):
                         query[index] = 0
 
 
-    return query
+    return query, total_sites
 
 def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu):
+    sites_mutated = []
+
     # mutate genomes
-    core_query1 = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
-    core_query2 = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
-    acc_query1 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
-    acc_query2 = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
+    core_query1, total_sites = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
+    sites_mutated.append(total_sites)
+    core_query2, total_sites = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu)
+    sites_mutated.append(total_sites)
+    acc_query1, total_sites = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
+    sites_mutated.append(total_sites)
+    acc_query2, total_sites = sim_divergence(np.copy(acc_ref), acc_mu[index], False, avg_gene_freq)
+    sites_mutated.append(total_sites)
 
     if adj == True:
         # add core genes to accessory distances
@@ -91,12 +97,29 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
         core_query1 = np.append(core_query1, core_invar)
         core_query2 = np.append(core_query2, core_invar)
 
+    acc_vs_core = 1
+    pangenome_frac = 0
+
+    if core_mu[index] != 0:
+        # determine accessory vs core divergence rate
+        prop_subs_core = (sites_mutated[0] + sites_mutated[1]) / (core_query1.size + core_query2.size)
+        prop_subs_acc = (sites_mutated[2] + sites_mutated[3]) / (acc_query1.size + acc_query2.size)
+        acc_vs_core = prop_subs_acc / prop_subs_core
+
+    # determine pangenome_frac
+    zeros_query1 = acc_query1 == 0
+    zeros_query2 = acc_query2 == 0
+    zeros_match = zeros_query1 == zeros_query2
+    num_zero_match = np.count_nonzero(zeros_match)
+
+    pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
+
     hamming_core = distance.hamming(core_query1, core_query2)
     hamming_acc = distance.hamming(acc_query1, acc_query2)
     jaccard_core = distance.jaccard(core_query1, core_query2)
     jaccard_acc = distance.jaccard(acc_query1, acc_query2)
 
-    return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc)
+    return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
 
 def model(x, c0, c1):
     return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
@@ -164,7 +187,9 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
         fig.savefig(outpref + name2 + ".png")
 
+        ax.clear()
         plt.clf
+        plt.cla
 
     # plot core hamming vs. accessory jaccard, predict relationship
     fig, ax = plt.subplots()
@@ -204,6 +229,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     ax.legend()
 
     fig.savefig(outpref + "core_vs_acc.png")
+    plt.cla
 
     plt.clf
 
