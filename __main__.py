@@ -218,6 +218,9 @@ if __name__ == "__main__":
     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
     lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
+    # plot pangenome_fracs against accessory and core distances
+    check_panfrac((distances[0], distances[3]), (pangenome_frac_sims, pangenome_frac_sims), options.outpref)
+
     # calculate proportion of invariable sites
     core_adj = size_core / core_num_var
     acc_adj = num_pangenome / size_acc

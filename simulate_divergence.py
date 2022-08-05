@@ -124,6 +124,11 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 def model(x, c0, c1):
     return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
 
+def model2(x, c1, c3):
+    #return c0 + c1 * x - c2 * np.exp(-c3 * x)
+    return c1 - c1 * np.exp(-c3 * x)
+    #return 1 + c1 * x - np.exp(-c3 * x)
+
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     sim = 0
     reg_x = np.zeros(len(hamming_core_sim) * len(hamming_core_sim[0]))
@@ -143,9 +148,44 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     try:
         c, cov = curve_fit(model, reg_x, reg_y)
     except RuntimeError:
-        c = [0,0,0,0]
+        c = [0,0,0]
 
     return c
+
+def check_panfrac(distances, pangenome_fracs, outpref):
+    reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
+    reg_y = np.zeros(len(distances[1]) * len(distances[1][0]))
+
+    for var1, var2, name in zip(distances, pangenome_fracs, ("hamming_core", "jaccard_accessory")):
+        # plot
+        fig, ax = plt.subplots()
+
+        for j in range(len(var1)):
+            x = np.array(var1[j])
+            y = np.array(var2[j])
+
+            reg_x[(j) * x.size: ((j) * x.size) + x.size] = x
+            reg_y[(j) * y.size: ((j) * y.size) + y.size] = y
+
+            ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
+
+        if name == "hamming_core":
+            c, cov = curve_fit(model2, reg_x, reg_y)
+
+            x = np.array(distances[0][0])
+            y = np.array([model2(j, c[0], c[1]) for j in x])
+            ax.plot(x, y, linewidth=2.0, label="Model")
+            print("Model parameters for hamming core vs. pangenome frac:\n" + " c0: " + str(c[0]) + " c1: " + str(c[1]))
+
+        ax.set_xlabel(name)
+        ax.set_ylabel("pangenome fraction")
+        ax.legend()
+
+        fig.savefig(outpref + name + "_vs_pangenome_frac.png")
+
+        ax.clear()
+        plt.clf
+        plt.cla
 
 def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_adj, acc_adj, adjusted):
     for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
@@ -215,7 +255,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     x = np.array(distances[0][0])
     y = np.array([model(j, c[0], c[1]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\n01s, 10s and 11s over pangenome size: " + str(c[1]))
+    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\npangenome fraction params: " + str(c[1]))
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
