@@ -123,10 +123,10 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 def model(x, c0, c1):
     return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
 
-def model2(x, c0, c1, c2, c3):
-    return c0 + c1 * x - c2 * np.exp(-c3 * x)
-    # return c0 - c0 * np.exp(-c1 * x)
-    #return 1 + c1 * x - np.exp(-c3 * x)
+def model2(x, c2, c3):
+    #return c0 + c1 * x - c2 * np.exp(-c3 * x)
+    #return c0 - c2 * np.exp(-c3 * x)
+    return 1 - c2 * np.exp(-c3 * x)
 
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     sim = 0
@@ -172,10 +172,10 @@ def check_panfrac(distances, pangenome_fracs, outpref):
             c, cov = curve_fit(model2, reg_x, reg_y)
 
             x = np.array(distances[0][0])
-            y = np.array([model2(j, c[0], c[1], c[2], c[3]) for j in x])
+            y = np.array([model2(j, c[0], c[1]) for j in x])
             ax.plot(x, y, linewidth=2.0, label="Model")
-            print("Model parameters for hamming core vs. pangenome frac:\n" + " c0: " + str(c[0]) + " c1: " + str(c[1])
-                  + " c2: " + str(c[2]) + " c3: " + str(c[3]))
+            print("Model parameters for hamming core vs. pangenome frac:")
+            print(c)
 
         ax.set_xlabel(name)
         ax.set_ylabel("pangenome fraction")
