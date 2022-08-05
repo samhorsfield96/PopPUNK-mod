@@ -107,9 +107,8 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
         acc_vs_core = prop_subs_acc / prop_subs_core
 
     # determine pangenome_frac
-    zeros_query1 = acc_query1 == 0
-    zeros_query2 = acc_query2 == 0
-    zeros_match = zeros_query1 == zeros_query2
+    match = acc_query1 == acc_query2
+    zeros_match = match[acc_query1 == 0]
     num_zero_match = np.count_nonzero(zeros_match)
 
     pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
@@ -124,9 +123,9 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 def model(x, c0, c1):
     return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
 
-def model2(x, c1, c3):
-    #return c0 + c1 * x - c2 * np.exp(-c3 * x)
-    return c1 - c1 * np.exp(-c3 * x)
+def model2(x, c0, c1, c2, c3):
+    return c0 + c1 * x - c2 * np.exp(-c3 * x)
+    # return c0 - c0 * np.exp(-c1 * x)
     #return 1 + c1 * x - np.exp(-c3 * x)
 
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
@@ -173,9 +172,10 @@ def check_panfrac(distances, pangenome_fracs, outpref):
             c, cov = curve_fit(model2, reg_x, reg_y)
 
             x = np.array(distances[0][0])
-            y = np.array([model2(j, c[0], c[1]) for j in x])
+            y = np.array([model2(j, c[0], c[1], c[2], c[3]) for j in x])
             ax.plot(x, y, linewidth=2.0, label="Model")
-            print("Model parameters for hamming core vs. pangenome frac:\n" + " c0: " + str(c[0]) + " c1: " + str(c[1]))
+            print("Model parameters for hamming core vs. pangenome frac:\n" + " c0: " + str(c[0]) + " c1: " + str(c[1])
+                  + " c2: " + str(c[2]) + " c3: " + str(c[3]))
 
         ax.set_xlabel(name)
         ax.set_ylabel("pangenome fraction")
@@ -253,9 +253,10 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     # predict using new model
     x = np.array(distances[0][0])
-    y = np.array([model(j, c[0], c[1]) for j in x])
+    y = np.array([model(j, c[0], c[1], c[2]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\npangenome fraction params: " + str(c[1]))
+    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\npangenome fraction params: " + str(c[1])
+          + ", " + str(c[2]))
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
@@ -286,12 +287,12 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 #     base_freq = [0.25, 0.25, 0.25, 0.25]
 #     base_choices = [1, 2, 3, 4]
 #
-#     base_mu = [0.925, 0.025, 0.025, 0.025]
+#     base_mu = [0.25, 0.25, 0.25, 0.25]
 #
 #     # gene presence/absence frequencies are in order 0, 1
 #     gene_freq = [0.5, 0.5]
 #     gene_choices = [0, 1]
-#     avg_gene_freq = 0.9
+#     avg_gene_freq = 0.5
 #
 #     # core mu is number of differences per base of alignment
 #     core_mu = [0.1 * i for i in range(0, 21, 2)]
@@ -365,7 +366,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 #         jaccard_acc = [None] * len(acc_mu)
 #
 #         for ind, val in enumerate(core_mu):
-#             ind, hcore, hacc, jcore, jacc = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu)
+#             ind, hcore, hacc, jcore, jacc, acc_vs_core, pangenome_frac = gen_distances(ind, core_var, acc_ref, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu)
 #             hamming_core[ind] = hcore
 #             hamming_acc[ind] = hacc
 #             jaccard_core[ind] = jcore
