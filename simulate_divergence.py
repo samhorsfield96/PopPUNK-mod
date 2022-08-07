@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from math import e
+from scipy.special import logsumexp
 
 def sim_divergence(query, mu, core, freq):
     num_sites = round(len(query) * mu)
@@ -120,13 +121,19 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
 
-def model(x, c0, c1):
-    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
+def model(x, c0, c1, c2):
+    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / (c1 + c2 * x - np.exp(-c1 * x))
 
-def model2(x, c2, c3):
+def model2(x, c0, c1):
+    #works
     #return c0 + c1 * x - c2 * np.exp(-c3 * x)
-    #return c0 - c2 * np.exp(-c3 * x)
-    return 1 - c2 * np.exp(-c3 * x)
+    # works
+    #return c0 + c1 * x - np.exp(-c2 * x)
+    #doesn't work
+    #return c1 * x - np.exp(-c3 * x)
+
+    #works
+    return c0 + c1 * x - np.exp(-c0 * x)
 
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     sim = 0
@@ -249,14 +256,14 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         sim += 1
 
     #reg_x = reg_x.reshape((-1, 1))
-    c, cov = curve_fit(model, reg_x, reg_y)
+    c, cov = curve_fit(model, reg_x, reg_y, p0=[1,2,1])
 
     # predict using new model
     x = np.array(distances[0][0])
     y = np.array([model(j, c[0], c[1], c[2]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\npangenome fraction params: " + str(c[1])
-          + ", " + str(c[2]))
+    print("Model parameters:\n" + "Accessory vs. core rate " + str(c[0]) + "\npangenome fraction params: ")
+    print(c)
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
