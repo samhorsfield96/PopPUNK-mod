@@ -121,14 +121,18 @@ def gen_distances(index, core_var, acc_ref, core_invar, num_core, core_mu, acc_m
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
 
-def model(x, c0, c1, c2, c3):
-    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / (c1 + c2 * x - np.exp(-c3 * x))
+def model(x, c0, c1):
+    return 1 - e ** (-c0 * (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c1)))))
 
-def model2(x, c0, c1, c2):
+def model2(x, c0):
     #works
     #return c0 + c1 * x - c2 * np.exp(-c3 * x)
     # works
-    return c0 + c1 * x - np.exp(-c2 * x)
+    #return c0 + c1 * x - np.exp(-c2 * x)
+    # doesn't work
+    return 1 - (e ** (-c0 * x))
+    #doesn't work
+    #return c0 - c1 * np.exp(-c2 * x)
     #doesn't work
     #return c1 * x - np.exp(-c3 * x)
 
@@ -152,15 +156,15 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
 
     #reg_x = reg_x.reshape((-1, 1))
     try:
-        c, cov = curve_fit(model, reg_x, reg_y)
+        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=([0, -np.inf], [np.inf, np.inf]))
     except RuntimeError:
         c = [0,0,0]
 
     return c
 
 def check_panfrac(distances, pangenome_fracs, outpref):
-    reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
-    reg_y = np.zeros(len(distances[1]) * len(distances[1][0]))
+    #reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
+    #reg_y = np.zeros(len(distances[1]) * len(distances[1][0]))
 
     for var1, var2, name in zip(distances, pangenome_fracs, ("hamming_core", "jaccard_accessory")):
         # plot
@@ -170,19 +174,22 @@ def check_panfrac(distances, pangenome_fracs, outpref):
             x = np.array(var1[j])
             y = np.array(var2[j])
 
-            reg_x[(j) * x.size: ((j) * x.size) + x.size] = x
-            reg_y[(j) * y.size: ((j) * y.size) + y.size] = y
+            #reg_x[(j) * x.size: ((j) * x.size) + x.size] = x
+            #reg_y[(j) * y.size: ((j) * y.size) + y.size] = y
 
             ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
 
-        if name == "hamming_core":
-            c, cov = curve_fit(model2, reg_x, reg_y)
-
-            x = np.array(distances[0][0])
-            y = np.array([model2(j, c[0], c[1], c[2]) for j in x])
-            ax.plot(x, y, linewidth=2.0, label="Model")
-            print("Model parameters for hamming core vs. pangenome frac:")
-            print(c)
+        # if name == "hamming_core":
+        #     c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=([0, -np.inf], [1, np.inf]))
+        #
+        #     with open(outpref + "pangenome_frac_model_parameters.txt", "w") as f:
+        #         f.write(np.array2string(c))
+        #
+        #     x = np.array(distances[0][0])
+        #     y = np.array([model2(j, c[0], c[1]) for j in x])
+        #     ax.plot(x, y, linewidth=2.0, label="Model")
+        #     print("Model parameters for hamming core vs. pangenome frac:")
+        #     print(c)
 
         ax.set_xlabel(name)
         ax.set_ylabel("pangenome fraction")
@@ -226,8 +233,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
         ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
         ax.set_aspect('equal')
-        ax.set_xlim(lims)
-        ax.set_ylim(0, 1)
+        #ax.set_xlim(lims)
+        #ax.set_ylim(0, 1)
         ax.set_xlabel(name1)
         ax.set_ylabel(name2)
         ax.legend()
@@ -256,11 +263,12 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         sim += 1
 
     #reg_x = reg_x.reshape((-1, 1))
-    c, cov = curve_fit(model, reg_x, reg_y, p0=[0,0.1,0,0], maxfev=5000)
+    #c, cov = curve_fit(model, reg_x, reg_y, bounds=([0, 1., -1., 0], [np.inf, 2., 0, 1.]), maxfev=5000)
+    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=([0, -np.inf], [np.inf, np.inf]))
 
     # predict using new model
     x = np.array(distances[0][0])
-    y = np.array([model(j, c[0], c[1], c[2], c[3]) for j in x])
+    y = np.array([model(j, c[0], c[1]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
     print("Accessory vs. core model parameters:")
     print(c)
@@ -273,13 +281,48 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         np.max([ax.get_xlim(), ax.get_xlim()]),  # max of both axes
     ]
 
-    ax.set_ylim(0, 1)
-    ax.set_xlim(lims)
+    # ax.set_ylim(0, 1)
+    # ax.set_xlim(lims)
     ax.set_xlabel("Core Hamming distance")
     ax.set_ylabel("Accessory Jaccard Distance")
     ax.legend()
 
     fig.savefig(outpref + "core_vs_acc.png")
+    plt.cla
+
+    plt.clf
+
+    # plot accessory jaccard vs. accessory hamming
+    fig, ax = plt.subplots()
+    sim = 1
+    reg_x = np.zeros(len(distances[1]) * len(distances[1][0]))
+    reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
+    for hamming, jaccard in zip(distances[1], distances[3]):
+        # make data, as comparing two diverged sequences, multiply by 2
+        x = np.array(hamming)
+        y = np.array(jaccard)
+        reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
+        reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
+
+        ax.plot(x, y, linewidth=2.0, label="Sim " + str(sim))
+        sim += 1
+
+    c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=([-np.inf], [np.inf]))
+
+    with open(outpref + "acc_hamming_vs_jacc_parameters.txt", "w") as f:
+        f.write(np.array2string(c))
+
+    x = np.array(distances[1][0])
+    y = np.array([model2(j, c[0]) for j in x])
+    ax.plot(x, y, linewidth=2.0, label="Model")
+    print("Model parameters for hamming acc vs. jaccard acc:")
+    print(c)
+
+    ax.set_xlabel("Accessory Hamming distance")
+    ax.set_ylabel("Accessory Jaccard Distance")
+    ax.legend()
+
+    fig.savefig(outpref + "acc_hamming_vs_jaccard.png")
     plt.cla
 
     plt.clf
