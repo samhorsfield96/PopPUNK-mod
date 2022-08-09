@@ -13,9 +13,9 @@ Simulates core and accessory genome divergence and calculates Hamming and Jaccar
 
 ```
 usage: python __main__.py [-h] [--core-size CORE_SIZE] [--core-var CORE_VAR] [--base-freq BASE_FREQ] [--base-mu BASE_MU] 
-                               [--start-gene-freq START_GENE_FREQ] [--avg-gene-freq AVG_GENE_FREQ] [--num-core NUM_CORE]
-                               [--num-pan NUM_PAN] [--core-mu CORE_MU] [--acc-mu ACC_MU] [--num-sim NUM_SIM] [--adjust] 
-                               [--outpref OUTPREF] [--threads THREADS]
+                          [--start-gene-freq START_GENE_FREQ] [--avg-gene-freq AVG_GENE_FREQ] [--num-core NUM_CORE]
+                          [--num-pan NUM_PAN] [--core-mu CORE_MU] [--acc-mu ACC_MU] [--core-sites CORE_SITES] 
+                          [--acc-sites ACC_SITES] [--num-sim NUM_SIM] [--adjust] [--outpref OUTPREF] [--threads THREADS]
 
 Calculate relationship between Hamming/Jaccard distances and core/accessory divergence
 
@@ -37,6 +37,10 @@ Input/Output options:
   --num-pan NUM_PAN     Number of genes in pangenome. Default = 5442
   --core-mu CORE_MU     Range of core genome mutation rate values (mutations per site per genome) in form start,stop,step. Default = "0,2,0.2"
   --acc-mu ACC_MU       Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. Default = "0,2,0.2"
+  --core-sites CORE_SITES
+                        Number of different core site mutation rates. Default = 5
+  --acc-sites ACC_SITES
+                        Number of different accessory site mutation rates. Default = 5
   --num-sim NUM_SIM     Number of simulations to run. Default = 1
   --adjust              Adjust core and accessory distances for invariant sites. Default = False
   --outpref OUTPREF     Output prefix. Default = "./"
