@@ -47,6 +47,16 @@ def get_options():
                     default="0,2,0.2",
                     help='Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. '
                          'Default = "0,2,0.2"')
+    IO.add_argument('--core-sites',
+                    type=int,
+                    default=5,
+                    help='Number of different core site mutation rates. '
+                         'Default = 5')
+    IO.add_argument('--acc-sites',
+                    type=int,
+                    default=5,
+                    help='Number of different accessory site mutation rates. '
+                         'Default = 5')
     IO.add_argument('--num-sim',
                     type=int,
                     default=1,
@@ -177,6 +187,7 @@ if __name__ == "__main__":
         core_var = core_ref[present]
         core_invar = core_ref[np.invert(present)]
 
+
         hamming_core = [None] * len(core_mu)
         hamming_acc = [None] * len(acc_mu)
         jaccard_core = [None] * len(core_mu)
@@ -186,9 +197,9 @@ if __name__ == "__main__":
 
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
-                    partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
+                    partial(gen_distances, core_var=core_var, acc_var=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
-                            base_mu=base_mu),
+                            base_mu=base_mu, no_splits_core=options.core_sites, no_splits_acc=options.acc_sites),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc
