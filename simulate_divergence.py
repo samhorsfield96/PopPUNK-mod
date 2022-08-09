@@ -22,9 +22,12 @@ def calc_gamma(x, no_split, shape):
         bin_probs[i] = cdf[i] - cdf[i - 1]
 
     # ensure all add up to 1
-    bin_probs[-1] = 1 - cdf[-2]
+    if no_split > 1:
+        bin_probs[-1] = 1 - cdf[-2]
+    else:
+        bin_probs[0] = 1.0
 
-    sum_bins_mu = np.sum(bin_probs)
+    #sum_bins_mu = np.sum(bin_probs)
 
     # get bins for pdf
     i, d = divmod(x.size, no_split)
@@ -45,6 +48,8 @@ def calc_gamma(x, no_split, shape):
         site_mu[start : start + bins[index]] = scaled_prob
 
         start += bins[index]
+
+    #sum_sites_mu = np.sum(site_mu)
 
     return site_mu
 
@@ -376,8 +381,8 @@ if __name__ == "__main__":
     num_pangenome = 5442
     num_sim = 2
     core_invar = 106196
-    core_sites = 5
-    acc_sites = 5
+    core_sites = 1
+    acc_sites = 1
 
     # base frequencies are alphabetical, A, C, G, T
     base_freq = [0.25, 0.25, 0.25, 0.25]
