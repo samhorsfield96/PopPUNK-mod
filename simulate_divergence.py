@@ -8,12 +8,37 @@ import random
 from math import e
 from scipy.stats import gamma
 
-def calc_gamma(x, no_split, shape):
-    #split_range = [x for x in range(no_split)]
+def calc_man(vec_size, bin_probs):
+    no_split = len(bin_probs)
 
-    split_range = np.linspace(gamma.ppf(0.00001, shape),
-                    gamma.ppf(0.99999, shape), no_split)
-    cdf = gamma.cdf(split_range, shape)
+    # get bins for pdf
+    i, d = divmod(vec_size, no_split)
+    mod = vec_size % no_split
+
+    bins = [i for x in range(no_split)]
+
+    # add modulus to bins to assign all sites
+    for i in range(mod):
+        bins[i] += 1
+
+    # assign probabilities to sites
+    site_mu = np.zeros(vec_size)
+
+    start = 0
+    for index, prob in enumerate(bin_probs):
+        scaled_prob = prob / bins[index]
+        site_mu[start : start + bins[index]] = scaled_prob
+
+        start += bins[index]
+
+    #sum_sites_mu = np.sum(site_mu)
+
+    return site_mu
+
+def calc_gamma(vec_size, no_split, shape, scale, sim_index):
+    split_range = np.linspace(gamma.ppf(0.001, shape),
+                    gamma.ppf(0.999, shape), no_split)
+    cdf = gamma.cdf(split_range, shape, scale)
 
     # determine total culumative probability of bin
     bin_probs = [None] * no_split
@@ -27,11 +52,14 @@ def calc_gamma(x, no_split, shape):
     else:
         bin_probs[0] = 1.0
 
+    if sim_index == 0:
+        print(bin_probs)
+
     #sum_bins_mu = np.sum(bin_probs)
 
     # get bins for pdf
-    i, d = divmod(x.size, no_split)
-    mod = x.size % no_split
+    i, d = divmod(vec_size, no_split)
+    mod = vec_size % no_split
 
     bins = [i for x in range(no_split)]
 
@@ -40,7 +68,7 @@ def calc_gamma(x, no_split, shape):
         bins[i] += 1
 
     # assign probabilities to sites
-    site_mu = np.zeros(x.size)
+    site_mu = np.zeros(vec_size)
 
     start = 0
     for index, prob in enumerate(bin_probs):
@@ -116,12 +144,8 @@ def sim_divergence(query, mu, core, freq, site_mu):
     return query, total_sites
 
 def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu,
-                  no_splits_core, no_splits_acc):
+                  core_site_mu, acc_site_mu):
     sites_mutated = []
-
-    # determine site specific mutation rates
-    core_site_mu = calc_gamma(core_var, no_splits_core, core_mu[index])
-    acc_site_mu = calc_gamma(acc_var, no_splits_acc, acc_mu[index])
 
     # mutate genomes
     core_query1, total_sites = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu, core_site_mu)
@@ -373,16 +397,22 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     plt.clf
 
-# for testing
+#for testing
 if __name__ == "__main__":
     threads = 4
     size_core = 1140000
     num_core = 1194
     num_pangenome = 5442
     num_sim = 2
-    core_invar = 106196
-    core_sites = 1
-    acc_sites = 1
+    core_num_var = 106196
+    core_sites = 5
+    acc_sites = 5
+
+    # core_sites_man = [0.7, 0.1, 0.1, 0.1]
+    # acc_sites_man = [0.7, 0.1, 0.1, 0.1]
+
+    core_sites_man = None
+    acc_sites_man = None
 
     # base frequencies are alphabetical, A, C, G, T
     base_freq = [0.25, 0.25, 0.25, 0.25]
@@ -402,7 +432,6 @@ if __name__ == "__main__":
     acc_mu = [0.1 * i for i in range(0, 11)]
 
     adj = True
-    core_num_var = 106196
 
     hamming_core = [None] * len(core_mu)
     hamming_acc = [None] * len(core_mu)
@@ -443,6 +472,10 @@ if __name__ == "__main__":
     #         jaccard_core_sims[i] = jaccard_core
     #         jaccard_acc_sims[i] = jaccard_acc
 
+    # determine site specific mutation rates. Get from gamma distribution or manual entries
+    gamma_shape = 20.0
+    gamma_scale = 1.0
+
     for i in range(num_sim):
 
         print("Simulation " + str(i + 1))
@@ -466,11 +499,21 @@ if __name__ == "__main__":
         jaccard_core = [None] * len(core_mu)
         jaccard_acc = [None] * len(acc_mu)
 
+        if core_sites_man is None:
+            core_site_mu = calc_gamma(core_num_var, core_sites, gamma_shape, gamma_scale)
+        else:
+            core_site_mu = calc_man(core_num_var, core_sites_man)
+
+        if acc_sites_man is None:
+            acc_site_mu = calc_gamma(size_acc, acc_sites, gamma_shape, gamma_scale)
+        else:
+            acc_site_mu = calc_man(size_acc, acc_sites_man)
+
         for ind, val in enumerate(core_mu):
             ind, hcore, hacc, jcore, jacc, acc_vs_core, pangenome_frac = gen_distances(ind, core_var, acc_ref,
                                                                                        core_invar, num_core, core_mu, acc_mu,
-                                                                                       adj, avg_gene_freq, base_mu, core_sites,
-                                                                                       acc_sites)
+                                                                                       adj, avg_gene_freq, base_mu, core_site_mu,
+                                                                                       acc_site_mu)
             hamming_core[ind] = hcore
             hamming_acc[ind] = hacc
             jaccard_core[ind] = jcore

@@ -49,14 +49,42 @@ def get_options():
                          'Default = "0,2,0.2"')
     IO.add_argument('--core-sites',
                     type=int,
-                    default=5,
+                    default=3,
                     help='Number of different core site mutation rates. '
-                         'Default = 5')
+                         'Default = 3')
     IO.add_argument('--acc-sites',
                     type=int,
-                    default=5,
+                    default=3,
                     help='Number of different accessory site mutation rates. '
-                         'Default = 5')
+                         'Default = 3')
+    IO.add_argument('--core-gamma-shape',
+                    type=float,
+                    default=20.0,
+                    help='Shape parameter for core per-site substitution rates. '
+                         'Default = 20.0')
+    IO.add_argument('--core-gamma-scale',
+                    type=float,
+                    default=1.0,
+                    help='Scale parameter for core per-site substitution rates. '
+                         'Default = 1.0')
+    IO.add_argument('--acc-gamma-shape',
+                    type=float,
+                    default=20.0,
+                    help='Shape parameter for accessory per-site substitution rates. '
+                         'Default = 20.0')
+    IO.add_argument('--acc-gamma-scale',
+                    type=float,
+                    default=1.0,
+                    help='Scale parameter for accessory per-site substitution rates. '
+                         'Default = 1.0')
+    IO.add_argument('--core-sites-man',
+                    default=None,
+                    help='Manual core per-site mutation rates. Must sum to 1. '
+                         'Default = None')
+    IO.add_argument('--acc-sites-man',
+                    default=None,
+                    help='Manual accessory per-site mutation rates. Must sum to 1. '
+                         'Default = None')
     IO.add_argument('--num-sim',
                     type=int,
                     default=1,
@@ -85,6 +113,14 @@ if __name__ == "__main__":
     core_num_var = options.core_var
     adjusted = options.adjust
     avg_gene_freq = options.avg_gene_freq
+
+    # determine per-site substitution rates
+    core_sites_man = None
+    acc_sites_man = None
+    if options.core_sites_man is not None:
+        core_sites_man = [float(i) for i in options.core_sites_man.split(",")]
+    if options.acc_sites_man is not None:
+        acc_sites_man = [float(i) for i in options.acc_sites_man.split(",")]
 
     # calculate number of core invariant sites
     core_num_invar = size_core - core_num_var
@@ -176,7 +212,6 @@ if __name__ == "__main__":
     pangenome_frac_sims = [None] * options.num_sim
 
     for i in range(options.num_sim):
-        print("Simulation " + str(i + 1))
         core_ref = np.random.choice(base_choices, size_core, p=base_freq)
         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 
@@ -186,7 +221,22 @@ if __name__ == "__main__":
         present[sites] = True
         core_var = core_ref[present]
         core_invar = core_ref[np.invert(present)]
+        # determine per-site mutation rate
+        if core_sites_man is None:
+            if i == 0:
+                print("Core genome per-site mutation rate compartments: ")
+            core_site_mu = calc_gamma(core_var.size, options.core_sites, options.core_gamma_shape,
+                                      options.core_gamma_scale, i)
+        else:
+            core_site_mu = calc_man(core_var.size, core_sites_man)
 
+        if acc_sites_man is None:
+            if i == 0:
+                print("Accessory genome per-site mutation rate compartments: ")
+            acc_site_mu = calc_gamma(size_acc, options.acc_sites, options.acc_gamma_shape,
+                                     options.acc_gamma_scale, i)
+        else:
+            acc_site_mu = calc_man(size_acc, acc_sites_man)
 
         hamming_core = [None] * len(core_mu)
         hamming_acc = [None] * len(acc_mu)
@@ -195,11 +245,12 @@ if __name__ == "__main__":
         acc_vs_core = [None] * len(acc_mu)
         pangenome_frac = [None] * len(acc_mu)
 
+        print("Simulation " + str(i + 1))
         with Pool(processes=threads) as pool:
             for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_var=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
-                            base_mu=base_mu, no_splits_core=options.core_sites, no_splits_acc=options.acc_sites),
+                            base_mu=base_mu, core_site_mu=core_site_mu, acc_site_mu=acc_site_mu),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc
