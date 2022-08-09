@@ -8,6 +8,46 @@ import random
 from math import e
 from scipy.stats import gamma
 
+def calc_man_vec(array_size, vec_size, bin_probs):
+    no_split = np.shape(bin_probs)[1]
+
+    # get bins for pdf
+    i, d = divmod(vec_size, no_split)
+    mod = vec_size % no_split
+
+    bins = np.repeat(i, repeats=np.shape(bin_probs)[1], axis=1).astype(int)
+
+    # add modulus to bins to assign all sites
+    bins[:, 0] += mod[:, 0]
+
+    # assign probabilities to sites
+    site_mu = np.zeros((np.shape(bin_probs)[0], array_size))
+
+    scaled_bin_probs = bin_probs / bins
+
+    start = np.zeros(np.shape(bin_probs)[0], dtype=int)
+    end = bins[:, 0]
+
+    for index in range(np.shape(bin_probs)[1]):
+        to_change = np.zeros(site_mu.shape)
+
+        # mask areas in strings
+        r = np.arange(to_change.shape[1])
+        mask = (start[:, None] <= r) & (end[:, None] >= r)
+
+        scaled_bins_index = scaled_bin_probs[:, index]
+
+        for entry in range(scaled_bins_index.size):
+            site_mu[entry][mask[entry]] = scaled_bins_index[entry]
+
+        start += bins[:, index]
+        end += bins[:, index]
+
+    for row in range(site_mu.shape[0]):
+        sum_sites_mu = np.sum(site_mu[row])
+
+    return site_mu
+
 def calc_man(vec_size, bin_probs):
     no_split = len(bin_probs)
 
