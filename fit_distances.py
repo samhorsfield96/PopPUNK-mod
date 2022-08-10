@@ -9,7 +9,7 @@ from sklearn.metrics import mean_squared_error
 import math
 
 def read_files(in_dir, prefix=""):
-    all_files = glob.glob(os.path.join(in_dir, "*.txt"))
+    all_files = glob.glob(os.path.join(in_dir, prefix + "*.txt"))
 
     li = []
     for filename in all_files:
