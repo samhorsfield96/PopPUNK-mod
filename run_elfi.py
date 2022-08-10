@@ -9,13 +9,22 @@ import elfi
 from simulate_divergence import *
 
 def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
-                       base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5,
-                       acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5,
+                       base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
+                       acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4,
                        batch_size=1, random_state=None):
+    # ensure probabilities sum to 1
+    vec_sum = np.sum(np.array([[base_mu1], [base_mu2], [base_mu3]]), axis=0)
+    base_mu4 = 1 - vec_sum[0]
+    vec_sum = np.sum(np.array([[core_site_mu1], [core_site_mu2], [core_site_mu3], [core_site_mu4]]), axis=0)
+    core_site_mu5 = 1 - vec_sum[0]
+    vec_sum = np.sum(np.array([[acc_site_mu1], [acc_site_mu2], [acc_site_mu3], [acc_site_mu4]]), axis=0)
+    acc_site_mu5 = 1 - vec_sum[0]
+
     # generate vectors for mutation rates
-    base_mu = np.transpose(np.array(base_mu1, base_mu2, base_mu3, base_mu4))
-    core_site = np.transpose(np.array(core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5))
-    acc_site = np.transpose(np.array(acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5))
+    base_mu = np.concatenate((base_mu1, base_mu2, base_mu3, base_mu4), axis=1)
+    core_site = np.concatenate((core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5), axis=1)
+    acc_site = np.concatenate((acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5), axis=1)
+    gene_mu = np.concatenate((1 - avg_gene_freq, avg_gene_freq), axis=1, dtype=float)
 
     core_mu_arr = np.repeat(core_mu, repeats=batch_size, axis=0)
     acc_mu_arr = core_mu_arr * acc_vs_core
@@ -25,41 +34,23 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
     acc_var = np.round(size_pan * prop_acc_var)
     acc_invar = size_pan - acc_var
 
-    core_site_mu = calc_man_vec(core_var, core_site, size_core)
-    acc_site_mu = calc_man_vec(acc_var, acc_site, size_pan)
+    core_site_mu = calc_man_vec(size_core, core_var, core_site)
+    acc_site_mu = calc_man_vec(size_pan, acc_var, acc_site)
+
+    # generate starting genomes
+    core_ref = np.zeros((batch_size, size_core))
+    acc_ref = np.zeros((batch_size, size_pan))
+    for i in range(batch_size):
+        core_ref[i] = np.random.choice([1, 2, 3, 4], size_core, p=base_mu[i])
+        acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
 
     # mutate genomes
-    core_query1, total_sites = sim_divergence(np.copy(core_var), core_mu, True, base_mu, core_site_mu)
-    core_query2, total_sites = sim_divergence(np.copy(core_var), core_mu, True, base_mu, core_site_mu)
-    acc_query1, total_sites = sim_divergence(np.copy(acc_var), acc_mu, False, avg_gene_freq, acc_site_mu)
-    acc_query2, total_sites = sim_divergence(np.copy(acc_var), acc_mu, False, avg_gene_freq, acc_site_mu)
+    core_query1 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
+    core_query2 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
+    acc_query1 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
+    acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
 
-    # add core genes to accessory distances
-    #acc_ref = np.append(acc_ref, np.ones(num_core))
-    acc_query1 = np.append(acc_query1, np.ones(num_core))
-    acc_query2 = np.append(acc_query2, np.ones(num_core))
-
-    # add core invariant sites to core alignments
-    #core_var = np.append(core_var, core_invar)
-    core_query1 = np.append(core_query1, core_invar)
-    core_query2 = np.append(core_query2, core_invar)
-
-    acc_vs_core = 1
-    pangenome_frac = 0
-
-    if core_mu[index] != 0:
-        # determine accessory vs core divergence rate
-        prop_subs_core = (sites_mutated[0] + sites_mutated[1]) / (core_query1.size + core_query2.size)
-        prop_subs_acc = (sites_mutated[2] + sites_mutated[3]) / (acc_query1.size + acc_query2.size)
-        acc_vs_core = prop_subs_acc / prop_subs_core
-
-    # determine pangenome_frac
-    match = acc_query1 == acc_query2
-    zeros_match = match[acc_query1 == 0]
-    num_zero_match = np.count_nonzero(zeros_match)
-
-    pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
-
+    # determine hamming and core distances
     hamming_core = distance.hamming(core_query1, core_query2)
     hamming_acc = distance.hamming(acc_query1, acc_query2)
     jaccard_core = distance.jaccard(core_query1, core_query2)
@@ -86,7 +77,31 @@ def autocov(x, lag=1):
     return C
 
 if __name__ == "__main__":
-    test_vec = calc_man_vec(10000, np.array([[500], [1000]]), np.array([[0.7, 0.1, 0.1, 0.1], [0.25, 0.25, 0.25, 0.25]]))
+    #test_vec = calc_man_vec(10000, np.array([[500], [1000]]), np.array([[0.7, 0.1, 0.1, 0.1], [0.25, 0.25, 0.25, 0.25]]))
+
+    size_core = 10000
+    size_pan = 1000
+    prop_core_var = np.array([[0.25], [0.5]])
+    prop_acc_var = np.array([[0.25], [0.5]])
+    core_mu = np.array([[0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18]])
+    acc_vs_core = np.array([[0.5], [1]])
+    avg_gene_freq = np.array([[0.5], [0.75]])
+    base_mu1 = np.array([[0.25], [0.7]])
+    base_mu2 = np.array([[0.25], [0.1]])
+    base_mu3 = np.array([[0.25], [0.1]])
+    core_site_mu1 = np.array([[0.2], [0.6]])
+    core_site_mu2 = np.array([[0.2], [0.1]])
+    core_site_mu3 = np.array([[0.2], [0.1]])
+    core_site_mu4 = np.array([[0.2], [0.1]])
+    acc_site_mu1 = np.array([[0.2], [0.6]])
+    acc_site_mu2 = np.array([[0.2], [0.1]])
+    acc_site_mu3 = np.array([[0.2], [0.1]])
+    acc_site_mu4 = np.array([[0.2], [0.1]])
+
+
+    test_out = gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1,
+                                  base_mu2, base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, acc_site_mu1,
+                                  acc_site_mu2, acc_site_mu3, acc_site_mu4, batch_size=2, random_state=None)
 
 
     # true parameters

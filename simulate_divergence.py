@@ -13,7 +13,7 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
     # get bins for pdf
     i, d = divmod(vec_size, no_split)
-    mod = vec_size % no_split
+    mod = (vec_size % no_split).astype(int)
 
     bins = np.repeat(i, repeats=np.shape(bin_probs)[1], axis=1).astype(int)
 
@@ -33,7 +33,7 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
         # mask areas in strings
         r = np.arange(to_change.shape[1])
-        mask = (start[:, None] <= r) & (end[:, None] >= r)
+        mask = (start[:, None] <= r) & (end[:, None] > r)
 
         scaled_bins_index = scaled_bin_probs[:, index]
 
@@ -47,6 +47,55 @@ def calc_man_vec(array_size, vec_size, bin_probs):
         sum_sites_mu = np.sum(site_mu[row])
 
     return site_mu
+
+def sim_divergence_vec(ref, mu, core, freq, site_mu):
+    num_sites_vec = np.round(ref.shape[1] * mu).astype(int)
+
+    #total_sites_vec = np.zeros((mu.shape[0]))
+
+    # create 3d array, columns are each base, rows are each mu rate, depth is num batches
+    query = np.zeros((mu.shape[0], mu.shape[1], ref.shape[1]))
+
+    # iterate until all required sites mutated for given mutation rate
+    for i in range(mu.shape[0]):
+        for j in range(mu.shape[1]):
+            query[i][j] = ref[i]
+
+            num_sites = num_sites_vec[i][j]
+            if num_sites > 0:
+                if core:
+                    choices = [1, 2, 3, 4]
+                else:
+                    choices = [0, 1]
+
+                total_sites = 0
+                while total_sites < num_sites:
+                    to_sample = num_sites - total_sites
+
+                    # pick all sites to be mutated
+                    sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
+
+                    # determine number of times each site can be mutated
+                    unique, counts = np.unique(sites, return_counts=True)
+
+                    # determine where to sample
+                    count_sites = counts == 1
+                    sample_sites = unique[count_sites]
+
+                    # determine sites with and without change
+                    probs = freq[i]
+                    sum_probs = np.sum(probs)
+                    changes = np.array([np.random.choice(choices, p=freq[i]) for _ in sample_sites])
+
+                    non_mutated = query[i][j][sample_sites] == changes
+
+                    query[i][j][sample_sites] = changes
+
+                    # determine number of actual changes
+                    total_sites += changes.size - np.count_nonzero(non_mutated)
+
+    return query
+
 
 def calc_man(vec_size, bin_probs):
     no_split = len(bin_probs)
@@ -156,30 +205,6 @@ def sim_divergence(query, mu, core, freq, site_mu):
 
             # determine number of actual changes
             total_sites += changes.size - np.count_nonzero(non_mutated)
-
-        # #for accessory, mutate at rates given from avg_gene_freq of 1s
-        # else:
-        #
-        #     mu_0 = freq
-        #     mu_1 = 1 - freq
-        #
-        #     while total_sites < num_sites:
-        #         # randomly pick point in accessory
-        #         index = random.choice(range(query.size))
-        #         x = query[index]
-        #
-        #         mutate = False
-        #         if x == 0:
-        #             mutate = np.random.choice([True, False], p=[mu_0, mu_1])
-        #         else:
-        #             mutate = np.random.choice([True, False], p=[mu_1, mu_0])
-        #
-        #         if mutate:
-        #             total_sites += 1
-        #             if x == 0:
-        #                 query[index] = 1
-        #             else:
-        #                 query[index] = 0
 
     return query, total_sites
 
