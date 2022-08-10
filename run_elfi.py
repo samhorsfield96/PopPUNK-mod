@@ -9,38 +9,79 @@ import elfi
 from simulate_divergence import *
 from fit_distances import read_files
 
-class CustomPrior_uniform(elfi.Distribution):
-    def rvs(locs, scales, size=1, random_state=None):
-        t1 = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t1
-
-class CustomPrior_uniform_neg1(elfi.Distribution):
-    def rvs(sum, size=1, random_state=None):
+class CustomPrior_s1(elfi.Distribution):
+    def rvs(vec, size=1, random_state=None):
         locs = np.zeros(size)
-        scales = 1 - sum
-        t2 = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t2
+        scales = 1 - vec
+        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
+        return t
+
+class CustomPrior_s2(elfi.Distribution):
+    def rvs(p1, p2, size=1, random_state=None):
+        locs = np.zeros(size)
+        scales = 1 - np.sum(np.array([p1, p2]), axis=0)
+        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
+        return t
+
+class CustomPrior_s3(elfi.Distribution):
+    def rvs(p1, p2, p3, size=1, random_state=None):
+        locs = np.zeros(size)
+        scales = 1 - np.sum(np.array([p1, p2, p3]), axis=0)
+        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
+        return t
+
+class CustomPrior_s4(elfi.Distribution):
+    def rvs(p1, p2, p3, p4, size=1, random_state=None):
+        locs = np.zeros(size)
+        scales = 1 - np.sum(np.array([p1, p2, p3, p4]), axis=0)
+        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
+        return t
+
+def mean(x):
+    C = np.mean(x, axis=0)
+    return C
+
+def median(x):
+    C = np.median(x, axis=0)
+    return C
+
+def max(x):
+    C = np.max(x, axis=0)
+    return C
+
+def min(x):
+    C = np.min(x, axis=0)
+    return C
+
+def quantile(x, q):
+    C = np.quantile(x, q, axis=0)
+    return C
+
+def stddev(x):
+    C = np.std(x, axis=0)
+    return C
 
 def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
-                       base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5,
-                       acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5,
+                       base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
+                       acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4,
                        batch_size=1, random_state=None):
     # ensure probabilities sum to 1
-    # vec_sum = np.sum(np.array([[base_mu1], [base_mu2], [base_mu3]]), axis=0)
-    # base_mu4 = 1 - vec_sum[0]
-    # vec_sum = np.sum(np.array([[core_site_mu1], [core_site_mu2], [core_site_mu3], [core_site_mu4]]), axis=0)
-    # core_site_mu5 = 1 - vec_sum[0]
-    # vec_sum = np.sum(np.array([[acc_site_mu1], [acc_site_mu2], [acc_site_mu3], [acc_site_mu4]]), axis=0)
-    # acc_site_mu5 = 1 - vec_sum[0]
+    vec_sum = np.sum(np.array([base_mu1, base_mu2, base_mu3]), axis=0)
+    base_mu4 = 1 - vec_sum
+    vec_sum = np.sum(np.array([core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4]), axis=0)
+    core_site_mu5 = 1 - vec_sum
+    vec_sum = np.sum(np.array([acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4]), axis=0)
+    acc_site_mu5 = 1 - vec_sum
 
     # generate vectors for mutation rates
-    base_mu = np.concatenate((base_mu1, base_mu2, base_mu3, base_mu4), axis=1)
-    core_site = np.concatenate((core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5), axis=1)
-    acc_site = np.concatenate((acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5), axis=1)
-    gene_mu = np.concatenate((1 - avg_gene_freq, avg_gene_freq), axis=1, dtype=float)
+    base_mu = np.stack((base_mu1, base_mu2, base_mu3, base_mu4), axis=1)
+    core_site = np.stack((core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, core_site_mu5), axis=1)
+    acc_site = np.stack((acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5), axis=1)
+    gene_mu = np.stack((1 - avg_gene_freq, avg_gene_freq), axis=1)
 
     # determine vectors of core and accessory per-site mutation rates and variable regions
-    core_mu_arr = np.repeat(core_mu, repeats=batch_size, axis=0)
+    core_mu_arr = np.array([core_mu] * batch_size)
+    acc_vs_core = np.reshape(acc_vs_core, (-1, 1))
     acc_mu_arr = core_mu_arr * acc_vs_core
     core_var = np.round(size_core * prop_core_var)
     acc_var = np.round(size_pan * prop_acc_var)
@@ -62,15 +103,18 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
     acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
 
     # determine hamming and core distances
-    hamming_core = np.zeros((batch_size, core_mu.shape[1]))
-    jaccard_acc = np.zeros((batch_size, core_mu.shape[1]))
+    hamming_core = np.zeros((batch_size, core_mu_arr.shape[1]))
+    jaccard_acc = np.zeros((batch_size, core_mu_arr.shape[1]))
 
     for i in range(batch_size):
-        for j in range(core_mu.shape[1]):
+        for j in range(core_mu_arr.shape[1]):
             hamming_core[i][j] = distance.hamming(core_query1[i][j], core_query2[i][j])
             jaccard_acc[i][j] = distance.hamming(acc_query1[i][j], acc_query2[i][j])
 
-    return (hamming_core, jaccard_acc)
+    # calculate euclidean distance to origin
+    eucl = np.sqrt((hamming_core ** 2) + (jaccard_acc ** 2))
+
+    return eucl
 
 def MA2(t1, t2, n_obs=100, batch_size=1, random_state=None):
     # Make inputs 2d arrays for numpy broadcasting with w
@@ -91,22 +135,25 @@ if __name__ == "__main__":
     # size_pan = 10000
     #
     # # testing
-    # prop_core_var = np.array([[0.25], [0.5]])
-    # prop_acc_var = np.array([[0.25], [0.5]])
-    # core_mu = np.array([[0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18]])
-    # acc_vs_core = np.array([[0.5], [1]])
-    # avg_gene_freq = np.array([[0.5], [0.75]])
-    # base_mu1 = np.array([[0.25], [0.7]])
-    # base_mu2 = np.array([[0.25], [0.1]])
-    # base_mu3 = np.array([[0.25], [0.1]])
-    # core_site_mu1 = np.array([[0.2], [0.6]])
-    # core_site_mu2 = np.array([[0.2], [0.1]])
-    # core_site_mu3 = np.array([[0.2], [0.1]])
-    # core_site_mu4 = np.array([[0.2], [0.1]])
-    # acc_site_mu1 = np.array([[0.2], [0.6]])
-    # acc_site_mu2 = np.array([[0.2], [0.1]])
-    # acc_site_mu3 = np.array([[0.2], [0.1]])
-    # acc_site_mu4 = np.array([[0.2], [0.1]])
+    # prop_core_var = np.array([0.25, 0.5])
+    # prop_acc_var = np.array([0.25, 0.5])
+    # core_mu = np.array([0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16, 0.18])
+    # acc_vs_core = np.array([0.5, 1])
+    # avg_gene_freq = np.array([0.5, 0.75])
+    # base_mu1 = np.array([0.25, 0.7])
+    # base_mu2 = np.array([0.25, 0.1])
+    # base_mu3 = np.array([0.25, 0.1])
+    # #base_mu4 = np.array([0.25, 0.1])
+    # core_site_mu1 = np.array([0.2, 0.6])
+    # core_site_mu2 = np.array([0.2, 0.1])
+    # core_site_mu3 = np.array([0.2, 0.1])
+    # core_site_mu4 = np.array([0.2, 0.1])
+    # #core_site_mu5 = np.array([0.2, 0.1])
+    # acc_site_mu1 = np.array([0.2, 0.6])
+    # acc_site_mu2 = np.array([0.2, 0.1])
+    # acc_site_mu3 = np.array([0.2, 0.1])
+    # acc_site_mu4 = np.array([0.2, 0.1])
+    # #acc_site_mu5 = np.array([0.2, 0.1])
     #
     #
     # test_out = gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1,
@@ -129,40 +176,63 @@ if __name__ == "__main__":
     batch_size = 1000
 
     # set priors
-    acc_vs_core = elfi.Prior('uniform', 0, 200, batch_size)
-    avg_gene_freq = elfi.Prior('uniform', 0, 1, batch_size)
-    prop_core_var = elfi.Prior('uniform', 0, 1, batch_size)
-    prop_acc_var = elfi.Prior('uniform', 0, 1, batch_size)
+    acc_vs_core = elfi.Prior('uniform', 0, 200)
+    avg_gene_freq = elfi.Prior('uniform', 0, 1)
+    prop_core_var = elfi.Prior('uniform', 0, 1)
+    prop_acc_var = elfi.Prior('uniform', 0, 1)
 
     # set priors based on remaining sum from previous allocations
-    base_mu1 = CustomPrior_uniform.rvs(0, 1, batch_size)
-    base_mu2 = CustomPrior_uniform_neg1.rvs(base_mu1, batch_size)
-    sum_vec = np.sum(np.array([[base_mu1], [base_mu2]]), axis=0)[0]
-    base_mu3 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
-    sum_vec = np.sum(np.array([[base_mu1], [base_mu2], [base_mu3]]), axis=0)[0]
-    base_mu4 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
+    base_mu1 = elfi.Prior('uniform', 0, 1)
+    base_mu2 = elfi.Prior(CustomPrior_s1, base_mu1)
+    base_mu3 = elfi.Prior(CustomPrior_s2, base_mu1, base_mu2)
+    #base_mu4 = elfi.Prior(CustomPrior_s3, base_mu1, base_mu2, base_mu3)
 
-    core_site_mu1 = CustomPrior_uniform.rvs(0, 1, batch_size)
-    core_site_mu2 = CustomPrior_uniform_neg1.rvs(core_site_mu1, batch_size)
-    sum_vec = np.sum(np.array([[core_site_mu1], [core_site_mu2]]), axis=0)[0]
-    core_site_mu3 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
-    sum_vec = np.sum(np.array([[core_site_mu1], [core_site_mu2], [core_site_mu3]]), axis=0)[0]
-    core_site_mu4 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
-    sum_vec = np.sum(np.array([[core_site_mu1], [core_site_mu2], [core_site_mu3], [core_site_mu4]]), axis=0)[0]
-    core_site_mu5 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
+    core_site_mu1 = elfi.Prior('uniform', 0, 1)
+    core_site_mu2 = elfi.Prior(CustomPrior_s1, core_site_mu1)
+    core_site_mu3 = elfi.Prior(CustomPrior_s2, core_site_mu1, core_site_mu2)
+    core_site_mu4 = elfi.Prior(CustomPrior_s3, core_site_mu1, core_site_mu2, core_site_mu3)
+    #core_site_mu5 = elfi.Prior(CustomPrior_s4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4)
 
-    acc_site_mu1 = CustomPrior_uniform.rvs(0, 1, batch_size)
-    acc_site_mu2 = CustomPrior_uniform_neg1.rvs(acc_site_mu1, batch_size)
-    sum_vec = np.sum(np.array([[acc_site_mu1], [acc_site_mu2]]), axis=0)[0]
-    acc_site_mu3 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
-    sum_vec = np.sum(np.array([[acc_site_mu1], [acc_site_mu2], [acc_site_mu3]]), axis=0)[0]
-    acc_site_mu4 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
-    sum_vec = np.sum(np.array([[acc_site_mu1], [acc_site_mu2], [acc_site_mu3], [acc_site_mu4]]), axis=0)[0]
-    acc_site_mu5 = CustomPrior_uniform_neg1.rvs(sum_vec, batch_size)
+    acc_site_mu1 = elfi.Prior('uniform', 0, 1)
+    acc_site_mu2 = elfi.Prior(CustomPrior_s1, acc_site_mu1)
+    acc_site_mu3 = elfi.Prior(CustomPrior_s2, acc_site_mu1, acc_site_mu2)
+    acc_site_mu4 = elfi.Prior(CustomPrior_s3, acc_site_mu1, acc_site_mu2, acc_site_mu3)
+    #acc_site_mu5 = elfi.Prior(CustomPrior_s4, acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1,
-                                   base_mu2, base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, acc_site_mu1,
-                                   acc_site_mu2, acc_site_mu3, acc_site_mu4)
+    #get observed data
+    obs_core = df['Core'].to_numpy()
+    obs_acc = df['Accessory'].to_numpy()
+
+    # calculate euclidean distance to origin
+    obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2))
+
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
+                       base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
+                       acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, observed=obs)
+
+
+    # generate summary statitics as quantiles of data
+    S_min = elfi.Summary(min, Y)
+    S_q1 = elfi.Summary(quantile, Y, 0.1)
+    S_q2 = elfi.Summary(quantile, Y, 0.2)
+    S_q3 = elfi.Summary(quantile, Y, 0.3)
+    S_q4 = elfi.Summary(quantile, Y, 0.4)
+    S_q5 = elfi.Summary(quantile, Y, 0.5)
+    S_q6 = elfi.Summary(quantile, Y, 0.6)
+    S_q7 = elfi.Summary(quantile, Y, 0.7)
+    S_q8 = elfi.Summary(quantile, Y, 0.8)
+    S_q9 = elfi.Summary(quantile, Y, 0.9)
+    S_max = elfi.Summary(max, Y)
+
+    d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
+
+    seed = 254
+    rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)
+
+    N = 1000
+    result = rej.sample(N, quantile=0.01)
+
+    result.summary()
 
     # # true parameters
     # t1_true = 0.6

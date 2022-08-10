@@ -13,9 +13,9 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
     # get bins for pdf
     i, d = divmod(vec_size, no_split)
-    mod = (vec_size % no_split).astype(int)
+    mod = np.reshape((vec_size % no_split).astype(int), (-1, 1))
 
-    bins = np.repeat(i, repeats=np.shape(bin_probs)[1], axis=1).astype(int)
+    bins = np.transpose(np.array([i] * np.shape(bin_probs)[1]).astype(int))
 
     # add modulus to bins to assign all sites
     bins[:, 0] += mod[:, 0]
@@ -71,6 +71,8 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                 total_sites = 0
                 while total_sites < num_sites:
                     to_sample = num_sites - total_sites
+
+                    site_sum = np.sum(site_mu[i])
 
                     # pick all sites to be mutated
                     sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
