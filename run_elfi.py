@@ -173,7 +173,7 @@ if __name__ == "__main__":
     size_pan = 10000
     # set evenly spaced core hamming values
     core_mu = np.linspace(0, max_real_core, num=num_steps)
-    batch_size = 1000
+    batch_size = 10000
 
     # set priors
     acc_vs_core = elfi.Prior('uniform', 0, 200)

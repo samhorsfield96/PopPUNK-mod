@@ -28,11 +28,12 @@ def calc_man_vec(array_size, vec_size, bin_probs):
     start = np.zeros(np.shape(bin_probs)[0], dtype=int)
     end = bins[:, 0]
 
-    for index in range(np.shape(bin_probs)[1]):
-        to_change = np.zeros(site_mu.shape)
+    r = np.arange(site_mu.shape[1])
 
-        # mask areas in strings
-        r = np.arange(to_change.shape[1])
+    # for testing
+    #non_zero = np.zeros(np.shape(bin_probs)[0])
+
+    for index in range(no_split):
         mask = (start[:, None] <= r) & (end[:, None] > r)
 
         scaled_bins_index = scaled_bin_probs[:, index]
@@ -40,11 +41,16 @@ def calc_man_vec(array_size, vec_size, bin_probs):
         for entry in range(scaled_bins_index.size):
             site_mu[entry][mask[entry]] = scaled_bins_index[entry]
 
-        start += bins[:, index]
-        end += bins[:, index]
+        if index < np.shape(bin_probs)[1] - 1:
+            start += bins[:, index]
+            end += bins[:, index + 1]
 
-    for row in range(site_mu.shape[0]):
-        sum_sites_mu = np.sum(site_mu[row])
+        # for testing
+        #non_zero += np.count_nonzero(mask, axis=1)
+
+    # for testing
+    # for row in range(site_mu.shape[0]):
+    #     sum_sites_mu = np.sum(site_mu[row])
 
     return site_mu
 
@@ -72,8 +78,6 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                 while total_sites < num_sites:
                     to_sample = num_sites - total_sites
 
-                    site_sum = np.sum(site_mu[i])
-
                     # pick all sites to be mutated
                     sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
 
@@ -85,8 +89,6 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                     sample_sites = unique[count_sites]
 
                     # determine sites with and without change
-                    probs = freq[i]
-                    sum_probs = np.sum(probs)
                     changes = np.array([np.random.choice(choices, p=freq[i]) for _ in sample_sites])
 
                     non_mutated = query[i][j][sample_sites] == changes
