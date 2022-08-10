@@ -160,6 +160,9 @@ if __name__ == "__main__":
     #                               base_mu2, base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, acc_site_mu1,
     #                               acc_site_mu2, acc_site_mu3, acc_site_mu4, batch_size=2, random_state=None)
 
+    # set multiprocessing client
+    elfi.set_client('multiprocessing')
+
     # read in real files
     df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
 
@@ -175,11 +178,15 @@ if __name__ == "__main__":
     core_mu = np.linspace(0, max_real_core, num=num_steps)
     batch_size = 10000
 
+    # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 5 at the moment)
+    min_prop_core_var = 5 / size_core
+    min_prop_acc_var = 5 / size_pan
+
     # set priors
     acc_vs_core = elfi.Prior('uniform', 0, 200)
     avg_gene_freq = elfi.Prior('uniform', 0, 1)
-    prop_core_var = elfi.Prior('uniform', 0, 1)
-    prop_acc_var = elfi.Prior('uniform', 0, 1)
+    prop_core_var = elfi.Prior('uniform', min_prop_core_var, 1 - min_prop_core_var)
+    prop_acc_var = elfi.Prior('uniform', min_prop_acc_var, 1 - min_prop_acc_var)
 
     # set priors based on remaining sum from previous allocations
     base_mu1 = elfi.Prior('uniform', 0, 1)

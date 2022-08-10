@@ -26,7 +26,7 @@ def calc_man_vec(array_size, vec_size, bin_probs):
     scaled_bin_probs = bin_probs / bins
 
     start = np.zeros(np.shape(bin_probs)[0], dtype=int)
-    end = bins[:, 0]
+    end = np.copy(bins[:, 0])
 
     r = np.arange(site_mu.shape[1])
 
@@ -48,7 +48,7 @@ def calc_man_vec(array_size, vec_size, bin_probs):
         # for testing
         #non_zero += np.count_nonzero(mask, axis=1)
 
-    # for testing
+    #for testing
     # for row in range(site_mu.shape[0]):
     #     sum_sites_mu = np.sum(site_mu[row])
 
@@ -79,6 +79,7 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                     to_sample = num_sites - total_sites
 
                     # pick all sites to be mutated
+                    sum_sites = np.sum(site_mu[i])
                     sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
 
                     # determine number of times each site can be mutated
