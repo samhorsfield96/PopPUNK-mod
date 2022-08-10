@@ -26,13 +26,11 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
     acc_site = np.concatenate((acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, acc_site_mu5), axis=1)
     gene_mu = np.concatenate((1 - avg_gene_freq, avg_gene_freq), axis=1, dtype=float)
 
+    # determine vectors of core and accessory per-site mutation rates and variable regions
     core_mu_arr = np.repeat(core_mu, repeats=batch_size, axis=0)
     acc_mu_arr = core_mu_arr * acc_vs_core
-
     core_var = np.round(size_core * prop_core_var)
-    core_invar = size_core - core_var
     acc_var = np.round(size_pan * prop_acc_var)
-    acc_invar = size_pan - acc_var
 
     core_site_mu = calc_man_vec(size_core, core_var, core_site)
     acc_site_mu = calc_man_vec(size_pan, acc_var, acc_site)
@@ -51,16 +49,15 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
     acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
 
     # determine hamming and core distances
-    hamming_core = distance.hamming(core_query1, core_query2)
-    hamming_acc = distance.hamming(acc_query1, acc_query2)
-    jaccard_core = distance.jaccard(core_query1, core_query2)
-    jaccard_acc = distance.jaccard(acc_query1, acc_query2)
+    hamming_core = np.zeros((batch_size, core_mu.shape[1]))
+    jaccard_acc = np.zeros((batch_size, core_mu.shape[1]))
 
-    return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
+    for i in range(batch_size):
+        for j in range(core_mu.shape[1]):
+            hamming_core[i][j] = distance.hamming(core_query1[i][j], core_query2[i][j])
+            jaccard_acc[i][j] = distance.hamming(acc_query1[i][j], acc_query2[i][j])
 
-def run_gen_distances():
-    test = 1
-
+    return (hamming_core, jaccard_acc)
 
 def MA2(t1, t2, n_obs=100, batch_size=1, random_state=None):
     # Make inputs 2d arrays for numpy broadcasting with w
