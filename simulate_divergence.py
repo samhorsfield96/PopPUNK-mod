@@ -8,6 +8,12 @@ import random
 from math import e
 from scipy.stats import gamma
 
+def recurse_prob(x, num_letters):
+    if x == 1:
+        return 1/(num_letters - 1)
+    else:
+        return (1 - recurse_prob(x - 1, num_letters)) * (1/(num_letters - 1))
+
 def calc_man_vec(array_size, vec_size, bin_probs):
     no_split = np.shape(bin_probs)[1]
 
@@ -71,8 +77,10 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
             if num_sites > 0:
                 if core:
                     choices = [1, 2, 3, 4]
+                    num_letters = 4
                 else:
                     choices = [0, 1]
+                    num_letters = 2
 
                 total_sites = 0
                 while total_sites < num_sites:
@@ -84,6 +92,10 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
 
                     # determine number of times each site can be mutated
                     unique, counts = np.unique(sites, return_counts=True)
+
+                    # calculate probabilities of mutating back to same base
+                    max_count = np.max(counts)
+                    match_probs = [recurse_prob(i, num_letters) for i in range(1, max_count + 1)]
 
                     # determine where to sample
                     count_sites = counts == 1
