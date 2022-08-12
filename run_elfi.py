@@ -162,6 +162,7 @@ if __name__ == "__main__":
 
     # set multiprocessing client
     elfi.set_client('multiprocessing')
+    elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=4))
 
     # read in real files
     df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
@@ -176,7 +177,9 @@ if __name__ == "__main__":
     size_pan = 10000
     # set evenly spaced core hamming values
     core_mu = np.linspace(0, max_real_core, num=num_steps)
-    batch_size = 10000
+    batch_size = 100
+    N_samples = 100
+    seed = 254
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 5 at the moment)
     min_prop_core_var = 5 / size_core
@@ -233,13 +236,13 @@ if __name__ == "__main__":
 
     d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
 
-    seed = 254
     rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)
 
-    N = 1000
-    result = rej.sample(N, quantile=0.01)
+    result = rej.sample(N_samples, quantile=0.01)
 
-    result.summary()
+    #result.summary()
+
+    print(result)
 
     # # true parameters
     # t1_true = 0.6

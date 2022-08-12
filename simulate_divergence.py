@@ -70,10 +70,8 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
 
     if core:
         choices = np.array([1, 2, 3, 4])
-        num_letters = 4
     else:
         choices = np.array([0, 1])
-        num_letters = 2
 
     index_array = np.arange(ref[0].size)
 
