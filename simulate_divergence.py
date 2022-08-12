@@ -8,14 +8,23 @@ import random
 from math import e
 from scipy.stats import gamma
 
-def recurse_prob(x, num_letters):
+def recurse_prob(x, weight):
     if x == 1:
-        return 1/(num_letters - 1)
+        return weight
     else:
-        return (1 - recurse_prob(x - 1, num_letters)) * (1/(num_letters - 1))
+        return (1 - recurse_prob(x - 1)) * weight
 
-def calc_man_vec(array_size, vec_size, bin_probs):
+def calc_man_vec(array_size, vec_size, bin_probs, ref, mu):
     no_split = np.shape(bin_probs)[1]
+
+    # get inverse of mu (probability of changing from given element)
+    inv_mu = 1 - mu
+
+    # if accessory, set choice to [0, 1], else [1,2,3,4]
+    if mu.shape[1] == 2:
+        choices = [0, 1]
+    else:
+        choices = [1, 2, 3, 4]
 
     # get bins for pdf
     i, d = divmod(vec_size, no_split)
@@ -40,12 +49,14 @@ def calc_man_vec(array_size, vec_size, bin_probs):
     #non_zero = np.zeros(np.shape(bin_probs)[0])
 
     for index in range(no_split):
-        mask = (start[:, None] <= r) & (end[:, None] > r)
+        for i, c in enumerate(choices):
+            mask = (start[:, None] <= r) & (end[:, None] > r) & (ref == c)
 
-        scaled_bins_index = scaled_bin_probs[:, index]
+            scaled_bins_index = scaled_bin_probs[:, index]
 
-        for entry in range(scaled_bins_index.size):
-            site_mu[entry][mask[entry]] = scaled_bins_index[entry]
+            # update site-specific mutation rates with mu
+            for entry in range(scaled_bins_index.size):
+                site_mu[entry][mask[entry]] = scaled_bins_index[entry] * inv_mu[entry][i]
 
         if index < np.shape(bin_probs)[1] - 1:
             start += bins[:, index]
@@ -54,9 +65,12 @@ def calc_man_vec(array_size, vec_size, bin_probs):
         # for testing
         #non_zero += np.count_nonzero(mask, axis=1)
 
+    # ensure row sums are 1
+    sum_site_mu = np.sum(site_mu, axis=1)
+    site_mu = (site_mu / sum_site_mu[:, None])# * site_mu
+
     #for testing
-    # for row in range(site_mu.shape[0]):
-    #     sum_sites_mu = np.sum(site_mu[row])
+    #sum_site_mu = np.sum(site_mu, axis=1)
 
     return site_mu
 
@@ -87,7 +101,7 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                     to_sample = num_sites - total_sites
 
                     # pick all sites to be mutated
-                    sum_sites = np.sum(site_mu[i])
+                    #sum_sites = np.sum(site_mu[i])
                     sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
 
                     # determine number of times each site can be mutated
