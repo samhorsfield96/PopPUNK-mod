@@ -1,5 +1,6 @@
 import math
 
+import pandas as pd
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
@@ -7,30 +8,22 @@ import numpy as np
 import random
 from math import e
 from scipy.stats import gamma
+from numba import jit
 
 def recurse_prob(x, weight):
     if x == 1:
         return weight
     else:
-        return (1 - recurse_prob(x - 1)) * weight
+        return (1 - recurse_prob(x - 1, weight)) * weight
 
-def calc_man_vec(array_size, vec_size, bin_probs, ref, mu):
+def calc_man_vec(array_size, vec_size, bin_probs):
     no_split = np.shape(bin_probs)[1]
 
-    # get inverse of mu (probability of changing from given element)
-    inv_mu = 1 - mu
-
-    # if accessory, set choice to [0, 1], else [1,2,3,4]
-    if mu.shape[1] == 2:
-        choices = [0, 1]
-    else:
-        choices = [1, 2, 3, 4]
-
     # get bins for pdf
-    i, d = divmod(vec_size, no_split)
-    mod = np.reshape((vec_size % no_split).astype(int), (-1, 1))
+    integer = vec_size // no_split
+    mod = np.reshape((vec_size % no_split).astype(np.int64), (-1, 1))
 
-    bins = np.transpose(np.array([i] * np.shape(bin_probs)[1]).astype(int))
+    bins = np.transpose(np.array([integer] * np.shape(bin_probs)[1]).astype(int))
 
     # add modulus to bins to assign all sites
     bins[:, 0] += mod[:, 0]
@@ -40,7 +33,7 @@ def calc_man_vec(array_size, vec_size, bin_probs, ref, mu):
 
     scaled_bin_probs = bin_probs / bins
 
-    start = np.zeros(np.shape(bin_probs)[0], dtype=int)
+    start = np.zeros(np.shape(bin_probs)[0], dtype=np.int64)
     end = np.copy(bins[:, 0])
 
     r = np.arange(site_mu.shape[1])
@@ -49,14 +42,12 @@ def calc_man_vec(array_size, vec_size, bin_probs, ref, mu):
     #non_zero = np.zeros(np.shape(bin_probs)[0])
 
     for index in range(no_split):
-        for i, c in enumerate(choices):
-            mask = (start[:, None] <= r) & (end[:, None] > r) & (ref == c)
+        mask = (start[:, None] <= r) & (end[:, None] > r)
 
-            scaled_bins_index = scaled_bin_probs[:, index]
+        scaled_bins_index = scaled_bin_probs[:, index]
 
-            # update site-specific mutation rates with mu
-            for entry in range(scaled_bins_index.size):
-                site_mu[entry][mask[entry]] = scaled_bins_index[entry] * inv_mu[entry][i]
+        for entry in range(scaled_bins_index.size):
+            site_mu[entry][mask[entry]] = scaled_bins_index[entry]
 
         if index < np.shape(bin_probs)[1] - 1:
             start += bins[:, index]
@@ -65,17 +56,26 @@ def calc_man_vec(array_size, vec_size, bin_probs, ref, mu):
         # for testing
         #non_zero += np.count_nonzero(mask, axis=1)
 
-    # ensure row sums are 1
-    sum_site_mu = np.sum(site_mu, axis=1)
-    site_mu = (site_mu / sum_site_mu[:, None])# * site_mu
-
     #for testing
-    #sum_site_mu = np.sum(site_mu, axis=1)
+    # for row in range(site_mu.shape[0]):
+    #     sum_sites_mu = np.sum(site_mu[row])
 
     return site_mu
 
+@jit(nopython=True)
 def sim_divergence_vec(ref, mu, core, freq, site_mu):
-    num_sites_vec = np.round(ref.shape[1] * mu).astype(int)
+    num_sites_vec = np.empty_like(mu)
+    np.round(ref.shape[1] * mu, 0, num_sites_vec)
+    num_sites_vec = num_sites_vec.astype(np.int64)
+
+    if core:
+        choices = np.array([1, 2, 3, 4])
+        num_letters = 4
+    else:
+        choices = np.array([0, 1])
+        num_letters = 2
+
+    index_array = np.arange(ref[0].size)
 
     #total_sites_vec = np.zeros((mu.shape[0]))
 
@@ -89,34 +89,18 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
 
             num_sites = num_sites_vec[i][j]
             if num_sites > 0:
-                if core:
-                    choices = [1, 2, 3, 4]
-                    num_letters = 4
-                else:
-                    choices = [0, 1]
-                    num_letters = 2
-
                 total_sites = 0
                 while total_sites < num_sites:
                     to_sample = num_sites - total_sites
 
                     # pick all sites to be mutated
-                    #sum_sites = np.sum(site_mu[i])
-                    sites = np.random.choice(range(query[i][j].size), to_sample, p=site_mu[i])
+                    sites = index_array[np.searchsorted(np.cumsum(site_mu[i]), np.random.rand(to_sample))]
 
                     # determine number of times each site can be mutated
-                    unique, counts = np.unique(sites, return_counts=True)
-
-                    # calculate probabilities of mutating back to same base
-                    max_count = np.max(counts)
-                    match_probs = [recurse_prob(i, num_letters) for i in range(1, max_count + 1)]
-
-                    # determine where to sample
-                    count_sites = counts == 1
-                    sample_sites = unique[count_sites]
+                    sample_sites = np.array(list(set(sites)))
 
                     # determine sites with and without change
-                    changes = np.array([np.random.choice(choices, p=freq[i]) for _ in sample_sites])
+                    changes = np.array([choices[np.searchsorted(np.cumsum(freq[i]), np.random.rand(1))][0] for _ in sample_sites], dtype=np.int64)
 
                     non_mutated = query[i][j][sample_sites] == changes
 
