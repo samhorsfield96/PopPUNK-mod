@@ -1,9 +1,5 @@
-import time
-
-import numpy as np
+import argparse
 import scipy.stats
-import matplotlib.pyplot as plt
-import logging
 
 import elfi
 from simulate_divergence import *
@@ -116,24 +112,69 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
 
     return eucl
 
-def MA2(t1, t2, n_obs=100, batch_size=1, random_state=None):
-    # Make inputs 2d arrays for numpy broadcasting with w
-    t1 = np.asanyarray(t1).reshape((-1, 1))
-    t2 = np.asanyarray(t2).reshape((-1, 1))
-    random_state = random_state or np.random
+def get_options():
+    description = 'Calculate relationship between Hamming/Jaccard distances and core/accessory divergence'
+    parser = argparse.ArgumentParser(description=description,
+                                     prog='distance_sim')
 
-    w = random_state.randn(batch_size, n_obs+2)  # i.i.d. sequence ~ N(0,1)
-    x = w[:, 2:] + t1*w[:, 1:-1] + t2*w[:, :-2]
-    return x
+    IO = parser.add_argument_group('Input/Output options')
+    IO.add_argument('--core-size',
+                    type=int,
+                    default=10000,
+                    help='Number of positions in core genome. Default = 10000 ')
+    IO.add_argument('--pan-size',
+                    type=int,
+                    default=10000,
+                    help='Number of positions in pangenome. Default = 10000 ')
+    IO.add_argument('--max-acc-vs-core',
+                    type=int,
+                    default=1000,
+                    help='Maximum ratio between accessory and core genome evolution. Default = 1000 ')
+    IO.add_argument('--num-steps',
+                    type=int,
+                    default=50,
+                    help='Number of steps to take in increasing divergence. Default = 50 ')
+    IO.add_argument('--batch-size',
+                    type=int,
+                    default=10000,
+                    help='Batch size for processing. Default = 10000 ')
+    IO.add_argument('--samples',
+                    type=int,
+                    default=1000,
+                    help='No. samples for posterior estimation. Default = 1000 ')
+    IO.add_argument('--qnt',
+                    type=float,
+                    default=0.01,
+                    help='Quantile of the samples with smallest discrepancies is accepted. Default = 0.01 ')
+    IO.add_argument('--data-dir',
+                    help='Directory containing popPUNK distance files. ')
+    IO.add_argument('--data-pref',
+                    help='Prefix of popPUNK distance file(s). ')
+    IO.add_argument('--seed',
+                    type=int,
+                    default=254,
+                    help='Seed for random number generation. Default = 254. ')
+    IO.add_argument('--summary',
+                    choices=['quantile', 'mean'],
+                    default="quantile",
+                    help='Mode for summary statistics, either "mean" or "quantile". Default = "quantile". ')
+    IO.add_argument('--outpref',
+                    default="./",
+                    help='Output prefix. Default = "./"')
+    IO.add_argument('--threads',
+                    type=int,
+                    default=1,
+                    help='Number of threads. Default = 1')
 
-def autocov(x, lag=1):
-    C = np.mean(x[:,lag:] * x[:,:-lag], axis=1)
-    return C
+    return parser.parse_args()
 
 if __name__ == "__main__":
     # size_core = 10000
     # size_pan = 10000
-    #
+    # batch_size = 10000
+    # N_samples = 100
+    # qnt = 0.01
+    # seed = 254
     # # testing
     # prop_core_var = np.array([0.25, 0.5])
     # prop_acc_var = np.array([0.25, 0.5])
@@ -160,33 +201,44 @@ if __name__ == "__main__":
     #                               base_mu2, base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, acc_site_mu1,
     #                               acc_site_mu2, acc_site_mu3, acc_site_mu4, batch_size=2, random_state=None)
 
+    options = get_options()
+    threads = options.threads
+    data_dir = options.data_dir
+    data_pref = options.data_pref
+    size_core = options.core_size
+    size_pan = options.pan_size
+    batch_size = options.batch_size
+    max_acc_vs_core = options.max_acc_vs_core
+    num_steps = options.num_steps
+    qnt = options.qnt
+    N_samples = options.samples
+    seed = options.seed
+    outpref = options.outpref
+    summary = options.summary
+
+    print("No. simulations: " + str(N_samples / qnt))
+
     # set multiprocessing client
-    #elfi.set_client('multiprocessing')
-    #elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=4))
+    elfi.set_client('multiprocessing')
+    elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
 
     # read in real files
-    df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
+    df = read_files(data_dir, data_pref)
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-    num_steps = 10
 
     # set constants
-    size_core = 1000
-    size_pan = 1000
     # set evenly spaced core hamming values
     core_mu = np.linspace(0, max_real_core, num=num_steps)
-    batch_size = 1000
-    N_samples = 10
-    seed = 254
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 5 at the moment)
     min_prop_core_var = 5 / size_core
     min_prop_acc_var = 5 / size_pan
 
     # set priors
-    acc_vs_core = elfi.Prior('uniform', 0, 200)
+    acc_vs_core = elfi.Prior('uniform', 0, max_acc_vs_core)
     avg_gene_freq = elfi.Prior('uniform', 0, 1)
     prop_core_var = elfi.Prior('uniform', min_prop_core_var, 1 - min_prop_core_var)
     prop_acc_var = elfi.Prior('uniform', min_prop_acc_var, 1 - min_prop_acc_var)
@@ -195,19 +247,16 @@ if __name__ == "__main__":
     base_mu1 = elfi.Prior('uniform', 0, 1)
     base_mu2 = elfi.Prior(CustomPrior_s1, base_mu1)
     base_mu3 = elfi.Prior(CustomPrior_s2, base_mu1, base_mu2)
-    #base_mu4 = elfi.Prior(CustomPrior_s3, base_mu1, base_mu2, base_mu3)
 
     core_site_mu1 = elfi.Prior('uniform', 0, 1)
     core_site_mu2 = elfi.Prior(CustomPrior_s1, core_site_mu1)
     core_site_mu3 = elfi.Prior(CustomPrior_s2, core_site_mu1, core_site_mu2)
     core_site_mu4 = elfi.Prior(CustomPrior_s3, core_site_mu1, core_site_mu2, core_site_mu3)
-    #core_site_mu5 = elfi.Prior(CustomPrior_s4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4)
 
     acc_site_mu1 = elfi.Prior('uniform', 0, 1)
     acc_site_mu2 = elfi.Prior(CustomPrior_s1, acc_site_mu1)
     acc_site_mu3 = elfi.Prior(CustomPrior_s2, acc_site_mu1, acc_site_mu2)
     acc_site_mu4 = elfi.Prior(CustomPrior_s3, acc_site_mu1, acc_site_mu2, acc_site_mu3)
-    #acc_site_mu5 = elfi.Prior(CustomPrior_s4, acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4)
 
     #get observed data
     obs_core = df['Core'].to_numpy()
@@ -220,56 +269,30 @@ if __name__ == "__main__":
                        base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        acc_site_mu1, acc_site_mu2, acc_site_mu3, acc_site_mu4, observed=obs)
 
-
-    # generate summary statitics as quantiles of data
     S_min = elfi.Summary(min, Y)
-    S_q1 = elfi.Summary(quantile, Y, 0.1)
-    S_q2 = elfi.Summary(quantile, Y, 0.2)
-    S_q3 = elfi.Summary(quantile, Y, 0.3)
-    S_q4 = elfi.Summary(quantile, Y, 0.4)
-    S_q5 = elfi.Summary(quantile, Y, 0.5)
-    S_q6 = elfi.Summary(quantile, Y, 0.6)
-    S_q7 = elfi.Summary(quantile, Y, 0.7)
-    S_q8 = elfi.Summary(quantile, Y, 0.8)
-    S_q9 = elfi.Summary(quantile, Y, 0.9)
     S_max = elfi.Summary(max, Y)
+    if summary == "quantile":
+        # generate summary statitics as quantiles of data
 
-    d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
+        S_q1 = elfi.Summary(quantile, Y, 0.1)
+        S_q2 = elfi.Summary(quantile, Y, 0.2)
+        S_q3 = elfi.Summary(quantile, Y, 0.3)
+        S_q4 = elfi.Summary(quantile, Y, 0.4)
+        S_q5 = elfi.Summary(quantile, Y, 0.5)
+        S_q6 = elfi.Summary(quantile, Y, 0.6)
+        S_q7 = elfi.Summary(quantile, Y, 0.7)
+        S_q8 = elfi.Summary(quantile, Y, 0.8)
+        S_q9 = elfi.Summary(quantile, Y, 0.9)
+
+        d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
+    else:
+        S_mean = elfi.Summary(mean, Y)
+        S_stddev = elfi.Summary(stddev, Y)
+        d = elfi.Distance('euclidean', S_min, S_mean, S_stddev, S_max)
 
     rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)
 
-    result = rej.sample(N_samples, quantile=0.01)
+    result = rej.sample(N_samples, quantile=qnt)
 
-    #result.summary()
-
-    print(result)
-
-    # # true parameters
-    # t1_true = 0.6
-    # t2_true = 0.2
-    #
-    # y_obs = MA2(t1_true, t2_true)
-    #
-    # # # Plot the observed sequence
-    # # plt.figure(figsize=(11, 6));
-    # # plt.plot(y_obs.ravel());
-    # #
-    # # # To illustrate the stochasticity, let's plot a couple of more observations with the same true parameters:
-    # # plt.plot(MA2(t1_true, t2_true).ravel());
-    # # plt.plot(MA2(t1_true, t2_true).ravel());
-    #
-    # # a node is defined by giving a distribution from scipy.stats together with any arguments (here 0 and 2)
-    # t1 = elfi.Prior(scipy.stats.uniform, 0, 2)
-    #
-    # # ELFI also supports giving the scipy.stats distributions as strings
-    # t2 = elfi.Prior('uniform', 0, 2)
-    #
-    # Y = elfi.Simulator(MA2, t1, t2, observed=y_obs)
-    #
-    # S1 = elfi.Summary(autocov, Y)
-    # S2 = elfi.Summary(autocov, Y, 2)  # the optional keyword lag is given the value 2
-    #
-    # # Finish the model with the final node that calculates the squared distance (S1_sim-S1_obs)**2 + (S2_sim-S2_obs)**2
-    # d = elfi.Distance('euclidean', S1, S2)
-
-    test = 1
+    with open(outpref + "ELFI_summary.txt", "w") as f:
+        f.write(result)
