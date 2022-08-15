@@ -38,27 +38,27 @@ class CustomPrior_s4(elfi.Distribution):
         return t
 
 def mean(x):
-    C = np.mean(x, axis=0)
+    C = np.mean(x, axis=1)
     return C
 
 def median(x):
-    C = np.median(x, axis=0)
+    C = np.median(x, axis=1)
     return C
 
 def max(x):
-    C = np.max(x, axis=0)
+    C = np.max(x, axis=1)
     return C
 
 def min(x):
-    C = np.min(x, axis=0)
+    C = np.min(x, axis=1)
     return C
 
 def quantile(x, q):
-    C = np.quantile(x, q, axis=0)
+    C = np.quantile(x, q, axis=1)
     return C
 
 def stddev(x):
-    C = np.std(x, axis=0)
+    C = np.std(x, axis=1)
     return C
 
 def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
@@ -109,7 +109,7 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
     for i in range(batch_size):
         for j in range(core_mu_arr.shape[1]):
             hamming_core[i][j] = distance.hamming(core_query1[i][j], core_query2[i][j])
-            jaccard_acc[i][j] = distance.hamming(acc_query1[i][j], acc_query2[i][j])
+            jaccard_acc[i][j] = distance.jaccard(acc_query1[i][j], acc_query2[i][j])
 
     # calculate euclidean distance to origin
     eucl = np.sqrt((hamming_core ** 2) + (jaccard_acc ** 2))
@@ -161,8 +161,8 @@ if __name__ == "__main__":
     #                               acc_site_mu2, acc_site_mu3, acc_site_mu4, batch_size=2, random_state=None)
 
     # set multiprocessing client
-    elfi.set_client('multiprocessing')
-    elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=4))
+    #elfi.set_client('multiprocessing')
+    #elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=4))
 
     # read in real files
     df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
@@ -173,12 +173,12 @@ if __name__ == "__main__":
     num_steps = 10
 
     # set constants
-    size_core = 10000
-    size_pan = 10000
+    size_core = 1000
+    size_pan = 1000
     # set evenly spaced core hamming values
     core_mu = np.linspace(0, max_real_core, num=num_steps)
-    batch_size = 100
-    N_samples = 100
+    batch_size = 1000
+    N_samples = 10
     seed = 254
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 5 at the moment)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     obs_acc = df['Accessory'].to_numpy()
 
     # calculate euclidean distance to origin
-    obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2))
+    obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
                        base_mu3, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
