@@ -1,5 +1,7 @@
 import argparse
 import scipy.stats
+import logging
+logging.basicConfig(level=logging.INFO)
 
 import elfi
 from simulate_divergence import *
