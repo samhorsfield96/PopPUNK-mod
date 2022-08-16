@@ -183,34 +183,32 @@ def calc_gamma(vec_size, no_split, shape, scale, sim_index):
 
     return site_mu
 
-def sim_divergence(query, mu, core, freq, site_mu):
-    num_sites = round(len(query) * mu)
+def sim_divergence(ref, mu, core, freq, site_mu):
+    num_sites = round(len(ref) * mu)
 
+    if core:
+        choices = np.array([1, 2, 3, 4])
+    else:
+        choices = np.array([0, 1])
+        freq = [1 - freq, freq]
+
+    index_array = np.arange(ref.size)
+
+    # create 3d array, columns are each base, rows are each mu rate, depth is num batches
+    query = ref.copy()
     total_sites = 0
-
-    # iterate until all required sites mutated for given mutation rate
     if num_sites > 0:
-        if core:
-            choices = [1, 2, 3, 4]
-        else:
-            choices = [0, 1]
-            freq = [1 - freq, freq]
-
         while total_sites < num_sites:
             to_sample = num_sites - total_sites
 
             # pick all sites to be mutated
-            sites = np.random.choice(range(query.size), to_sample, p=site_mu)
+            sites = np.random.choice(index_array, to_sample, p=site_mu)
 
             # determine number of times each site can be mutated
-            unique, counts = np.unique(sites, return_counts=True)
-
-            # determine where to sample
-            count_sites = counts == 1
-            sample_sites = unique[count_sites]
+            sample_sites = np.array(list(set(sites)))
 
             # determine sites with and without change
-            changes = np.array([np.random.choice(choices, p=freq) for _ in sample_sites])
+            changes = np.random.choice(choices, sample_sites.size, p=freq)
 
             non_mutated = query[sample_sites] == changes
 
@@ -226,13 +224,13 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
     sites_mutated = []
 
     # mutate genomes
-    core_query1, total_sites = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu, core_site_mu)
+    core_query1, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu)
     sites_mutated.append(total_sites)
-    core_query2, total_sites = sim_divergence(np.copy(core_var), core_mu[index], True, base_mu, core_site_mu)
+    core_query2, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu)
     sites_mutated.append(total_sites)
-    acc_query1, total_sites = sim_divergence(np.copy(acc_var), acc_mu[index], False, avg_gene_freq, acc_site_mu)
+    acc_query1, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu)
     sites_mutated.append(total_sites)
-    acc_query2, total_sites = sim_divergence(np.copy(acc_var), acc_mu[index], False, avg_gene_freq, acc_site_mu)
+    acc_query2, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu)
     sites_mutated.append(total_sites)
 
     if adj == True:
@@ -247,7 +245,6 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
         core_query2 = np.append(core_query2, core_invar)
 
     acc_vs_core = 1
-    pangenome_frac = 0
 
     if core_mu[index] != 0:
         # determine accessory vs core divergence rate
@@ -272,13 +269,19 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
 def model(x, c0, c1):
     return 1 - e ** (-c0 * (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c1)))))
 
-def model2(x, c0):
-    #works
+def model2(x, c0, c1):
+    #model 1 works
     #return c0 + c1 * x - c2 * np.exp(-c3 * x)
+    # model 2 doesn't work
+    #c0 - c1 * np.exp(-c2 * x)
+    # model 3 doesn't work
+    #c0 - c1 * c2 * np.exp(-c3 * x)
+    # model 4
+    return c0 * (x ** c1)
+    # doesn't work
+    #return 1 - (e ** (-c0 * x))
     # works
     #return c0 + c1 * x - np.exp(-c2 * x)
-    # doesn't work
-    return 1 - (e ** (-c0 * x))
     #doesn't work
     #return c0 - c1 * np.exp(-c2 * x)
     #doesn't work
@@ -455,16 +458,19 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         ax.plot(x, y, linewidth=2.0, label="Sim " + str(sim))
         sim += 1
 
-    c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=([-np.inf], [np.inf]))
+    try:
+        c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000)
 
-    with open(outpref + "acc_hamming_vs_jacc_parameters.txt", "w") as f:
-        f.write(np.array2string(c))
+        with open(outpref + "acc_hamming_vs_jacc_parameters.txt", "w") as f:
+            f.write(np.array2string(c))
 
-    x = np.array(distances[1][0])
-    y = np.array([model2(j, c[0]) for j in x])
-    ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Model parameters for hamming acc vs. jaccard acc:")
-    print(c)
+        x = np.array(distances[1][0])
+        y = np.array([model2(j, c[0], c[1]) for j in x])
+        ax.plot(x, y, linewidth=2.0, label="Model")
+        print("Model parameters for hamming acc vs. jaccard acc:")
+        print(c)
+    except RuntimeError:
+        pass
 
     ax.set_xlabel("Accessory Hamming distance")
     ax.set_ylabel("Accessory Jaccard Distance")
