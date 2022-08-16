@@ -266,8 +266,8 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
 
-def model(x, c0, c1):
-    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / c1
+def model(x, c0, c1, c2):
+    return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) * c1 + (c2 * x)
 
 def model2(x, c0, c1, c2, c3):
     #model 1 works
@@ -278,17 +278,6 @@ def model2(x, c0, c1, c2, c3):
     #c0 - c1 * c2 * np.exp(-c3 * x)
     # model 4
     return c0 + c1 * x + c2 * (x ** c3)
-    # doesn't work
-    #return 1 - (e ** (-c0 * x))
-    # works
-    #return c0 + c1 * x - np.exp(-c2 * x)
-    #doesn't work
-    #return c0 - c1 * np.exp(-c2 * x)
-    #doesn't work
-    #return c1 * x - np.exp(-c3 * x)
-
-    #works
-    #return c0 + c1 * x - np.exp(-c0 * x)
 
 def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     sim = 0
@@ -309,7 +298,7 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
     try:
         c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
     except RuntimeError:
-        c = [0,0]
+        c = np.zeros(3)
 
     return c
 
@@ -420,18 +409,19 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
     d_c0 = np.sqrt(cov[0][0])
     d_c1 = np.sqrt(cov[1][1])
+    d_c2 = np.sqrt(cov[2][2])
 
     # predict using new model
     x = np.array(distances[0][0])
-    y = np.array([model(j, c[0], c[1]) for j in x])
+    y = np.array([model(j, c[0], c[1], c[2]) for j in x])
     ax.plot(x, y, linewidth=2.0, label="Model")
     print("Accessory vs. core model parameters:")
     print(c)
-    print("[" + str(d_c0) + " " + str(d_c1) + "]")
+    print("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + "]")
 
     with open(outpref + "model_parameters.txt", "w") as f:
         f.write(np.array2string(c))
-        f.write("[" + str(d_c0) + " " + str(d_c1) + "]")
+        f.write("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + "]")
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
