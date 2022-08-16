@@ -307,9 +307,9 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
 
     #reg_x = reg_x.reshape((-1, 1))
     try:
-        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=([0, 0], [np.inf, 1]))
+        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
     except RuntimeError:
-        c = [0,0,0]
+        c = [0,0]
 
     return c
 
@@ -416,9 +416,10 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
         sim += 1
 
-    #reg_x = reg_x.reshape((-1, 1))
-    #c, cov = curve_fit(model, reg_x, reg_y, bounds=([0, 1., -1., 0], [np.inf, 2., 0, 1.]), maxfev=5000)
+    #fit model, determine uncertainty
     c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
+    d_c0 = np.sqrt(cov[0][0])
+    d_c1 = np.sqrt(cov[1][1])
 
     # predict using new model
     x = np.array(distances[0][0])
@@ -426,9 +427,11 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     ax.plot(x, y, linewidth=2.0, label="Model")
     print("Accessory vs. core model parameters:")
     print(c)
+    print("[" + str(d_c0) + " " + str(d_c1) + "]")
 
     with open(outpref + "model_parameters.txt", "w") as f:
         f.write(np.array2string(c))
+        f.write("[" + str(d_c0) + " " + str(d_c1) + "]")
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
