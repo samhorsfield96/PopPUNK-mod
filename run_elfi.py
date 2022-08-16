@@ -8,9 +8,9 @@ from simulate_divergence import *
 from fit_distances import read_files
 
 def get_options():
-    description = 'Calculate relationship between Hamming/Jaccard distances and core/accessory divergence'
+    description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='distance_sim')
+                                     prog='python run_ELFI.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--core-size',
@@ -20,7 +20,7 @@ def get_options():
     IO.add_argument('--pan-size',
                     type=int,
                     default=1000,
-                    help='Number of positions in pangenome. Default = 10000 ')
+                    help='Number of positions in pangenome. Default = 1000 ')
     IO.add_argument('--max-acc-vs-core',
                     type=int,
                     default=1000,
@@ -43,9 +43,9 @@ def get_options():
                     help='Quantile of the samples with smallest discrepancies is accepted. Default = 0.01 ')
     IO.add_argument('--init-evidence',
                     type=int,
-                    default=262145,
+                    default=65537,
                     help='Number of initialization points sampled straight from the priors before starting to '
-                         'optimize the acquisition of points. Default = 262145 ')
+                         'optimize the acquisition of points. Default = 65537 ')
     IO.add_argument('--update-int',
                     type=int,
                     default=10,
@@ -58,7 +58,7 @@ def get_options():
                          'Default = 0.1 ')
     IO.add_argument('--n-evidence',
                     type=int,
-                    default=300000,
+                    default=120000,
                     help='Evidence points requested (including init-evidence). '
                          'Default = 300000 ')
     IO.add_argument('--data-dir',

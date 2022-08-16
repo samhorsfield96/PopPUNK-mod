@@ -7,7 +7,7 @@ import tqdm
 def get_options():
     description = 'Calculate relationship between Hamming/Jaccard distances and core/accessory divergence'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='distance_sim')
+                                     prog='python simulate_distances.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--core-size',
