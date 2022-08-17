@@ -150,7 +150,7 @@ if __name__ == "__main__":
         RMSE_results = [None] * len(a_vs_c_rates)
         for index, entry in enumerate(curve_coefficents):
             c = entry
-            pred_y = model_vec(true_x, c[0], c[1], c[2])
+            pred_y = model_vec(true_x, c[0], c[1], c[2], c[3])
             MSE = mean_squared_error(true_y, pred_y)
             RMSE_results[index] = math.sqrt(MSE)
 
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                 x.append(i * step)
 
             x = np.array(x)
-            y = model_vec(x, c[0], c[1], c[2])
+            y = model_vec(x, c[0], c[1], c[2], c[3])
 
             ax.plot(x, y, linewidth=2.0, label="Rate: " + str(rate))
 
@@ -193,7 +193,7 @@ if __name__ == "__main__":
         species = df["Species"].unique()
 
         with open(outpref + "fit_parameters.txt", "w") as f:
-            f.write("Species\tSample\tA_c_ratio\tPangenome_fraction1\tPangenome_fraction2\tRMSE\n")
+            f.write("Species\tSample\tA_c_ratio\tPangenome_fraction1\tPangenome_fraction2\tPangenome_fraction3\tRMSE\n")
             for element in species:
                 new_df = df[df["Species"] == element]
 
@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
                     ax.scatter(true_x, true_y, alpha=0.15)
 
-                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000, bounds=([0, 0, -np.inf], [np.inf, 1, np.inf]))
+                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000)
 
                     step = np.max(true_x) / 10
                     start = 0
@@ -218,16 +218,16 @@ if __name__ == "__main__":
                     for j in range(11):
                         x.append(j * step)
 
-                    y = model_vec(x, c[0], c[1], c[2])
+                    y = model_vec(x, c[0], c[1], c[2], c[3])
 
                     ax.plot(x, y, linewidth=2.0, label="Sample: " + str(i))
 
-                    pred_y = model_vec(true_x, c[0], c[1], c[2])
+                    pred_y = model_vec(true_x, c[0], c[1], c[2], c[3])
                     MSE = mean_squared_error(true_y, pred_y)
                     RMSE = math.sqrt(MSE)
 
                     f.write(element + "\t" + str(i) + "\t" + str(c[0]) + "\t" + str(c[1]) + "\t" + str(c[2]) + "\t"
-                            + str(RMSE) + "\n")
+                            + str(c[3]) + "\t" + str(RMSE) + "\n")
 
                 ax.set_xlabel("Core")
                 ax.set_ylabel("Accessory")
