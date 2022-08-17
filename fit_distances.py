@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
                     ax.scatter(true_x, true_y, alpha=0.15)
 
-                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000)
+                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
 
                     step = np.max(true_x) / 10
                     start = 0

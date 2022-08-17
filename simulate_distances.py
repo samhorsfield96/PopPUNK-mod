@@ -276,8 +276,8 @@ if __name__ == "__main__":
 
     mu_rates = (core_mu_ori, acc_mu_ori, core_mu_ori, acc_mu_ori)
     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
-    mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
-    distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
+    mu_names = ("Core mu", "Acc. mu", "Core mu", "Acc mu")
+    distance_names = ("Hamming Core", "Hamming Acc.", "Jaccard Core", "Jaccard Acc.")
     lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
     # plot pangenome_fracs against accessory and core distances

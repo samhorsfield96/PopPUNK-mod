@@ -296,7 +296,7 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
 
     #reg_x = reg_x.reshape((-1, 1))
     try:
-        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
+        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
     except RuntimeError:
         c = np.zeros(4)
 
@@ -321,7 +321,7 @@ def check_panfrac(distances, pangenome_fracs, outpref):
 
         if name == "hamming_core":
             try:
-                c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000)
+                c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=(([0,0,-1]), (1,1,0)))
 
                 with open(outpref + "pangenome_frac_model_parameters.txt", "w") as f:
                     f.write(np.array2string(c))
@@ -362,7 +362,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         ]
 
         # plot Jukes-cantor relationship
-        if "core" in name1:
+        if "Core" in name1:
             if adjusted:
                 y = (3/4 * (1 - e ** (-(4/3) * x))) / core_adj
             else:
@@ -376,8 +376,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
         ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
         ax.set_aspect('equal')
-        #ax.set_xlim(lims)
-        #ax.set_ylim(0, 1)
+        ax.set_xlim(lims)
+        ax.set_ylim(0, 1)
         ax.set_xlabel(name1)
         ax.set_ylabel(name2)
         ax.legend()
@@ -406,7 +406,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         sim += 1
 
     #fit model, determine uncertainty
-    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000)
+    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
     d_c0 = np.sqrt(cov[0][0])
     d_c1 = np.sqrt(cov[1][1])
     d_c2 = np.sqrt(cov[2][2])
