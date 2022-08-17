@@ -216,7 +216,7 @@ if __name__ == "__main__":
         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
 
         # pull out variable sites in core_ref
-        sites = np.array(random.sample(range(core_ref.size), k=core_num_var))
+        sites = np.random.choice(range(core_ref.size), core_num_var, replace=False)
         present = np.full(core_ref.size, False)
         present[sites] = True
         core_var = core_ref[present]

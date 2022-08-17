@@ -196,7 +196,8 @@ def sim_divergence(ref, mu, core, freq, site_mu):
 
     # create 3d array, columns are each base, rows are each mu rate, depth is num batches
     query = ref.copy()
-    total_sites = 0
+
+    total_sites = 0        
     if num_sites > 0:
         while total_sites < num_sites:
             to_sample = num_sites - total_sites
@@ -204,18 +205,23 @@ def sim_divergence(ref, mu, core, freq, site_mu):
             # pick all sites to be mutated
             sites = np.random.choice(index_array, to_sample, p=site_mu)
 
-            # determine number of times each site can be mutated
-            sample_sites = np.array(list(set(sites)))
+            unique, counts = np.unique(sites, return_counts=True)
 
-            # determine sites with and without change
-            changes = np.random.choice(choices, sample_sites.size, p=freq)
+            max_count = np.max(counts)
 
-            non_mutated = query[sample_sites] == changes
+            for count in range(1, max_count + 1):
+                # determine number of times each site can be mutated
+                sample_sites = unique[counts >= count]
 
-            query[sample_sites] = changes
+                # determine sites with and without change
+                changes = np.random.choice(choices, sample_sites.size, p=freq)
 
-            # determine number of actual changes
-            total_sites += changes.size - np.count_nonzero(non_mutated)
+                non_mutated = query[sample_sites] == changes
+
+                query[sample_sites] = changes
+
+                # determine number of actual changes
+                total_sites += changes.size - np.count_nonzero(non_mutated)
 
     return query, total_sites
 
@@ -492,8 +498,8 @@ if __name__ == "__main__":
     # core_sites_man = [0.7, 0.1, 0.1, 0.1]
     # acc_sites_man = [0.7, 0.1, 0.1, 0.1]
 
-    core_sites_man = None
-    acc_sites_man = None
+    core_sites_man = [1]
+    acc_sites_man = [1]
 
     # base frequencies are alphabetical, A, C, G, T
     base_freq = [0.25, 0.25, 0.25, 0.25]
