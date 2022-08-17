@@ -94,18 +94,24 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                     # pick all sites to be mutated
                     sites = index_array[np.searchsorted(np.cumsum(site_mu[i]), np.random.rand(to_sample))]
 
-                    # determine number of times each site can be mutated
-                    sample_sites = np.array(list(set(sites)))
+                    unique = np.array(list(set(sites)))
+                    counts = np.array([np.count_nonzero(sites == val) for val in unique])
 
-                    # determine sites with and without change
-                    changes = choices[np.searchsorted(np.cumsum(freq[i]), np.random.rand(sample_sites.size))]
+                    max_count = np.max(counts)
 
-                    non_mutated = query[i][j][sample_sites] == changes
+                    for count in range(1, max_count + 1):
+                        # determine number of times each site can be mutated
+                        sample_sites = unique[counts >= count]
 
-                    query[i][j][sample_sites] = changes
+                        # determine sites with and without change
+                        changes = choices[np.searchsorted(np.cumsum(freq[i]), np.random.rand(sample_sites.size))]
 
-                    # determine number of actual changes
-                    total_sites += changes.size - np.count_nonzero(non_mutated)
+                        non_mutated = query[i][j][sample_sites] == changes
+
+                        query[i][j][sample_sites] = changes
+
+                        # determine number of actual changes
+                        total_sites += changes.size - np.count_nonzero(non_mutated)
 
     return query
 
