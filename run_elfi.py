@@ -193,45 +193,45 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
 
 if __name__ == "__main__":
     #testing
-    size_core = 10000
-    size_pan = 1000
-    batch_size = 10000
-    N_samples = 100
-    qnt = 0.01
-    seed = 254
-    summary = "quantile"
-    data_dir = "/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances"
-    data_pref = "GPSv4"
-    num_steps = 10
-    max_acc_vs_core = 1000
-    threads = 1
-    mode = "ABC"
-    outpref = "test_"
-    initial_evidence = 20
-    update_interval = 10
-    acq_noise_var = 0.1
-    n_evidence = 200
-    info_freq = 1000
+    # size_core = 10000
+    # size_pan = 1000
+    # batch_size = 10000
+    # N_samples = 100
+    # qnt = 0.01
+    # seed = 254
+    # summary = "quantile"
+    # data_dir = "/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances"
+    # data_pref = "GPSv4"
+    # num_steps = 10
+    # max_acc_vs_core = 1000
+    # threads = 1
+    # mode = "ABC"
+    # outpref = "test_"
+    # initial_evidence = 20
+    # update_interval = 10
+    # acq_noise_var = 0.1
+    # n_evidence = 200
+    # info_freq = 1000
 
-    # options = get_options()
-    # threads = options.threads
-    # data_dir = options.data_dir
-    # data_pref = options.data_pref
-    # size_core = options.core_size
-    # size_pan = options.pan_size
-    # batch_size = options.batch_size
-    # max_acc_vs_core = options.max_acc_vs_core
-    # num_steps = options.num_steps
-    # qnt = options.qnt
-    # N_samples = options.samples
-    # seed = options.seed
-    # outpref = options.outpref
-    # summary = options.summary
-    # mode = options.mode
-    # initial_evidence = options.init_evidence
-    # update_interval = options.update_int
-    # acq_noise_var = options.acq_noise_var
-    # n_evidence = options.n_evidence
+    options = get_options()
+    threads = options.threads
+    data_dir = options.data_dir
+    data_pref = options.data_pref
+    size_core = options.core_size
+    size_pan = options.pan_size
+    batch_size = options.batch_size
+    max_acc_vs_core = options.max_acc_vs_core
+    num_steps = options.num_steps
+    qnt = options.qnt
+    N_samples = options.samples
+    seed = options.seed
+    outpref = options.outpref
+    summary = options.summary
+    mode = options.mode
+    initial_evidence = options.init_evidence
+    update_interval = options.update_int
+    acq_noise_var = options.acq_noise_var
+    n_evidence = options.n_evidence
 
     #set multiprocessing client
     # elfi.set_client('multiprocessing')
