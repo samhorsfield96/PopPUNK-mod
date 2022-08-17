@@ -321,7 +321,7 @@ def check_panfrac(distances, pangenome_fracs, outpref):
 
         if name == "hamming_core":
             try:
-                c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=(([0,0,-1]), (1,1,0)))
+                c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000, bounds=(([0,0,-np.inf]), (1,np.inf,0)))
 
                 with open(outpref + "pangenome_frac_model_parameters.txt", "w") as f:
                     f.write(np.array2string(c))
@@ -406,7 +406,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         sim += 1
 
     #fit model, determine uncertainty
-    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
+    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-np.inf]), (np.inf,1,np.inf,0)))
     d_c0 = np.sqrt(cov[0][0])
     d_c1 = np.sqrt(cov[1][1])
     d_c2 = np.sqrt(cov[2][2])
