@@ -37,7 +37,7 @@ def read_files(in_dir, prefix=""):
 
 if __name__ == "__main__":
     df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
-    outpref = "smr_1_bmr_1_amr_1_"
+    outpref = "smr_1_bmr_7.1_amr_1_gmr_0.1_"
 
     # max_value_core = float(df["Core"].max())
     # max_value_accessory = float(df["Accessory"].max())
@@ -64,7 +64,7 @@ if __name__ == "__main__":
     avg_gene_freq = 0.5
 
     # core mu is number of differences per base of alignment
-    core_mu = [0.1 * i for i in range(0, 21, 2)]
+    core_mu = [0.1 * i for i in range(0, 21, 1)]
 
     # determine site mutation rates
     core_sites_man = [0.25, 0.25, 0.25, 0.25]
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                 x = np.array(hamming_core)
                 y = np.array(jaccard_accessory)
 
-                ax.plot(x, y, linewidth=2.0, c=clr, label="Acc/Core: " + str(rate))
+                ax.plot(x, y, linewidth=2.0, c=clr, label="a/π: " + str(rate))
 
             curve_coefficents[index] = c
 
@@ -187,7 +187,6 @@ if __name__ == "__main__":
 
         ax.set_xlabel("Core Hamming")
         ax.set_ylabel("Accessory Jaccard")
-        #ax.legend()
 
         fig.savefig(outpref + "core_vs_acc.png")
         plt.cla
