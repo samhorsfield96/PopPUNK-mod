@@ -8,6 +8,23 @@ import tqdm
 from sklearn.metrics import mean_squared_error
 import math
 from matplotlib.pyplot import cm
+import matplotlib.patheffects as pe
+import argparse
+
+def get_options():
+    description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
+    parser = argparse.ArgumentParser(description=description,
+                                     prog='python fit_distances.py')
+
+    IO = parser.add_argument_group('Input/Output options')
+    IO.add_argument('--data-dir',
+                    help='Directory containing popPUNK distance files. ')
+    IO.add_argument('--data-pref',
+                    help='Prefix of popPUNK distance file(s). ')
+    IO.add_argument('--outpref',
+                    default="./",
+                    help='Output prefix. Default = "./"')
+    return parser.parse_args()
 
 def read_files(in_dir, prefix=""):
     all_files = glob.glob(os.path.join(in_dir, prefix + "*.txt"))
@@ -36,8 +53,17 @@ def read_files(in_dir, prefix=""):
     return frame
 
 if __name__ == "__main__":
-    df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
-    outpref = "smr_1_bmr_7.1_amr_1_gmr_0.1_"
+    #testing
+    #df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances")
+    #outpref = "./plots/for_poster/"
+
+    options = get_options()
+    data_dir = options.data_dir
+    data_pref = options.data_pref
+    outpref = options.outpref
+
+    #load in file
+    df = read_files(data_dir, data_pref)
 
     # max_value_core = float(df["Core"].max())
     # max_value_accessory = float(df["Accessory"].max())
@@ -76,7 +102,7 @@ if __name__ == "__main__":
 
     # if fit == false, will increment through chosen values of accessory vs. core
     # if fit == true, will fit given model to real data
-    fit = False
+    fit = True
 
     # create vectorised version of model
     model_vec = np.vectorize(model)
@@ -259,19 +285,19 @@ if __name__ == "__main__":
                     true_x = sample_df['Core'].to_numpy()
                     true_y = sample_df['Accessory'].to_numpy()
 
-                    ax.scatter(true_x, true_y, alpha=0.15)
+                    ax.scatter(true_x, true_y, alpha=0.10)
                     c, cov = curve_fit(model, true_x, true_y, maxfev=5000,
                                        bounds=(([0, 0, 0, -np.inf]), (np.inf, 1, np.inf, 0)))
 
-                    step = np.max(true_x) / 10
+                    step = np.max(true_x) / 20
                     start = 0
                     x = []
-                    for j in range(11):
+                    for j in range(21):
                         x.append(j * step)
 
                     y = model_vec(x, c[0], c[1], c[2], c[3])
 
-                    ax.plot(x, y, linewidth=2.0, label="Sample: " + str(i))
+                    ax.plot(x, y, linewidth=2.0, label="Sample: " + str(i), path_effects=[pe.Stroke(linewidth=2, foreground='k'), pe.Normal()])
 
                     pred_y = model_vec(true_x, c[0], c[1], c[2], c[3])
                     MSE = mean_squared_error(true_y, pred_y)
