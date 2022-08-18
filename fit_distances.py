@@ -7,6 +7,7 @@ from simulate_divergence import *
 import tqdm
 from sklearn.metrics import mean_squared_error
 import math
+from matplotlib.pyplot import cm
 
 def read_files(in_dir, prefix=""):
     all_files = glob.glob(os.path.join(in_dir, prefix + "*.txt"))
@@ -35,8 +36,8 @@ def read_files(in_dir, prefix=""):
     return frame
 
 if __name__ == "__main__":
-    df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances")
-    outpref = "./"
+    df = read_files("/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances", "GPSv4")
+    outpref = "smr_1_bmr_1_amr_1_"
 
     # max_value_core = float(df["Core"].max())
     # max_value_accessory = float(df["Accessory"].max())
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     size_core = 1140000
     num_core = 1194
     num_pangenome = 5442
-    num_sim = 2
+    num_sim = 3
     core_invar = 106196
     adjusted = True
 
@@ -65,12 +66,17 @@ if __name__ == "__main__":
     # core mu is number of differences per base of alignment
     core_mu = [0.1 * i for i in range(0, 21, 2)]
 
+    # determine site mutation rates
+    core_sites_man = [0.25, 0.25, 0.25, 0.25]
+    acc_sites_man = [0.25, 0.25, 0.25, 0.25]
+
+
     adj = True
     core_num_var = 106196
 
     # if fit == false, will increment through chosen values of accessory vs. core
     # if fit == true, will fit given model to real data
-    fit = True
+    fit = False
 
     # create vectorised version of model
     model_vec = np.vectorize(model)
@@ -88,13 +94,19 @@ if __name__ == "__main__":
 
 
         # specify range of accesory vs. core rates
-        a_vs_c_rates = [0.25, 0.5, 0.75, 1, 1.5, 2, 4, 6, 8, 10]
+        a_vs_c_rates = [0.1, 0.2, 0.5, 1, 2, 5, 10]
         #a_vs_c_rates = [1]
 
         # hold coefficients
         curve_coefficents = [None] * len(a_vs_c_rates)
 
+        # initiliase core hamming vs. accessory jaccard plot
+        fig, ax = plt.subplots()
+        color = iter(cm.rainbow(np.linspace(0, 1, len(a_vs_c_rates))))
+
         for index, rate in enumerate(a_vs_c_rates):
+            # iter colour for rate
+            clr = next(color)
             print("Accessory vs. core rate: " + str(rate))
             # determine acc_mu as a function of core_mu
             acc_mu = [x * rate for x in core_mu]
@@ -103,6 +115,8 @@ if __name__ == "__main__":
             hamming_acc_sims = [None] * num_sim
             jaccard_core_sims = [None] * num_sim
             jaccard_acc_sims = [None] * num_sim
+            acc_vs_core_sims = [None] * num_sim
+            pangenome_frac_sims = [None] * num_sim
 
             for i in range(num_sim):
                 print("Simulation " + str(i + 1))
@@ -116,31 +130,69 @@ if __name__ == "__main__":
                 core_var = core_ref[present]
                 core_invar = core_ref[np.invert(present)]
 
+                core_site_mu = calc_man(core_var.size, core_sites_man)
+                acc_site_mu = calc_man(size_acc, acc_sites_man)
+
                 hamming_core = [None] * len(core_mu)
                 hamming_acc = [None] * len(acc_mu)
                 jaccard_core = [None] * len(core_mu)
                 jaccard_acc = [None] * len(acc_mu)
+                acc_vs_core = [None] * len(acc_mu)
+                pangenome_frac = [None] * len(acc_mu)
 
                 with Pool(processes=threads) as pool:
-                    for ind, hcore, hacc, jcore, jacc in tqdm.tqdm(pool.imap(
-                            partial(gen_distances, core_var=core_var, acc_ref=acc_ref, core_invar=core_invar,
-                                    num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
-                                    base_mu=base_mu),
+                    for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
+                            partial(gen_distances, core_var=core_var, acc_var=acc_ref, core_invar=core_invar,
+                                    num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted,
+                                    avg_gene_freq=avg_gene_freq,
+                                    base_mu=base_mu, core_site_mu=core_site_mu, acc_site_mu=acc_site_mu),
                             range(0, len(core_mu))), total=len(core_mu)):
                         hamming_core[ind] = hcore
                         hamming_acc[ind] = hacc
                         jaccard_core[ind] = jcore
                         jaccard_acc[ind] = jacc
+                        acc_vs_core[ind] = avc
+                        pangenome_frac[ind] = p_frac
 
                 hamming_core_sims[i] = hamming_core
                 hamming_acc_sims[i] = hamming_acc
                 jaccard_core_sims[i] = jaccard_core
                 jaccard_acc_sims[i] = jaccard_acc
+                acc_vs_core_sims[i] = acc_vs_core
+                pangenome_frac_sims[i] = pangenome_frac
 
             # generate a fit for model
             c = fit_cvsa_curve(hamming_core_sims, jaccard_acc_sims)
 
+            # plot core hamming vs. accessory jaccard
+            for hamming_core, jaccard_accessory in zip(hamming_core_sims, jaccard_acc_sims):
+                # make data, as comparing two diverged sequences, multiply by 2
+                x = np.array(hamming_core)
+                y = np.array(jaccard_accessory)
+
+                ax.plot(x, y, linewidth=2.0, c=clr, label="Acc/Core: " + str(rate))
+
             curve_coefficents[index] = c
+
+        # remove duplicate labels
+        # remove duplicates
+        handles, labels = plt.gca().get_legend_handles_labels()
+        newLabels, newHandles = [], []
+        for handle, label in zip(handles, labels):
+            if label not in newLabels:
+                newLabels.append(label)
+                newHandles.append(handle)
+
+        plt.legend(newHandles, newLabels)
+
+        ax.set_xlabel("Core Hamming")
+        ax.set_ylabel("Accessory Jaccard")
+        #ax.legend()
+
+        fig.savefig(outpref + "core_vs_acc.png")
+        plt.cla
+
+        plt.clf
 
         # create numpy arrays of inputs
         true_x = df['Core'].to_numpy()
@@ -158,7 +210,7 @@ if __name__ == "__main__":
         fig, ax = plt.subplots()
         x = true_x
         y = true_y
-        ax.scatter(x, y, alpha=0.15)
+        #ax.scatter(x, y, alpha=0.15)
 
         for index in range(len(a_vs_c_rates)):
             c = curve_coefficents[index]
@@ -209,8 +261,8 @@ if __name__ == "__main__":
                     true_y = sample_df['Accessory'].to_numpy()
 
                     ax.scatter(true_x, true_y, alpha=0.15)
-
-                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
+                    c, cov = curve_fit(model, true_x, true_y, maxfev=5000,
+                                       bounds=(([0, 0, 0, -np.inf]), (np.inf, 1, np.inf, 0)))
 
                     step = np.max(true_x) / 10
                     start = 0

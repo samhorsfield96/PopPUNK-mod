@@ -308,7 +308,8 @@ def fit_cvsa_curve(hamming_core_sim, jaccard_accessory_sim):
 
     #reg_x = reg_x.reshape((-1, 1))
     try:
-        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-1]), (np.inf,1,1,0)))
+        c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000,
+                           bounds=(([0, 0, 0, -np.inf]), (np.inf, 1, np.inf, 0)))
     except RuntimeError:
         c = np.zeros(4)
 
