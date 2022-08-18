@@ -6,6 +6,7 @@ logging.basicConfig(level=logging.INFO)
 import elfi
 from simulate_divergence import *
 from fit_distances import read_files
+import os
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -236,6 +237,7 @@ if __name__ == "__main__":
     #set multiprocessing client
     elfi.set_client('multiprocessing')
     elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
+    os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
     # read in real files
     df = read_files(data_dir, data_pref)
