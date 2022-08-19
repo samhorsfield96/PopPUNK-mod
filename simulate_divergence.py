@@ -16,8 +16,10 @@ def recurse_prob(x, weight):
     else:
         return (1 - recurse_prob(x - 1, weight)) * weight
 
-def calc_man_vec(array_size, vec_size, bin_probs):
+def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
     no_split = np.shape(bin_probs)[1]
+
+    vec_size = np.repeat([vec_size], batch_size)
 
     # get bins for pdf
     integer = vec_size // no_split
@@ -25,8 +27,9 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
     bins = np.transpose(np.array([integer] * np.shape(bin_probs)[1]).astype(int))
 
-    # add modulus to bins to assign all sites
+    # add modulus to bins to assign all sites (first is vectorised)
     bins[:, 0] += mod[:, 0]
+    #bins[0] += mod[0]
 
     # assign probabilities to sites
     site_mu = np.zeros((np.shape(bin_probs)[0], array_size))
@@ -35,6 +38,7 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
     start = np.zeros(np.shape(bin_probs)[0], dtype=np.int64)
     end = np.copy(bins[:, 0])
+    #end = np.copy(bins[0])
 
     r = np.arange(site_mu.shape[1])
 
@@ -43,15 +47,19 @@ def calc_man_vec(array_size, vec_size, bin_probs):
 
     for index in range(no_split):
         mask = (start[:, None] <= r) & (end[:, None] > r)
+        #mask = (start <= r) & (end > r)
 
         scaled_bins_index = scaled_bin_probs[:, index]
 
         for entry in range(scaled_bins_index.size):
             site_mu[entry][mask[entry]] = scaled_bins_index[entry]
+        #ite_mu[0][mask] = scaled_bins_index
 
         if index < np.shape(bin_probs)[1] - 1:
             start += bins[:, index]
             end += bins[:, index + 1]
+            # start += bins[index]
+            # end += bins[index + 1]
 
         # for testing
         #non_zero += np.count_nonzero(mask, axis=1)
@@ -91,8 +99,9 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                 while total_sites < num_sites:
                     to_sample = num_sites - total_sites
 
-                    # pick all sites to be mutated
+                    # pick all sites to be mutated (first is vectorised)
                     sites = index_array[np.searchsorted(np.cumsum(site_mu[i]), np.random.rand(to_sample))]
+                    #sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(to_sample))]
 
                     unique = np.array(list(set(sites)))
                     counts = np.array([np.count_nonzero(sites == val) for val in unique])
@@ -103,8 +112,9 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                         # determine number of times each site can be mutated
                         sample_sites = unique[counts >= count]
 
-                        # determine sites with and without change
+                        # determine sites with and without change (first is vectorised)
                         changes = choices[np.searchsorted(np.cumsum(freq[i]), np.random.rand(sample_sites.size))]
+                        #changes = choices[np.searchsorted(np.cumsum(freq), np.random.rand(sample_sites.size))]
 
                         non_mutated = query[i][j][sample_sites] == changes
 

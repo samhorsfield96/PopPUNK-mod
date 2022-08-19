@@ -14,24 +14,24 @@ Simulates core and accessory genome divergence and calculates Hamming and Jaccar
 ### Usage for simulator
 
 ```
-usage: python simulate_distances.py [-h] [--core-size CORE_SIZE]
-                                    [--core-var CORE_VAR]
-                                    [--base-freq BASE_FREQ]
-                                    [--base-mu BASE_MU]
-                                    [--start-gene-freq START_GENE_FREQ]
-                                    [--avg-gene-freq AVG_GENE_FREQ]
-                                    [--num-core NUM_CORE] [--num-pan NUM_PAN]
-                                    [--core-mu CORE_MU] [--acc-mu ACC_MU]
-                                    [--core-sites CORE_SITES]
-                                    [--acc-sites ACC_SITES]
-                                    [--core-gamma-shape CORE_GAMMA_SHAPE]
-                                    [--core-gamma-scale CORE_GAMMA_SCALE]
-                                    [--acc-gamma-shape ACC_GAMMA_SHAPE]
-                                    [--acc-gamma-scale ACC_GAMMA_SCALE]
-                                    [--core-sites-man CORE_SITES_MAN]
-                                    [--acc-sites-man ACC_SITES_MAN]
-                                    [--num-sim NUM_SIM] [--adjust]
-                                    [--outpref OUTPREF] [--threads THREADS]
+usage: python run_sim.py [-h] [--core-size CORE_SIZE]
+                              [--core-var CORE_VAR]
+                              [--base-freq BASE_FREQ]
+                              [--base-mu BASE_MU]
+                              [--start-gene-freq START_GENE_FREQ]
+                              [--avg-gene-freq AVG_GENE_FREQ]
+                              [--num-core NUM_CORE] [--num-pan NUM_PAN]
+                              [--core-mu CORE_MU] [--acc-mu ACC_MU]
+                              [--core-sites CORE_SITES]
+                              [--acc-sites ACC_SITES]
+                              [--core-gamma-shape CORE_GAMMA_SHAPE]
+                              [--core-gamma-scale CORE_GAMMA_SCALE]
+                              [--acc-gamma-shape ACC_GAMMA_SHAPE]
+                              [--acc-gamma-scale ACC_GAMMA_SCALE]
+                              [--core-sites-man CORE_SITES_MAN]
+                              [--acc-sites-man ACC_SITES_MAN]
+                              [--num-sim NUM_SIM] [--adjust]
+                              [--outpref OUTPREF] [--threads THREADS]
 
 Calculate relationship between Hamming/Jaccard distances and core/accessory divergence
 
@@ -97,22 +97,24 @@ Input/Output options:
 
 ```
 usage: python run_ELFI.py [-h] [--core-size CORE_SIZE]
-                          [--pan-size PAN_SIZE]
-                          [--max-acc-vs-core MAX_ACC_VS_CORE]
-                          [--num-steps NUM_STEPS]
-                          [--batch-size BATCH_SIZE]
-                          [--samples SAMPLES]
-                          [--qnt QNT]
-                          [--init-evidence INIT_EVIDENCE]
-                          [--update-int UPDATE_INT]
-                          [--acq-noise-var ACQ_NOISE_VAR]
+                          [--pan-size PAN_SIZE] 
+                          [--max-acc-vs-core MAX_ACC_VS_CORE] 
+                          [--num-steps NUM_STEPS] 
+                          [--base-mu BASE_MU] 
+                          [--avg-gene-freq AVG_GENE_FREQ]
+                          [--batch-size BATCH_SIZE] 
+                          [--samples SAMPLES] 
+                          [--qnt QNT] 
+                          [--init-evidence INIT_EVIDENCE] 
+                          [--update-int UPDATE_INT] 
+                          [--acq-noise-var ACQ_NOISE_VAR] 
                           [--n-evidence N_EVIDENCE]
-                          [--data-dir DATA_DIR]
-                          [--data-pref DATA_PREF]
-                          [--seed SEED]
-                          [--summary {quantile,mean}]
-                          [--mode {ABC,BOLFI}]
-                          [--outpref OUTPREF]
+                          [--data-dir DATA_DIR] 
+                          [--data-pref DATA_PREF] 
+                          [--seed SEED] 
+                          [--summary {quantile,mean}] 
+                          [--mode {ABC,BOLFI}] 
+                          [--outpref OUTPREF] 
                           [--threads THREADS]
 
 Fit model to PopPUNK data using Approximate Baysesian computation
@@ -122,12 +124,15 @@ options:
 
 Input/Output options:
   --core-size CORE_SIZE
-                        Number of positions in core genome. Default = 10000
+                        Number of positions in core genome. Default = 1000
   --pan-size PAN_SIZE   Number of positions in pangenome. Default = 1000
   --max-acc-vs-core MAX_ACC_VS_CORE
                         Maximum ratio between accessory and core genome evolution. Default = 1000
   --num-steps NUM_STEPS
                         Number of steps to take in increasing divergence. Default = 50
+  --base-mu BASE_MU     Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25"
+  --avg-gene-freq AVG_GENE_FREQ
+                        Average gene frequency in accessory genome. Default = "0.5"
   --batch-size BATCH_SIZE
                         Batch size for processing. Default = 10000
   --samples SAMPLES     No. samples for posterior estimation. Default = 1000
@@ -139,14 +144,14 @@ Input/Output options:
   --acq-noise-var ACQ_NOISE_VAR
                         Defines the diagonal covariance of noise added to the acquired points. Default = 0.1
   --n-evidence N_EVIDENCE
-                        Evidence points requested (including init-evidence). Default = 300000
+                        Evidence points requested (including init-evidence). Default = 120000
   --data-dir DATA_DIR   Directory containing popPUNK distance files.
   --data-pref DATA_PREF
                         Prefix of popPUNK distance file(s).
   --seed SEED           Seed for random number generation. Default = 254.
   --summary {quantile,mean}
                         Mode for summary statistics, either "mean" or "quantile". Default = "quantile".
-  --mode {ABC,BOLFI}    Mode for running model fit, either "ABC" or "BOLFI". Default = "BOLFI".
+  --mode {ABC,BOLFI}    Mode for running model fit, either "ABC" or "BOLFI". Default = "ABC".
   --outpref OUTPREF     Output prefix. Default = "./"
   --threads THREADS     Number of threads. Default = 1
 ```
