@@ -51,9 +51,9 @@ def get_options():
                     help='Quantile of the samples with smallest discrepancies is accepted. Default = 0.01 ')
     IO.add_argument('--init-evidence',
                     type=int,
-                    default=65537,
+                    default=5000,
                     help='Number of initialization points sampled straight from the priors before starting to '
-                         'optimize the acquisition of points. Default = 65537 ')
+                         'optimize the acquisition of points. Default = 5000 ')
     IO.add_argument('--update-int',
                     type=int,
                     default=10,
@@ -66,9 +66,9 @@ def get_options():
                          'Default = 0.1 ')
     IO.add_argument('--n-evidence',
                     type=int,
-                    default=120000,
+                    default=5000,
                     help='Evidence points requested (including init-evidence). '
-                         'Default = 120000 ')
+                         'Default = 5000 ')
     IO.add_argument('--data-dir',
                     help='Directory containing popPUNK distance files. ')
     IO.add_argument('--data-pref',
@@ -92,6 +92,10 @@ def get_options():
                     type=int,
                     default=1,
                     help='Number of threads. Default = 1')
+    IO.add_argument('--cluster',
+                    action='store_true',
+                    default=False,
+                    help='Parallelise using ipyparallel if using cluster. Default = False')
 
     return parser.parse_args()
 
@@ -208,7 +212,7 @@ if __name__ == "__main__":
     # num_steps = 10
     # max_acc_vs_core = 1000
     # threads = 1
-    # mode = "ABC"
+    # mode = "BOLFI"
     # outpref = "test_"
     # initial_evidence = 20
     # update_interval = 10
@@ -217,6 +221,7 @@ if __name__ == "__main__":
     # info_freq = 1000
     # avg_gene_freq = 0.5
     # base_mu = [0.25, 0.25, 0.25, 0.25]
+    # cluster = False
 
     options = get_options()
     threads = options.threads
@@ -239,10 +244,19 @@ if __name__ == "__main__":
     n_evidence = options.n_evidence
     avg_gene_freq = options.avg_gene_freq
     base_mu = [float(i) for i in options.base_mu.split(",")]
+    cluster = options.cluster
 
     #set multiprocessing client
-    elfi.set_client('multiprocessing')
-    elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
+    if cluster == True:
+        # must start ipyarallel cluster e.g. !ipcluster start -n threads --daemon
+        elfi.set_client('ipyparallel')
+    else:
+        if threads > 1:
+            elfi.set_client('multiprocessing')
+            elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
+        else:
+            elfi.set_client('native')
+
     os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
     # read in real files
