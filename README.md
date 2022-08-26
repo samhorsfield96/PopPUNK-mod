@@ -1,5 +1,5 @@
-# distance_sim
-Simulates core and accessory genome divergence and calculates Hamming and Jaccard distances, fitting to popPUNK models.
+# PopPUNK-mod
+PopPUNK modelling: simulates core and accessory genome divergence and calculates Hamming and Jaccard distances, fitting to PopPUNK models.
 
 ### Dependencies
 - tqdm
