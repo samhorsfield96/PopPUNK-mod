@@ -85,6 +85,12 @@ def get_options():
                     choices=['ABC', 'BOLFI'],
                     default="ABC",
                     help='Mode for running model fit, either "ABC" or "BOLFI". Default = "ABC". ')
+    IO.add_argument('--complexity',
+                    choices=['simple', 'intermediate'],
+                    default="simple",
+                    help='Model complexity. If simple, predict only a/pi and gene gain rate. '
+                         'If intermediate, predict prior two and fast gene site mu.'
+                         'Default = "simple". ')
     IO.add_argument('--outpref',
                     default="./",
                     help='Output prefix. Default = "./"')
@@ -207,12 +213,12 @@ if __name__ == "__main__":
     # qnt = 0.01
     # seed = 254
     # summary = "quantile"
-    # data_dir = "/mnt/c/Users/sth19/PycharmProjects/PhD_project/distance_sim/distances"
+    # data_dir = "distances"
     # data_pref = "GPSv4"
     # num_steps = 10
     # max_acc_vs_core = 1000
     # threads = 1
-    # mode = "BOLFI"
+    # mode = "ABC"
     # outpref = "test_"
     # initial_evidence = 20
     # update_interval = 10
@@ -222,6 +228,7 @@ if __name__ == "__main__":
     # avg_gene_freq = 0.5
     # base_mu = [0.25, 0.25, 0.25, 0.25]
     # cluster = False
+    # complexity = "simple"
 
     options = get_options()
     threads = options.threads
@@ -245,19 +252,11 @@ if __name__ == "__main__":
     avg_gene_freq = options.avg_gene_freq
     base_mu = [float(i) for i in options.base_mu.split(",")]
     cluster = options.cluster
+    complexity = options.complexity
 
-    #set multiprocessing client
-    if cluster == True:
-        # must start ipyarallel cluster e.g. !ipcluster start -n threads --daemon
-        elfi.set_client('ipyparallel')
-    else:
-        if threads > 1:
-            elfi.set_client('multiprocessing')
-            elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
-        else:
-            elfi.set_client('native')
-
-    os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
+    # set batch size to 1 if BOLFI used
+    if mode == "BOLFI":
+        batch_size = 1
 
     # read in real files
     df = read_files(data_dir, data_pref)
@@ -311,7 +310,12 @@ if __name__ == "__main__":
     # core_site_mu4 = elfi.Prior('uniform', 0, 1)
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
-    acc_site_fast = elfi.Prior('uniform', 0.5, 1 - 0.5)
+    # decide if predicting fast accessory site mutation rate
+    if complexity == "simple":
+        acc_site_fast = np.array([0.5] * batch_size)
+    elif complexity == "intermediate":
+        acc_site_fast = elfi.Prior('uniform', 0.5, 1 - 0.5)
+
     #acc_site_mu2 = np.array([0.5])
     # acc_site_mu1 = elfi.Prior('uniform', 0, 1)
     # acc_site_mu2 = elfi.Prior('uniform', 0, 1)
@@ -349,6 +353,19 @@ if __name__ == "__main__":
         S_mean = elfi.Summary(mean, Y)
         S_stddev = elfi.Summary(stddev, Y)
         d = elfi.Distance('euclidean', S_min, S_mean, S_stddev, S_max)
+
+    #set multiprocessing client
+    if cluster == True:
+        # must start ipyarallel cluster e.g. !ipcluster start -n threads --daemon
+        elfi.set_client('ipyparallel')
+    else:
+        if threads > 1:
+            elfi.set_client('multiprocessing')
+            elfi.set_client(elfi.clients.multiprocessing.Client(num_processes=threads))
+        else:
+            elfi.set_client('native')
+
+    os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
     if mode == "ABC":
         rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)

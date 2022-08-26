@@ -114,8 +114,10 @@ usage: python run_ELFI.py [-h] [--core-size CORE_SIZE]
                           [--seed SEED] 
                           [--summary {quantile,mean}] 
                           [--mode {ABC,BOLFI}] 
-                          [--outpref OUTPREF] 
-                          [--threads THREADS]
+                          [--complexity {simple,intermediate}] 
+                          [--outpref OUTPREF]
+                          [--threads THREADS] 
+                          [--cluster]
 
 Fit model to PopPUNK data using Approximate Baysesian computation
 
@@ -138,13 +140,13 @@ Input/Output options:
   --samples SAMPLES     No. samples for posterior estimation. Default = 1000
   --qnt QNT             Quantile of the samples with smallest discrepancies is accepted. Default = 0.01
   --init-evidence INIT_EVIDENCE
-                        Number of initialization points sampled straight from the priors before starting to optimize the acquisition of points. Default = 65537
+                        Number of initialization points sampled straight from the priors before starting to optimize the acquisition of points. Default = 5000
   --update-int UPDATE_INT
                         Defines how often the GP hyperparameters are optimized. Default = 10
   --acq-noise-var ACQ_NOISE_VAR
                         Defines the diagonal covariance of noise added to the acquired points. Default = 0.1
   --n-evidence N_EVIDENCE
-                        Evidence points requested (including init-evidence). Default = 120000
+                        Evidence points requested (including init-evidence). Default = 5000
   --data-dir DATA_DIR   Directory containing popPUNK distance files.
   --data-pref DATA_PREF
                         Prefix of popPUNK distance file(s).
@@ -152,6 +154,9 @@ Input/Output options:
   --summary {quantile,mean}
                         Mode for summary statistics, either "mean" or "quantile". Default = "quantile".
   --mode {ABC,BOLFI}    Mode for running model fit, either "ABC" or "BOLFI". Default = "ABC".
+  --complexity {simple,intermediate}
+                        Model complexity. If simple, predict only a/pi and gene gain rate. If intermediate, predict prior two and fast gene site mu.Default = "simple".
   --outpref OUTPREF     Output prefix. Default = "./"
   --threads THREADS     Number of threads. Default = 1
+  --cluster             Parallelise using ipyparallel if using cluster. Default = False
 ```
