@@ -1,4 +1,6 @@
 import argparse
+
+import numpy as np
 import scipy.stats
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -7,6 +9,7 @@ import elfi
 from simulate_divergence import *
 from fit_distances import read_files
 import os
+import sys
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -25,7 +28,11 @@ def get_options():
     IO.add_argument('--max-acc-vs-core',
                     type=int,
                     default=1000,
-                    help='Maximum ratio between accessory and core genome evolution. Default = 1000 ')
+                    help='Maximum ratio between accessory and core genome evolution (a/pi). Default = 1000 ')
+    IO.add_argument('--range-acc-vs-core2',
+                    type=int,
+                    default=1000,
+                    help='Positive + negative range of accessory to square of core genome evolution. Default = 1000 ')
     IO.add_argument('--num-steps',
                     type=int,
                     default=50,
@@ -45,6 +52,10 @@ def get_options():
                     type=int,
                     default=1000,
                     help='No. samples for posterior estimation. Default = 1000 ')
+    IO.add_argument('--schedule',
+                    type=str,
+                    default="0.7,0.2,0.05",
+                    help='SMC schedule, a list of thresholds to use for each population. Default = 0.7,0.2,0.05 ')
     IO.add_argument('--qnt',
                     type=float,
                     default=0.01,
@@ -82,9 +93,9 @@ def get_options():
                     default="quantile",
                     help='Mode for summary statistics, either "mean" or "quantile". Default = "quantile". ')
     IO.add_argument('--mode',
-                    choices=['ABC', 'BOLFI'],
-                    default="ABC",
-                    help='Mode for running model fit, either "ABC" or "BOLFI". Default = "ABC". ')
+                    choices=['rejection', 'SMC', 'BOLFI'],
+                    default="rejection",
+                    help='Mode for running model fit, either "rejection", "SMC "BOLFI". Default = "rejection". ')
     IO.add_argument('--complexity',
                     choices=['simple', 'intermediate'],
                     default="simple",
@@ -157,13 +168,14 @@ def stddev(x):
     C = np.std(x, axis=1)
     return C
 
-def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, avg_gene_freq, base_mu1, base_mu2,
-                       base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       acc_site_fast, batch_size=1, random_state=None):
+def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, acc_vs_core2,
+                       avg_gene_freq, base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2,
+                       core_site_mu3, core_site_mu4, acc_site_fast, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rates and variable regions
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_vs_core = np.reshape(acc_vs_core, (-1, 1))
-    acc_mu_arr = core_mu_arr * acc_vs_core
+    acc_vs_core2 = np.reshape(acc_vs_core2, (-1, 1))
+    acc_mu_arr = (acc_vs_core2 * (core_mu_arr ** 2)) + (core_mu_arr * acc_vs_core)
     core_var = np.round(size_core * prop_core_var)
     acc_var = np.round(size_pan * prop_acc_var)
 
@@ -218,7 +230,7 @@ if __name__ == "__main__":
     # num_steps = 10
     # max_acc_vs_core = 1000
     # threads = 1
-    # mode = "ABC"
+    # mode = "SMC"
     # outpref = "test_"
     # initial_evidence = 20
     # update_interval = 10
@@ -229,6 +241,8 @@ if __name__ == "__main__":
     # base_mu = [0.25, 0.25, 0.25, 0.25]
     # cluster = False
     # complexity = "simple"
+    # schedule = "0.7,0.2,0.05"
+    # range_acc_vs_core2 = 1000
 
     options = get_options()
     threads = options.threads
@@ -253,6 +267,11 @@ if __name__ == "__main__":
     base_mu = [float(i) for i in options.base_mu.split(",")]
     cluster = options.cluster
     complexity = options.complexity
+    schedule = options.schedule
+    range_acc_vs_core2 = options.range_acc_vs_core2
+
+    # parse schedule
+    schedule = [float(x) for x in schedule.split(",")]
 
     # set batch size to 1 if BOLFI used
     if mode == "BOLFI":
@@ -274,7 +293,8 @@ if __name__ == "__main__":
     min_prop_acc_var = 2 / size_pan
 
     # set priors
-    acc_vs_core = elfi.Prior('uniform', 0, max_acc_vs_core)
+    acc_vs_core = elfi.Prior('loguniform', 1e-50, max_acc_vs_core)
+    acc_vs_core2 = elfi.Prior('uniform', -range_acc_vs_core2, 2 * range_acc_vs_core2)
     #avg_gene_freq = np.array([avg_gene_freq])
     avg_gene_freq = elfi.Prior('uniform', 0, 1)
     prop_core_var = float(df["Core"].max())
@@ -331,7 +351,7 @@ if __name__ == "__main__":
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core,
-                       avg_gene_freq, base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
+                       acc_vs_core2, avg_gene_freq, base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                        core_site_mu4, acc_site_fast, observed=obs)
 
     S_min = elfi.Summary(min, Y)
@@ -367,10 +387,13 @@ if __name__ == "__main__":
 
     os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
-    if mode == "ABC":
+    if mode == "rejection":
         rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)
 
         result = rej.sample(N_samples, quantile=qnt)
+    elif mode == "SMC":
+        smc = elfi.SMC(d, batch_size=batch_size, seed=seed)
+        result = smc.sample(N_samples, schedule)
     else:
         log_d = elfi.Operation(np.log, d)
         bolfi = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
