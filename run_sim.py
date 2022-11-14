@@ -296,11 +296,11 @@ if __name__ == "__main__":
         for entry in sim_list:
             f.write(str(entry[0]) + "\t" + str(entry[1]) + "\t" + str(entry[2]) + "\t" + str(entry[3]) + "\t" + str(entry[4]) + "\n")
 
-    print("Actual accessory : core rates")
-    print(acc_vs_core_sims)
+    # print("Actual accessory : core rates")
+    # print(acc_vs_core_sims)
 
-    print("Actual pangenome fractions")
-    print(pangenome_frac_sims)
+    # print("Actual pangenome fractions")
+    # print(pangenome_frac_sims)
 
     print("Generating graphs...")
 
@@ -311,7 +311,7 @@ if __name__ == "__main__":
     lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
     # plot pangenome_fracs against accessory and core distances
-    check_panfrac((distances[0], distances[3]), (pangenome_frac_sims, pangenome_frac_sims), options.outpref)
+    #check_panfrac((distances[0], distances[3]), (pangenome_frac_sims, pangenome_frac_sims), options.outpref)
 
     # calculate proportion of invariable sites
     core_adj = size_core / core_num_var

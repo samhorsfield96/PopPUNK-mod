@@ -364,7 +364,7 @@ def check_panfrac(distances, pangenome_fracs, outpref):
         ax.set_ylabel("pangenome fraction")
         ax.legend()
 
-        fig.savefig(outpref + name + "_vs_pangenome_frac.png")
+        fig.savefig(outpref + "_" + name + "_vs_pangenome_frac.png")
 
         ax.clear()
         plt.clf
@@ -408,7 +408,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         ax.set_ylabel(name2)
         ax.legend()
 
-        fig.savefig(outpref + name2 + ".png")
+        fig.savefig(outpref + "_" + name2 + ".png")
 
         ax.clear()
         plt.clf
@@ -424,7 +424,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         x = np.array(hamming_core)
         y = np.array(jaccard_accessory)
 
-        ax.plot(x, y, linewidth=2.0, label="Sim" + str(sim))
+        #ax.plot(x, y, linewidth=2.0, label="Sim" + str(sim))
+        ax.scatter(x, y)
 
         reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
         reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
@@ -432,23 +433,23 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         sim += 1
 
     #fit model, determine uncertainty
-    c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-np.inf]), (np.inf,1,np.inf,0)))
-    d_c0 = np.sqrt(cov[0][0])
-    d_c1 = np.sqrt(cov[1][1])
-    d_c2 = np.sqrt(cov[2][2])
-    d_c3 = np.sqrt(cov[3][3])
+    # c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-np.inf]), (np.inf,1,np.inf,0)))
+    # d_c0 = np.sqrt(cov[0][0])
+    # d_c1 = np.sqrt(cov[1][1])
+    # d_c2 = np.sqrt(cov[2][2])
+    # d_c3 = np.sqrt(cov[3][3])
 
     # predict using new model
-    x = np.array(distances[0][0])
-    y = np.array([model(j, c[0], c[1], c[2], c[3]) for j in x])
-    ax.plot(x, y, linewidth=2.0, label="Model")
-    print("Accessory vs. core model parameters:")
-    print(c)
-    print("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + " " + str(d_c3) + "]")
+    # x = np.array(distances[0][0])
+    # y = np.array([model(j, c[0], c[1], c[2], c[3]) for j in x])
+    # ax.plot(x, y, linewidth=2.0, label="Model")
+    # print("Accessory vs. core model parameters:")
+    # print(c)
+    # print("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + " " + str(d_c3) + "]")
 
-    with open(outpref + "model_parameters.txt", "w") as f:
-        f.write(np.array2string(c))
-        f.write("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + " " + str(d_c3) + "]")
+    # with open(outpref + "model_parameters.txt", "w") as f:
+    #     f.write(np.array2string(c))
+    #     f.write("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + " " + str(d_c3) + "]")
 
     lims = [
         np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
@@ -461,7 +462,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     ax.set_ylabel("Accessory Jaccard Distance")
     ax.legend()
 
-    fig.savefig(outpref + "core_vs_acc.png")
+    fig.savefig(outpref + "_core_vs_acc.png")
     plt.cla
 
     plt.clf
@@ -499,7 +500,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     ax.set_ylabel("Accessory Jaccard Distance")
     ax.legend()
 
-    fig.savefig(outpref + "acc_hamming_vs_jaccard.png")
+    fig.savefig(outpref + "_acc_hamming_vs_jaccard.png")
     plt.cla
 
     plt.clf
