@@ -144,6 +144,14 @@ class CustomPrior_s4(elfi.Distribution):
         t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
         return t
 
+class CustomPrior_acc2(elfi.Distribution):
+    def rvs(p1, p2, p3, size=1, random_state=None):
+        locs = np.zeros(size)
+        limit = (p2 * p1) + p3
+        scales = 1 - np.sum(np.array([p1, p2, p3]), axis=0)
+        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
+        return t
+
 def mean(x):
     C = np.mean(x, axis=1)
     return C
@@ -168,14 +176,16 @@ def stddev(x):
     C = np.std(x, axis=1)
     return C
 
-def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core, acc_vs_core2,
-                       avg_gene_freq, base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2,
-                       core_site_mu3, core_site_mu4, acc_site_fast, batch_size=1, random_state=None):
+def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core_intercept,
+                       acc_vs_core, acc_vs_core2, avg_gene_freq, base_mu1, base_mu2, base_mu3,
+                       base_mu4, core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4, acc_site_fast,
+                       batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rates and variable regions
     core_mu_arr = np.array([core_mu] * batch_size)
+    acc_vs_core_intercept = np.reshape(acc_vs_core_intercept, (-1, 1))
     acc_vs_core = np.reshape(acc_vs_core, (-1, 1))
     acc_vs_core2 = np.reshape(acc_vs_core2, (-1, 1))
-    acc_mu_arr = (acc_vs_core2 * (core_mu_arr ** 2)) + (core_mu_arr * acc_vs_core)
+    acc_mu_arr = (acc_vs_core2 * (core_mu_arr ** 2)) + (core_mu_arr * acc_vs_core) + acc_vs_core_intercept
     core_var = np.round(size_core * prop_core_var)
     acc_var = np.round(size_pan * prop_acc_var)
 
@@ -218,57 +228,57 @@ def gen_distances_elfi(size_core, size_pan, prop_core_var, prop_acc_var, core_mu
 
 if __name__ == "__main__":
     #testing
-    # size_core = 1000
-    # size_pan = 1000
-    # batch_size = 1000
-    # N_samples = 10
-    # qnt = 0.01
-    # seed = 254
-    # summary = "quantile"
-    # data_dir = "distances"
-    # data_pref = "GPSv4"
-    # num_steps = 10
-    # max_acc_vs_core = 1000
-    # threads = 1
-    # mode = "SMC"
-    # outpref = "test_"
-    # initial_evidence = 20
-    # update_interval = 10
-    # acq_noise_var = 0.1
-    # n_evidence = 200
-    # info_freq = 1000
-    # avg_gene_freq = 0.5
-    # base_mu = [0.25, 0.25, 0.25, 0.25]
-    # cluster = False
-    # complexity = "simple"
-    # schedule = "0.7,0.2,0.05"
-    # range_acc_vs_core2 = 1000
+    size_core = 1000
+    size_pan = 1000
+    batch_size = 1000
+    N_samples = 10
+    qnt = 0.01
+    seed = 254
+    summary = "quantile"
+    data_dir = "distances"
+    data_pref = "GPSv4"
+    num_steps = 10
+    max_acc_vs_core = 1000
+    threads = 1
+    mode = "rejection"
+    outpref = "test_"
+    initial_evidence = 20
+    update_interval = 10
+    acq_noise_var = 0.1
+    n_evidence = 200
+    info_freq = 1000
+    avg_gene_freq = 0.5
+    base_mu = [0.25, 0.25, 0.25, 0.25]
+    cluster = False
+    complexity = "simple"
+    schedule = "0.7,0.2,0.05"
+    range_acc_vs_core2 = 1000
 
-    options = get_options()
-    threads = options.threads
-    data_dir = options.data_dir
-    data_pref = options.data_pref
-    size_core = options.core_size
-    size_pan = options.pan_size
-    batch_size = options.batch_size
-    max_acc_vs_core = options.max_acc_vs_core
-    num_steps = options.num_steps
-    qnt = options.qnt
-    N_samples = options.samples
-    seed = options.seed
-    outpref = options.outpref
-    summary = options.summary
-    mode = options.mode
-    initial_evidence = options.init_evidence
-    update_interval = options.update_int
-    acq_noise_var = options.acq_noise_var
-    n_evidence = options.n_evidence
-    avg_gene_freq = options.avg_gene_freq
-    base_mu = [float(i) for i in options.base_mu.split(",")]
-    cluster = options.cluster
-    complexity = options.complexity
-    schedule = options.schedule
-    range_acc_vs_core2 = options.range_acc_vs_core2
+    # options = get_options()
+    # threads = options.threads
+    # data_dir = options.data_dir
+    # data_pref = options.data_pref
+    # size_core = options.core_size
+    # size_pan = options.pan_size
+    # batch_size = options.batch_size
+    # max_acc_vs_core = options.max_acc_vs_core
+    # num_steps = options.num_steps
+    # qnt = options.qnt
+    # N_samples = options.samples
+    # seed = options.seed
+    # outpref = options.outpref
+    # summary = options.summary
+    # mode = options.mode
+    # initial_evidence = options.init_evidence
+    # update_interval = options.update_int
+    # acq_noise_var = options.acq_noise_var
+    # n_evidence = options.n_evidence
+    # avg_gene_freq = options.avg_gene_freq
+    # base_mu = [float(i) for i in options.base_mu.split(",")]
+    # cluster = options.cluster
+    # complexity = options.complexity
+    # schedule = options.schedule
+    # range_acc_vs_core2 = options.range_acc_vs_core2
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -293,7 +303,8 @@ if __name__ == "__main__":
     min_prop_acc_var = 2 / size_pan
 
     # set priors
-    acc_vs_core = elfi.Prior('loguniform', 1e-50, max_acc_vs_core)
+    acc_vs_core_intercept = elfi.Prior('uniform', 0, max_real_core * max_acc_vs_core)
+    acc_vs_core = elfi.Prior('uniform', 0, max_acc_vs_core)
     acc_vs_core2 = elfi.Prior('uniform', -range_acc_vs_core2, 2 * range_acc_vs_core2)
     #avg_gene_freq = np.array([avg_gene_freq])
     avg_gene_freq = elfi.Prior('uniform', 0, 1)
@@ -350,7 +361,7 @@ if __name__ == "__main__":
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core,
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, prop_core_var, prop_acc_var, core_mu, acc_vs_core_intercept, acc_vs_core,
                        acc_vs_core2, avg_gene_freq, base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                        core_site_mu4, acc_site_fast, observed=obs)
 
