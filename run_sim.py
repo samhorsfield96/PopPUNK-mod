@@ -140,10 +140,10 @@ if __name__ == "__main__":
     # core mu is number of differences per base of alignment. Divide by two to account for using two diverging sequences
     core_mu = []
     str_core_mu = [float(i) / 2 for i in options.core_mu.split(",")]
-    mu = str_core_mu[0]
-    while mu <= str_core_mu[1]:
-        core_mu.append(mu)
-        mu += str_core_mu[2]
+    num_items = int(round((str_core_mu[1] / str_core_mu[2]), 0))
+    core_mu.append(str_core_mu[0])
+    for i in range(1, num_items):
+        core_mu.append(i * str_core_mu[2])
 
     # round to 6 dp
     core_mu = [round(i, 6) for i in core_mu]
@@ -161,10 +161,10 @@ if __name__ == "__main__":
     # acc mu is number of differences per gene in accessory genome. Divide by two to account for using two diverging sequences
     acc_mu = []
     str_acc_mu = [float(i) / 2 for i in options.acc_mu.split(",")]
-    mu = str_acc_mu[0]
-    while mu <= str_acc_mu[1]:
-        acc_mu.append(mu)
-        mu += str_acc_mu[2]
+    num_items = int(round((str_acc_mu[1] / str_acc_mu[2]), 0))
+    acc_mu.append(str_acc_mu[0])
+    for i in range(1, num_items):
+        acc_mu.append(i * str_acc_mu[2])
 
     #round to 6 dp
     acc_mu = [round(i, 6) for i in acc_mu]
