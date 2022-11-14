@@ -77,6 +77,14 @@ def get_options():
                     default=1.0,
                     help='Scale parameter for accessory per-site substitution rates. '
                          'Default = 1.0')
+    IO.add_argument('--sim-core-dispersion',
+                    default=0.01,
+                    help='Dispersion for simulated core values as proportion of max mean value. '
+                         'Default = 0.01')
+    IO.add_argument('--sim-acc-dispersion',
+                    default=0.01,
+                    help='Dispersion for simulated accessory values as proportion of max mean value. '
+                         'Default = 0.01')
     IO.add_argument('--core-sites-man',
                     default=None,
                     help='Manual core per-site mutation rates. Must sum to 1. '
@@ -113,6 +121,10 @@ if __name__ == "__main__":
     core_num_var = options.core_var
     adjusted = options.adjust
     avg_gene_freq = options.avg_gene_freq
+    sim_core_dispersion = options.sim_core_dispersion
+    sim_acc_dispersion = options.sim_acc_dispersion
+    core_sites_man = options.core_sites_man
+    acc_sites_man = options.acc_sites_man
 
     # determine per-site substitution rates
     core_sites_man = None
@@ -137,6 +149,9 @@ if __name__ == "__main__":
     core_mu = [round(i, 6) for i in core_mu]
     core_mu_ori = core_mu.copy()
 
+    # to ensure dispersion is constant, set on max value of core
+    sim_core_dispersion = max(core_mu) * sim_core_dispersion
+
     # adjust core mutation rate in variable sites to match overall core_mu
     #core_mu = [(i * (size_core / core_num_var)) for i in core_mu]
 
@@ -153,6 +168,9 @@ if __name__ == "__main__":
 
     #round to 6 dp
     acc_mu = [round(i, 6) for i in acc_mu]
+
+    # to ensure dispersion is constant, set on max value of accessory
+    sim_acc_dispersion = max(acc_mu) * sim_acc_dispersion
 
     # get number of accessory genes
     size_acc = num_pangenome - num_core
@@ -179,7 +197,7 @@ if __name__ == "__main__":
     print(base_freq)
 
     # parse individual base mutation rates
-    base_mu = [float(i) for i in options.base_freq.split(",")]
+    base_mu = [float(i) for i in options.base_mu.split(",")]
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -211,9 +229,13 @@ if __name__ == "__main__":
     acc_vs_core_sims = [None] * options.num_sim
     pangenome_frac_sims = [None] * options.num_sim
 
+    sim_list = []
+
     for i in range(options.num_sim):
         core_ref = np.random.choice(base_choices, size_core, p=base_freq)
         acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+
+        ref_name = str(i) + "_0"
 
         # pull out variable sites in core_ref
         sites = np.random.choice(range(core_ref.size), core_num_var, replace=False)
@@ -250,7 +272,8 @@ if __name__ == "__main__":
             for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_var=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
-                            base_mu=base_mu, core_site_mu=core_site_mu, acc_site_mu=acc_site_mu),
+                            base_mu=base_mu, core_site_mu=core_site_mu, acc_site_mu=acc_site_mu,
+                            sim_core_dispersion=sim_core_dispersion, sim_acc_dispersion=sim_acc_dispersion),
                     range(0, len(core_mu))), total=len(core_mu)):
                 hamming_core[ind] = hcore
                 hamming_acc[ind] = hacc
@@ -258,6 +281,8 @@ if __name__ == "__main__":
                 jaccard_acc[ind] = jacc
                 acc_vs_core[ind] = avc
                 pangenome_frac[ind] = p_frac
+                query_name = str(i) + "_" + str(ind + 1)
+                sim_list.append((ref_name, query_name, hcore, jacc, avc))
 
         hamming_core_sims[i] = hamming_core
         hamming_acc_sims[i] = hamming_acc
@@ -265,6 +290,11 @@ if __name__ == "__main__":
         jaccard_acc_sims[i] = jaccard_acc
         acc_vs_core_sims[i] = acc_vs_core
         pangenome_frac_sims[i] = pangenome_frac
+
+    # print simulated run
+    with open(options.outpref + "simulation.txt", "w") as f:
+        for entry in sim_list:
+            f.write(str(entry[0]) + "\t" + str(entry[1]) + "\t" + str(entry[2]) + "\t" + str(entry[3]) + "\t" + str(entry[4]) + "\n")
 
     print("Actual accessory : core rates")
     print(acc_vs_core_sims)
@@ -276,8 +306,8 @@ if __name__ == "__main__":
 
     mu_rates = (core_mu_ori, acc_mu_ori, core_mu_ori, acc_mu_ori)
     distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
-    mu_names = ("Core mu", "Acc. mu", "Core mu", "Acc mu")
-    distance_names = ("Hamming Core", "Hamming Acc.", "Jaccard Core", "Jaccard Acc.")
+    mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
+    distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
     lengths = (size_core, num_pangenome, size_core, num_pangenome)
 
     # plot pangenome_fracs against accessory and core distances
