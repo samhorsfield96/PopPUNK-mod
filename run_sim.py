@@ -79,10 +79,12 @@ def get_options():
                          'Default = 1.0')
     IO.add_argument('--sim-core-dispersion',
                     default=0.01,
+                    type=float,
                     help='Dispersion for simulated core values as proportion of max mean value. '
                          'Default = 0.01')
     IO.add_argument('--sim-acc-dispersion',
                     default=0.01,
+                    type=float,
                     help='Dispersion for simulated accessory values as proportion of max mean value. '
                          'Default = 0.01')
     IO.add_argument('--core-sites-man',
@@ -292,7 +294,7 @@ if __name__ == "__main__":
         pangenome_frac_sims[i] = pangenome_frac
 
     # print simulated run
-    with open(options.outpref + "simulation.txt", "w") as f:
+    with open(options.outpref + "_simulation.txt", "w") as f:
         for entry in sim_list:
             f.write(str(entry[0]) + "\t" + str(entry[1]) + "\t" + str(entry[2]) + "\t" + str(entry[3]) + "\t" + str(entry[4]) + "\n")
 
