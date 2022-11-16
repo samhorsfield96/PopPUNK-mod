@@ -13,24 +13,28 @@ def get_options():
     IO.add_argument('--core-size',
                     type=int,
                     default=1140000,
-                    help='Size of core genome alignment (in bases). Default = 1140000 ')
+                    help='Size of core genome alignment (in bases). '
+                         'Default = 1140000 ')
     IO.add_argument('--core-var',
                     type=int,
                     default=106196,
-                    help='Number of variant sites in core. Default = 106196 ')
+                    help='Number of variant sites in core. '
+                         'Default = 106196 ')
     IO.add_argument('--base-freq',
-                    default="0.25,0.25,0.25,0.25",
-                    help='Base frequencies in starting core genome in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
+                    default="0.3,0.2,0.2,0.3",
+                    help='Base frequencies in starting core genome in order "A,C,G,T". '
+                         'Default = "0.3,0.2,0.2,0.3" ')
     IO.add_argument('--base-mu',
-                    default="0.25,0.25,0.25,0.25",
-                    help='Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
+                    default="0.3,0.2,0.2,0.3",
+                    help='Mutation rates from all other bases to each base, in order "A,C,G,T". '
+                         'Default = "0.3,0.2,0.2,0.3" ')
     IO.add_argument('--start-gene-freq',
-                    default="0.5,0.5",
-                    help='Gene frequencies in starting accessory genome in order "0,1". Default = "0.5,0.5" ')
+                    default="0.608,0.392",
+                    help='Gene frequencies in starting accessory genome in order "0,1". Default = "0.608,0.392" ')
     IO.add_argument('--avg-gene-freq',
                     type=float,
-                    default=0.5,
-                    help='Average gene frequency in accessory genome. Default = "0.5" ')
+                    default=0.392,
+                    help='Average gene frequency in accessory genome. Default = "0.392" ')
     IO.add_argument('--num-core',
                     type=int,
                     default=1194,
@@ -40,13 +44,13 @@ def get_options():
                     default=5442,
                     help='Number of genes in pangenome. Default = 5442')
     IO.add_argument('--core-mu',
-                    default="0,2,0.2",
+                    default="0,0.02,0.002",
                     help='Range of core genome mutation rate values (mutations per site per genome) in form start,stop,step. '
-                         'Default = "0,2,0.2"')
+                         'Default = "0,0.02,0.002"')
     IO.add_argument('--acc-mu',
-                    default="0,2,0.2",
+                    default="0,0.4,0.04",
                     help='Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. '
-                         'Default = "0,2,0.2"')
+                         'Default = "0,0.4,0.04"')
     IO.add_argument('--acc_func',
                     default=None,
                     help='Function for acc. variation around core. Takes form quadratic,slope,intercept. '
@@ -87,10 +91,10 @@ def get_options():
                     help='Dispersion for simulated core values as proportion of max mean value. '
                          'Default = 0.01')
     IO.add_argument('--sim-acc-dispersion',
-                    default=0.01,
+                    default=0.1,
                     type=float,
                     help='Dispersion for simulated accessory values as proportion of max mean value. '
-                         'Default = 0.01')
+                         'Default = 0.1')
     IO.add_argument('--core-sites-man',
                     default=None,
                     help='Manual core per-site mutation rates. Must sum to 1. '
