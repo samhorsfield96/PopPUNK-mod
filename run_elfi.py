@@ -46,7 +46,9 @@ def get_options():
     IO.add_argument('--avg-gene-freq',
                     type=float,
                     default=0.5,
-                    help='Average gene frequency in accessory genome. Default = "0.5" ')
+                    help='Average gene frequency in accessory genome. '
+                         'Determines gene gain/loss rate e.g. 0.1 = gene gain/loss rate 1:9 '
+                         'Default = "0.5" ')
     IO.add_argument('--batch-size',
                     type=int,
                     default=10000,
@@ -98,16 +100,16 @@ def get_options():
     IO.add_argument('--mode',
                     choices=['rejection', 'SMC', 'BOLFI'],
                     default="rejection",
-                    help='Mode for running model fit, either "rejection", "SMC "BOLFI". Default = "rejection". ')
+                    help='Mode for running model fit, either "rejection", "SMC or "BOLFI". Default = "rejection". ')
     IO.add_argument('--complexity',
                     choices=['simple', 'intermediate'],
                     default="simple",
-                    help='Model complexity. If simple, predict only a/pi and gene gain rate. '
-                         'If intermediate, predict prior two and fast gene site mu.'
+                    help="Model complexity. If simple, don't assume single per-site gene gain/loss rate. "
+                         "If intermediate, assume two per-site gain/loss rates mu. "
                          'Default = "simple". ')
     IO.add_argument('--outpref',
-                    default="./",
-                    help='Output prefix. Default = "./"')
+                    default="PopPUNK-mod",
+                    help='Output prefix. Default = "PopPUNK-mod"')
     IO.add_argument('--threads',
                     type=int,
                     default=1,
