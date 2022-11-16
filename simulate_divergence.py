@@ -16,18 +16,19 @@ def read_files(in_dir, prefix=""):
 
     li = []
     for filename in all_files:
-        file_pref = os.path.splitext(os.path.basename(filename))[0]
-        split_file_pref = file_pref.split("_distances_sample")
-        name, sample = (split_file_pref[0], split_file_pref[1])
+        #file_pref = os.path.splitext(os.path.basename(filename))[0]
+        #split_file_pref = file_pref.split("_distances_sample")
+        #name, sample = (split_file_pref[0], split_file_pref[1])
 
         df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
         # rename columns
-        df.columns = ['Species', 'Sample', 'Core', 'Accessory']
+        df.rename(columns={df.columns[0]: "Sample1", df.columns[1] : "Sample2", df.columns[2]: "Core",
+                           df.columns[3]: "Accessory"}, inplace=True)
 
         # drop first two columns
-        df['Species'] = name
-        df['Sample'] = int(sample)
+        #df['Species'] = name
+        #df['Sample'] = int(sample)
         df['Core'] = pd.to_numeric(df['Core'])
         df['Accessory'] = pd.to_numeric(df['Accessory'])
 

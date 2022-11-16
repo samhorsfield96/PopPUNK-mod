@@ -247,7 +247,7 @@ if __name__ == "__main__":
     # seed = 254
     # summary = "quantile"
     # data_dir = "distances"
-    # data_pref = "GPSv4"
+    # data_pref = "Pneumo_sim_simulation"
     # num_steps = 10
     # max_acc_vs_core = 1000
     # max_acc_vs_core_intercept = 1.0
