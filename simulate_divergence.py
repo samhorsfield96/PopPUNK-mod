@@ -281,43 +281,43 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
     # mutate genomes
     core_query1, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
     sites_mutated.append(total_sites)
-    core_query2, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
-    sites_mutated.append(total_sites)
+    #core_query2, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
+    #sites_mutated.append(total_sites)
     acc_query1, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
     sites_mutated.append(total_sites)
-    acc_query2, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
-    sites_mutated.append(total_sites)
+    #acc_query2, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
+    #sites_mutated.append(total_sites)
 
     if adj == True:
         # add core genes to accessory distances
-        #acc_ref = np.append(acc_ref, np.ones(num_core))
+        acc_var = np.append(acc_var, np.ones(num_core))
         acc_query1 = np.append(acc_query1, np.ones(num_core))
-        acc_query2 = np.append(acc_query2, np.ones(num_core))
+        #acc_query2 = np.append(acc_query2, np.ones(num_core))
 
         # add core invariant sites to core alignments
-        #core_var = np.append(core_var, core_invar)
+        core_var = np.append(core_var, core_invar)
         core_query1 = np.append(core_query1, core_invar)
-        core_query2 = np.append(core_query2, core_invar)
+        #core_query2 = np.append(core_query2, core_invar)
 
     acc_vs_core = 1
 
     if core_mu[index] != 0:
         # determine accessory vs core divergence rate
-        prop_subs_core = (sites_mutated[0] + sites_mutated[1]) / (core_query1.size + core_query2.size)
-        prop_subs_acc = (sites_mutated[2] + sites_mutated[3]) / (acc_query1.size + acc_query2.size)
+        prop_subs_core = (sites_mutated[0]) / (core_query1.size + core_var.size)
+        prop_subs_acc = (sites_mutated[1]) / (acc_query1.size + acc_var.size)
         acc_vs_core = prop_subs_acc / prop_subs_core
 
     # determine pangenome_frac
-    match = acc_query1 == acc_query2
+    match = acc_query1 == acc_var
     zeros_match = match[acc_query1 == 0]
     num_zero_match = np.count_nonzero(zeros_match)
 
     pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
 
-    hamming_core = distance.hamming(core_query1, core_query2)
-    hamming_acc = distance.hamming(acc_query1, acc_query2)
-    jaccard_core = distance.jaccard(core_query1, core_query2)
-    jaccard_acc = distance.jaccard(acc_query1, acc_query2)
+    hamming_core = distance.hamming(core_query1, core_var)
+    hamming_acc = distance.hamming(acc_query1, acc_var)
+    jaccard_core = distance.jaccard(core_query1, core_var)
+    jaccard_acc = distance.jaccard(acc_query1, acc_var)
 
     return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
 
@@ -406,7 +406,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         fig, ax = plt.subplots()
 
         # make data, as comparing two diverged sequences, multiply by 2
-        x = np.array(var1) * 2
+        x = np.array(var1)
         for j in range(len(var2)):
             y = np.array(var2[j])
 
@@ -432,8 +432,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
         ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
         ax.set_aspect('equal')
-        ax.set_xlim(lims)
-        ax.set_ylim(0, 1)
+        #ax.set_xlim(lims)
+        #ax.set_ylim(0, 1)
         ax.set_xlabel(name1)
         ax.set_ylabel(name2)
         ax.legend()

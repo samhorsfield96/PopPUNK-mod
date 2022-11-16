@@ -107,10 +107,10 @@ def get_options():
                     type=int,
                     default=1,
                     help='Number of simulations to run. Default = 1')
-    IO.add_argument('--adjust',
-                    default=False,
-                    action="store_true",
-                    help='Adjust core and accessory distances for invariant sites. Default = False')
+    IO.add_argument('--no-adjust',
+                    default=True,
+                    action="store_false",
+                    help="Don't adjust core and accessory distances for invariant sites. ")
     IO.add_argument('--outpref',
                     default="popPUNK-mod",
                     help='Output prefix. Default = "./"')
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     num_core = options.num_core
     num_pangenome = options.num_pan
     core_num_var = options.core_var
-    adjusted = options.adjust
+    adjusted = options.no_adjust
     avg_gene_freq = options.avg_gene_freq
     sim_core_dispersion = options.sim_core_dispersion
     sim_acc_dispersion = options.sim_acc_dispersion
@@ -148,9 +148,9 @@ if __name__ == "__main__":
     # calculate number of core invariant sites
     core_num_invar = size_core - core_num_var
 
-    # core mu is number of differences per base of alignment. Divide by two to account for using two diverging sequences
+    # core mu is number of differences per base of alignment.
     core_mu = []
-    str_core_mu = [float(i) / 2 for i in options.core_mu.split(",")]
+    str_core_mu = [float(i) for i in options.core_mu.split(",")]
     num_items = int(round((str_core_mu[1] / str_core_mu[2]), 0))
     core_mu.append(str_core_mu[0])
     for i in range(1, num_items):
@@ -169,10 +169,10 @@ if __name__ == "__main__":
     print("Individual genome core per-base mutation rate values: ")
     print(core_mu)
 
-    # acc mu is number of differences per gene in accessory genome. Divide by two to account for using two diverging sequences
+    # acc mu is number of differences per gene in accessory genome.
     acc_mu = []
     if acc_func is None:
-        str_acc_mu = [float(i) / 2 for i in options.acc_mu.split(",")]
+        str_acc_mu = [float(i) for i in options.acc_mu.split(",")]
         num_items = int(round((str_acc_mu[1] / str_acc_mu[2]), 0))
         acc_mu.append(str_acc_mu[0])
         for i in range(1, num_items):
