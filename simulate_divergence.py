@@ -1,5 +1,6 @@
 import math
-
+import glob
+import os
 import pandas as pd
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
@@ -9,6 +10,32 @@ import random
 from math import e
 from scipy.stats import gamma
 from numba import jit
+
+def read_files(in_dir, prefix=""):
+    all_files = glob.glob(os.path.join(in_dir, prefix + "*.txt"))
+
+    li = []
+    for filename in all_files:
+        file_pref = os.path.splitext(os.path.basename(filename))[0]
+        split_file_pref = file_pref.split("_distances_sample")
+        name, sample = (split_file_pref[0], split_file_pref[1])
+
+        df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+
+        # rename columns
+        df.columns = ['Species', 'Sample', 'Core', 'Accessory']
+
+        # drop first two columns
+        df['Species'] = name
+        df['Sample'] = int(sample)
+        df['Core'] = pd.to_numeric(df['Core'])
+        df['Accessory'] = pd.to_numeric(df['Accessory'])
+
+        li.append(df)
+
+    frame = pd.concat(li, axis=0, ignore_index=True)
+
+    return frame
 
 def recurse_prob(x, weight):
     if x == 1:

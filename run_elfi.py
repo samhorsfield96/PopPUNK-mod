@@ -7,7 +7,6 @@ logging.basicConfig(level=logging.INFO)
 
 import elfi
 from simulate_divergence import *
-from fit_distances import read_files
 import os
 import sys
 
@@ -25,7 +24,7 @@ def get_options():
                     type=int,
                     default=10000,
                     help='Number of positions in pangenome. Default = 10000 ')
-    IO.add_argument('--max_intercept',
+    IO.add_argument('--max-intercept',
                     type=float,
                     default=1.0,
                     help='Maximum intercept for pi vs. a. Default = 1.0')
@@ -33,10 +32,10 @@ def get_options():
                     type=float,
                     default=1000,
                     help='Maximum ratio between accessory and core genome evolution (a/pi). Default = 1000 ')
-    IO.add_argument('--range-acc-vs-core2',
+    IO.add_argument('--shape-acc-vs-core2',
                     type=int,
                     default=1000,
-                    help='Positive / negative range of accessory to square of core genome evolution. Default = 1000 ')
+                    help='Shape parameter of cauchy distribution for acc_vs_core2. Default = 1000 ')
     IO.add_argument('--num-steps',
                     type=int,
                     default=50,
@@ -252,8 +251,8 @@ if __name__ == "__main__":
     # num_steps = 10
     # max_acc_vs_core = 1000
     # max_acc_vs_core_intercept = 1.0
-    # threads = 1
-    # mode = "rejection"
+    # threads = 4
+    # mode = "BOLFI"
     # outpref = "test_"
     # initial_evidence = 20
     # update_interval = 10
@@ -265,7 +264,7 @@ if __name__ == "__main__":
     # cluster = False
     # complexity = "simple"
     # schedule = "0.7,0.2,0.05"
-    # range_acc_vs_core2 = 1000
+    # shape_acc_vs_core2 = 1000
 
     options = get_options()
     threads = options.threads
@@ -291,15 +290,11 @@ if __name__ == "__main__":
     cluster = options.cluster
     complexity = options.complexity
     schedule = options.schedule
-    range_acc_vs_core2 = options.range_acc_vs_core2
+    shape_acc_vs_core2 = options.shape_acc_vs_core2
     max_acc_vs_core_intercept = options.max_intercept
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
-
-    # set batch size to 1 if BOLFI used
-    if mode == "BOLFI":
-        batch_size = 1
 
     # read in real files
     df = read_files(data_dir, data_pref)
@@ -319,7 +314,7 @@ if __name__ == "__main__":
     # set priors
     acc_vs_core_intercept = elfi.Prior('uniform', 0, max_acc_vs_core_intercept)
     acc_vs_core = elfi.Prior('uniform', 0, max_acc_vs_core)
-    acc_vs_core2 = elfi.Prior('cauchy', 0, range_acc_vs_core2)
+    acc_vs_core2 = elfi.Prior('cauchy', 0, shape_acc_vs_core2)
     #acc_vs_core2 = CustomPrior_acc2.rvs(core_mu, acc_vs_core, acc_vs_core_intercept, range_acc_vs_core2)
     #avg_gene_freq = np.array([avg_gene_freq])
     avg_gene_freq = elfi.Prior('uniform', 0, 1)
@@ -422,8 +417,17 @@ if __name__ == "__main__":
         result = smc.sample(N_samples, schedule)
     else:
         log_d = elfi.Operation(np.log, d)
+        # calculate max value based on cauchy
+        max_acc_vs_core2 = np.max(np.abs(scipy.stats.cauchy.rvs(0, shape_acc_vs_core2, batch_size)))
+
+        bounds = {
+            'acc_vs_core' : (0, max_acc_vs_core),
+            'acc_vs_core2' : (-max_acc_vs_core2, max_acc_vs_core2),
+            'acc_vs_core_intercept' : (-max_acc_vs_core, max_acc_vs_core),
+            'avg_gene_freq' : (0, 1)
+        }
         bolfi = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                           acq_noise_var=acq_noise_var, seed=seed)
+                           acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
         post = bolfi.fit(n_evidence=n_evidence)
         result = bolfi.sample(N_samples)
 
