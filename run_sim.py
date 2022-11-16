@@ -47,6 +47,10 @@ def get_options():
                     default="0,2,0.2",
                     help='Range of accessory gene gain/loss rates (change per gene per genome) in form start,stop,step. '
                          'Default = "0,2,0.2"')
+    IO.add_argument('--acc_func',
+                    default=None,
+                    help='Function for acc. variation around core. Takes form quadratic,slope,intercept. '
+                         'Default = None')
     IO.add_argument('--core-sites',
                     type=int,
                     default=3,
@@ -104,7 +108,7 @@ def get_options():
                     action="store_true",
                     help='Adjust core and accessory distances for invariant sites. Default = False')
     IO.add_argument('--outpref',
-                    default="./",
+                    default="popPUNK-mod",
                     help='Output prefix. Default = "./"')
     IO.add_argument('--threads',
                     type=int,
@@ -127,6 +131,7 @@ if __name__ == "__main__":
     sim_acc_dispersion = options.sim_acc_dispersion
     core_sites_man = options.core_sites_man
     acc_sites_man = options.acc_sites_man
+    acc_func = options.acc_func
 
     # determine per-site substitution rates
     core_sites_man = None
@@ -162,11 +167,15 @@ if __name__ == "__main__":
 
     # acc mu is number of differences per gene in accessory genome. Divide by two to account for using two diverging sequences
     acc_mu = []
-    str_acc_mu = [float(i) / 2 for i in options.acc_mu.split(",")]
-    num_items = int(round((str_acc_mu[1] / str_acc_mu[2]), 0))
-    acc_mu.append(str_acc_mu[0])
-    for i in range(1, num_items):
-        acc_mu.append(i * str_acc_mu[2])
+    if acc_func is None:
+        str_acc_mu = [float(i) / 2 for i in options.acc_mu.split(",")]
+        num_items = int(round((str_acc_mu[1] / str_acc_mu[2]), 0))
+        acc_mu.append(str_acc_mu[0])
+        for i in range(1, num_items):
+            acc_mu.append(i * str_acc_mu[2])
+    else:
+        str_acc_mu = [float(i) for i in options.acc_func.split(",")]
+        acc_mu = [(str_acc_mu[0] * (mu ** 2)) + (mu * str_acc_mu[1]) + str_acc_mu[2] for mu in core_mu]
 
     #round to 6 dp
     acc_mu = [round(i, 6) for i in acc_mu]
@@ -296,7 +305,7 @@ if __name__ == "__main__":
     # print simulated run
     with open(options.outpref + "_simulation.txt", "w") as f:
         for entry in sim_list:
-            f.write(str(entry[0]) + "\t" + str(entry[1]) + "\t" + str(entry[2]) + "\t" + str(entry[3]) + "\t" + str(entry[4]) + "\n")
+            f.write(str(entry[0]) + "\t" + str(entry[1]) + "\t" + str(entry[2]) + "\t" + str(entry[3]) + "\n")
 
     # print("Actual accessory : core rates")
     # print(acc_vs_core_sims)
