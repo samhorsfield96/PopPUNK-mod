@@ -436,7 +436,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
         #ax.set_ylim(0, 1)
         ax.set_xlabel(name1)
         ax.set_ylabel(name2)
-        ax.legend()
+        #ax.legend()
 
         fig.savefig(outpref + "_" + name2 + ".png")
 
@@ -528,7 +528,7 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     ax.set_xlabel("Accessory Hamming distance")
     ax.set_ylabel("Accessory Jaccard Distance")
-    ax.legend()
+    #ax.legend()
 
     fig.savefig(outpref + "_acc_hamming_vs_jaccard.png")
     plt.cla
