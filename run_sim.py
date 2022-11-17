@@ -1,4 +1,5 @@
 import argparse
+import sys
 from multiprocessing import Pool
 from functools import partial
 from simulate_divergence import *
@@ -184,6 +185,10 @@ if __name__ == "__main__":
     #round to 6 dp
     acc_mu = [round(i, 6) for i in acc_mu]
 
+    if any([x < 0  for x in acc_mu]):
+        print("Parameters generated negative values")
+        sys.exit(0)
+
     # to ensure dispersion is constant, set on max value of accessory
     sim_acc_dispersion = max(acc_mu) * sim_acc_dispersion
 
@@ -335,3 +340,4 @@ if __name__ == "__main__":
     generate_graph(mu_rates, distances, mu_names, distance_names, options.outpref, core_adj, 1, adjusted)
 
     print("Done.")
+    sys.exit(0)
