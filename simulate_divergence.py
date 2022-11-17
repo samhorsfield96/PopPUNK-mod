@@ -302,11 +302,11 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
 
     acc_vs_core = 1
 
-    if core_mu[index] != 0:
-        # determine accessory vs core divergence rate
-        prop_subs_core = (sites_mutated[0]) / (core_query1.size + core_var.size)
-        prop_subs_acc = (sites_mutated[1]) / (acc_query1.size + acc_var.size)
-        acc_vs_core = prop_subs_acc / prop_subs_core
+    # if core_mu[index] != 0:
+    #     # determine accessory vs core divergence rate
+    #     prop_subs_core = (sites_mutated[0]) / (core_query1.size + core_var.size)
+    #     prop_subs_acc = (sites_mutated[1]) / (acc_query1.size + acc_var.size)
+    #     acc_vs_core = prop_subs_acc / prop_subs_core
 
     # determine pangenome_frac
     match = acc_query1 == acc_var

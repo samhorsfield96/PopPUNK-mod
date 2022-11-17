@@ -92,10 +92,10 @@ def get_options():
                     help='Dispersion for simulated core values as proportion of max mean value. '
                          'Default = 0.01')
     IO.add_argument('--sim-acc-dispersion',
-                    default=0.1,
+                    default=0.01,
                     type=float,
                     help='Dispersion for simulated accessory values as proportion of max mean value. '
-                         'Default = 0.1')
+                         'Default = 0.01')
     IO.add_argument('--core-sites-man',
                     default=None,
                     help='Manual core per-site mutation rates. Must sum to 1. '
@@ -106,7 +106,7 @@ def get_options():
                          'Default = None')
     IO.add_argument('--num-sim',
                     type=int,
-                    default=1,
+                    default=5,
                     help='Number of simulations to run. Default = 1')
     IO.add_argument('--no-adjust',
                     default=True,
