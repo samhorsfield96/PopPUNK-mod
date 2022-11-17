@@ -114,7 +114,11 @@ def get_options():
                     help="Don't adjust core and accessory distances for invariant sites. ")
     IO.add_argument('--outpref',
                     default="popPUNK-mod",
-                    help='Output prefix. Default = "./"')
+                    help='Output prefix. Default = "popPUNK-mod"')
+    IO.add_argument('--graph',
+                    default=False,
+                    action="store_true",
+                    help="Generate distance comparison graphs. ")
     IO.add_argument('--threads',
                     type=int,
                     default=1,
@@ -137,6 +141,7 @@ if __name__ == "__main__":
     core_sites_man = options.core_sites_man
     acc_sites_man = options.acc_sites_man
     acc_func = options.acc_func
+    gen_graph = options.graph
 
     # determine per-site substitution rates
     core_sites_man = None
@@ -337,7 +342,7 @@ if __name__ == "__main__":
     core_adj = size_core / core_num_var
     acc_adj = num_pangenome / size_acc
 
-    generate_graph(mu_rates, distances, mu_names, distance_names, options.outpref, core_adj, 1, adjusted)
+    generate_graph(mu_rates, distances, mu_names, distance_names, options.outpref, core_adj, 1, adjusted, gen_graph)
 
     print("Done.")
     sys.exit(0)

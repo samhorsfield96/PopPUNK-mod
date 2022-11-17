@@ -401,49 +401,50 @@ def check_panfrac(distances, pangenome_fracs, outpref):
         plt.clf
         plt.cla
 
-def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_adj, acc_adj, adjusted):
-    for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
-        # plot
-        fig, ax = plt.subplots()
+def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_adj, acc_adj, adjusted, gen_graph):
+    if gen_graph:
+        for var1, var2, name1, name2 in zip(mu_rates, distances, mu_names, distance_names):
+            # plot
+            fig, ax = plt.subplots()
 
-        # make data, as comparing two diverged sequences, multiply by 2
-        x = np.array(var1)
-        for j in range(len(var2)):
-            y = np.array(var2[j])
+            # make data, as comparing two diverged sequences, multiply by 2
+            x = np.array(var1)
+            for j in range(len(var2)):
+                y = np.array(var2[j])
 
-            ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
+                ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
 
-        lims = [
-            np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
-            np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
-        ]
+            lims = [
+                np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
+                np.max([ax.get_xlim(), ax.get_ylim()]),  # max of both axes
+            ]
 
-        # plot Jukes-cantor relationship
-        if "Core" in name1:
-            if adjusted:
-                y = (3/4 * (1 - e ** (-(4/3) * x))) / core_adj
+            # plot Jukes-cantor relationship
+            if "Core" in name1:
+                if adjusted:
+                    y = (3/4 * (1 - e ** (-(4/3) * x))) / core_adj
+                else:
+                    y = 3 / 4 * (1 - e ** (-(4 / 3) * x))
             else:
-                y = 3 / 4 * (1 - e ** (-(4 / 3) * x))
-        else:
-            if adjusted:
-                y = (1/2 * (1 - e ** (-(2/1) * x))) / acc_adj
-            else:
-                y = 1 / 2 * (1 - e ** (-(2 / 1) * x))
-        ax.plot(x, y, linewidth=2.0, label="Jukes-Cantor")
+                if adjusted:
+                    y = (1/2 * (1 - e ** (-(2/1) * x))) / acc_adj
+                else:
+                    y = 1 / 2 * (1 - e ** (-(2 / 1) * x))
+            ax.plot(x, y, linewidth=2.0, label="Jukes-Cantor")
 
-        ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
-        ax.set_aspect('equal')
-        #ax.set_xlim(lims)
-        #ax.set_ylim(0, 1)
-        ax.set_xlabel(name1)
-        ax.set_ylabel(name2)
-        #ax.legend()
+            ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
+            ax.set_aspect('equal')
+            #ax.set_xlim(lims)
+            #ax.set_ylim(0, 1)
+            ax.set_xlabel(name1)
+            ax.set_ylabel(name2)
+            #ax.legend()
 
-        fig.savefig(outpref + "_" + name2 + ".png")
+            fig.savefig(outpref + "_" + name2 + ".png")
 
-        ax.clear()
-        plt.clf
-        plt.cla
+            ax.clear()
+            plt.clf
+            plt.cla
 
     # plot core hamming vs. accessory jaccard, predict relationship
     fig, ax = plt.subplots()
@@ -482,10 +483,10 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     #     f.write(np.array2string(c))
     #     f.write("[" + str(d_c0) + " " + str(d_c1) + " " + str(d_c2) + " " + str(d_c3) + "]")
 
-    lims = [
-        np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
-        np.max([ax.get_xlim(), ax.get_xlim()]),  # max of both axes
-    ]
+    # lims = [
+    #     np.min([ax.get_xlim(), ax.get_xlim()]),  # min of both axes
+    #     np.max([ax.get_xlim(), ax.get_xlim()]),  # max of both axes
+    # ]
 
     # ax.set_ylim(0, 1)
     # ax.set_xlim(lims)
