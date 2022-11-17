@@ -2,6 +2,7 @@ import math
 import glob
 import os
 import pandas as pd
+import scipy.stats
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
@@ -231,7 +232,7 @@ def calc_gamma(vec_size, no_split, shape, scale, sim_index):
 
 def sim_divergence(ref, mu, core, freq, site_mu, dispersion):
     # add dispersion to number of sites based on normal distribution
-    mu = abs(np.random.normal(mu, dispersion))
+    mu = scipy.stats.norm.rvs(mu, dispersion)
 
     num_sites = round(len(ref) * mu)
 
