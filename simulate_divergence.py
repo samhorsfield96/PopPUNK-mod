@@ -499,40 +499,41 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
     plt.clf
 
-    # plot accessory jaccard vs. accessory hamming
-    fig, ax = plt.subplots()
-    sim = 1
-    reg_x = np.zeros(len(distances[1]) * len(distances[1][0]))
-    reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
-    for hamming, jaccard in zip(distances[1], distances[3]):
-        # make data, as comparing two diverged sequences, multiply by 2
-        x = np.array(hamming)
-        y = np.array(jaccard)
-        reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
-        reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
+    if gen_graph:
+        # plot accessory jaccard vs. accessory hamming
+        fig, ax = plt.subplots()
+        sim = 1
+        reg_x = np.zeros(len(distances[1]) * len(distances[1][0]))
+        reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
+        for hamming, jaccard in zip(distances[1], distances[3]):
+            # make data, as comparing two diverged sequences, multiply by 2
+            x = np.array(hamming)
+            y = np.array(jaccard)
+            reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
+            reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
 
-        ax.plot(x, y, linewidth=2.0, label="Sim " + str(sim))
-        sim += 1
+            ax.plot(x, y, linewidth=2.0, label="Sim " + str(sim))
+            sim += 1
 
-    # try:
-    #     c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000)
-    #
-    #     with open(outpref + "acc_hamming_vs_jacc_parameters.txt", "w") as f:
-    #         f.write(np.array2string(c))
-    #
-    #     x = np.array(distances[1][0])
-    #     y = np.array([model2(j, c[0], c[1]) for j in x])
-    #     ax.plot(x, y, linewidth=2.0, label="Model")
-    #     print("Model parameters for hamming acc vs. jaccard acc:")
-    #     print(c)
-    # except RuntimeError:
-    #     pass
+        # try:
+        #     c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000)
+        #
+        #     with open(outpref + "acc_hamming_vs_jacc_parameters.txt", "w") as f:
+        #         f.write(np.array2string(c))
+        #
+        #     x = np.array(distances[1][0])
+        #     y = np.array([model2(j, c[0], c[1]) for j in x])
+        #     ax.plot(x, y, linewidth=2.0, label="Model")
+        #     print("Model parameters for hamming acc vs. jaccard acc:")
+        #     print(c)
+        # except RuntimeError:
+        #     pass
 
-    ax.set_xlabel("Accessory Hamming distance")
-    ax.set_ylabel("Accessory Jaccard Distance")
-    #ax.legend()
+        ax.set_xlabel("Accessory Hamming distance")
+        ax.set_ylabel("Accessory Jaccard Distance")
+        #ax.legend()
 
-    fig.savefig(outpref + "_acc_hamming_vs_jaccard.png")
-    plt.cla
+        fig.savefig(outpref + "_acc_hamming_vs_jaccard.png")
+        plt.cla
 
-    plt.clf
+        plt.clf
