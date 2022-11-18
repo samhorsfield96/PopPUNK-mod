@@ -231,8 +231,11 @@ def calc_gamma(vec_size, no_split, shape, scale, sim_index):
     return site_mu
 
 def sim_divergence(ref, mu, core, freq, site_mu, dispersion):
-    # add dispersion to number of sites based on normal distribution
-    mu = scipy.stats.norm.rvs(mu, dispersion)
+    # add dispersion to number of sites based on normal distribution, ensure positive
+    new_mu = -1
+    while new_mu < 0:
+        new_mu = scipy.stats.norm.rvs(mu, dispersion)
+    mu = new_mu
 
     num_sites = round(len(ref) * mu)
 
