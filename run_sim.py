@@ -107,7 +107,7 @@ def get_options():
     IO.add_argument('--num-sim',
                     type=int,
                     default=5,
-                    help='Number of simulations to run. Default = 1')
+                    help='Number of simulations to run. Default = 5')
     IO.add_argument('--no-adjust',
                     default=True,
                     action="store_false",
@@ -247,74 +247,77 @@ if __name__ == "__main__":
 
     print("Iterating over distance simulations...")
 
-    hamming_core_sims = [None] * options.num_sim
-    hamming_acc_sims = [None] * options.num_sim
-    jaccard_core_sims = [None] * options.num_sim
-    jaccard_acc_sims = [None] * options.num_sim
-    acc_vs_core_sims = [None] * options.num_sim
-    pangenome_frac_sims = [None] * options.num_sim
-
     sim_list = []
 
+    # start from same root genome
+    core_ref = np.random.choice(base_choices, size_core, p=base_freq)
+    acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
+
+    # pull out variable sites in core_ref
+    sites = np.random.choice(range(core_ref.size), core_num_var, replace=False)
+    present = np.full(core_ref.size, False)
+    present[sites] = True
+    core_var = core_ref[present]
+    core_invar = core_ref[np.invert(present)]
+    # determine per-site mutation rate
+    if core_sites_man is None:
+        if i == 0:
+            print("Core genome per-site mutation rate compartments: ")
+        core_site_mu = calc_gamma(core_var.size, options.core_sites, options.core_gamma_shape,
+                                  options.core_gamma_scale, i)
+    else:
+        core_site_mu = calc_man(core_var.size, core_sites_man)
+
+    if acc_sites_man is None:
+        if i == 0:
+            print("Accessory genome per-site mutation rate compartments: ")
+        acc_site_mu = calc_gamma(size_acc, options.acc_sites, options.acc_gamma_shape,
+                                 options.acc_gamma_scale, i)
+    else:
+        acc_site_mu = calc_man(size_acc, acc_sites_man)
+
+    core_list = [None] * len(core_mu) * options.num_sim
+    acc_list = [None] * len(acc_mu) * options.num_sim
+
     for i in range(options.num_sim):
-        core_ref = np.random.choice(base_choices, size_core, p=base_freq)
-        acc_ref = np.random.choice(gene_choices, size_acc, p=gene_freq)
-
-        ref_name = str(i) + "_0"
-
-        # pull out variable sites in core_ref
-        sites = np.random.choice(range(core_ref.size), core_num_var, replace=False)
-        present = np.full(core_ref.size, False)
-        present[sites] = True
-        core_var = core_ref[present]
-        core_invar = core_ref[np.invert(present)]
-        # determine per-site mutation rate
-        if core_sites_man is None:
-            if i == 0:
-                print("Core genome per-site mutation rate compartments: ")
-            core_site_mu = calc_gamma(core_var.size, options.core_sites, options.core_gamma_shape,
-                                      options.core_gamma_scale, i)
-        else:
-            core_site_mu = calc_man(core_var.size, core_sites_man)
-
-        if acc_sites_man is None:
-            if i == 0:
-                print("Accessory genome per-site mutation rate compartments: ")
-            acc_site_mu = calc_gamma(size_acc, options.acc_sites, options.acc_gamma_shape,
-                                     options.acc_gamma_scale, i)
-        else:
-            acc_site_mu = calc_man(size_acc, acc_sites_man)
-
-        hamming_core = [None] * len(core_mu)
-        hamming_acc = [None] * len(acc_mu)
-        jaccard_core = [None] * len(core_mu)
-        jaccard_acc = [None] * len(acc_mu)
-        acc_vs_core = [None] * len(acc_mu)
-        pangenome_frac = [None] * len(acc_mu)
-
         print("Simulation " + str(i + 1))
         with Pool(processes=threads) as pool:
-            for ind, hcore, hacc, jcore, jacc, avc, p_frac in tqdm.tqdm(pool.imap(
+            for ind, core_seq, acc_seq in tqdm.tqdm(pool.imap(
                     partial(gen_distances, core_var=core_var, acc_var=acc_ref, core_invar=core_invar,
                             num_core=num_core, core_mu=core_mu, acc_mu=acc_mu, adj=adjusted, avg_gene_freq=avg_gene_freq,
                             base_mu=base_mu, core_site_mu=core_site_mu, acc_site_mu=acc_site_mu,
                             sim_core_dispersion=sim_core_dispersion, sim_acc_dispersion=sim_acc_dispersion),
                     range(0, len(core_mu))), total=len(core_mu)):
-                hamming_core[ind] = hcore
-                hamming_acc[ind] = hacc
-                jaccard_core[ind] = jcore
-                jaccard_acc[ind] = jacc
-                acc_vs_core[ind] = avc
-                pangenome_frac[ind] = p_frac
-                query_name = str(i) + "_" + str(ind + 1)
-                sim_list.append((ref_name, query_name, hcore, jacc, avc))
+                core_list[(len(core_mu) * i) + ind] = core_seq
+                acc_list[(len(core_mu) * i) + ind] = acc_seq
 
-        hamming_core_sims[i] = hamming_core
-        hamming_acc_sims[i] = hamming_acc
-        jaccard_core_sims[i] = jaccard_core
-        jaccard_acc_sims[i] = jaccard_acc
-        acc_vs_core_sims[i] = acc_vs_core
-        pangenome_frac_sims[i] = pangenome_frac
+    # go through all combinations and determine distances
+    core_hamming = []
+    core_jaccard = []
+    acc_jaccard = []
+    acc_hamming = []
+    for i in range(0, len(core_list)):
+        for j in range(0, len(core_list)):
+            #ensure only part of array is searched
+            if j <= i:
+                continue
+            core1 = core_list[i]
+            core2 = core_list[j]
+            acc1 = acc_list[i]
+            acc2 = acc_list[j]
+
+            hcore = distance.hamming(core1, core2)
+            jacc = distance.jaccard(acc1, acc2)
+            jcore = distance.jaccard(core1, core2)
+            hacc = distance.hamming(acc1, acc2)
+
+            core_hamming.append(hcore)
+            acc_jaccard.append(jacc)
+            acc_hamming.append(hacc)
+            core_jaccard.append(jcore)
+
+            sim_list.append((str(i), str(j), hcore, jacc))
+
 
     # print simulated run
     with open(options.outpref + "_simulation.txt", "w") as f:
@@ -330,7 +333,7 @@ if __name__ == "__main__":
     print("Generating graphs...")
 
     mu_rates = (core_mu_ori, acc_mu_ori, core_mu_ori, acc_mu_ori)
-    distances = (hamming_core_sims, hamming_acc_sims, jaccard_core_sims, jaccard_acc_sims)
+    distances = (core_hamming, acc_hamming, core_jaccard, acc_jaccard)
     mu_names = ("core_mu", "acc_mu", "core_mu", "acc_mu")
     distance_names = ("hamming_core", "hamming_acc", "jaccard_core", "jaccard_acc")
     lengths = (size_core, num_pangenome, size_core, num_pangenome)

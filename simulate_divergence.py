@@ -280,30 +280,30 @@ def sim_divergence(ref, mu, core, freq, site_mu, dispersion):
 
 def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_mu, adj, avg_gene_freq, base_mu,
                   core_site_mu, acc_site_mu, sim_core_dispersion, sim_acc_dispersion):
-    sites_mutated = []
+    #sites_mutated = []
 
     # mutate genomes
-    core_query1, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
-    sites_mutated.append(total_sites)
+    core_query, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
+    #sites_mutated.append(total_sites)
     #core_query2, total_sites = sim_divergence(core_var, core_mu[index], True, base_mu, core_site_mu, sim_core_dispersion)
     #sites_mutated.append(total_sites)
-    acc_query1, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
-    sites_mutated.append(total_sites)
+    acc_query, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
+    #sites_mutated.append(total_sites)
     #acc_query2, total_sites = sim_divergence(acc_var, acc_mu[index], False, avg_gene_freq, acc_site_mu, sim_acc_dispersion)
     #sites_mutated.append(total_sites)
 
     if adj == True:
         # add core genes to accessory distances
-        acc_var = np.append(acc_var, np.ones(num_core))
-        acc_query1 = np.append(acc_query1, np.ones(num_core))
+        #acc_var = np.append(acc_var, np.ones(num_core))
+        acc_query = np.append(acc_query, np.ones(num_core))
         #acc_query2 = np.append(acc_query2, np.ones(num_core))
 
         # add core invariant sites to core alignments
-        core_var = np.append(core_var, core_invar)
-        core_query1 = np.append(core_query1, core_invar)
+        # core_var = np.append(core_var, core_invar)
+        core_query = np.append(core_query, core_invar)
         #core_query2 = np.append(core_query2, core_invar)
 
-    acc_vs_core = 1
+    # acc_vs_core = 1
 
     # if core_mu[index] != 0:
     #     # determine accessory vs core divergence rate
@@ -312,18 +312,18 @@ def gen_distances(index, core_var, acc_var, core_invar, num_core, core_mu, acc_m
     #     acc_vs_core = prop_subs_acc / prop_subs_core
 
     # determine pangenome_frac
-    match = acc_query1 == acc_var
-    zeros_match = match[acc_query1 == 0]
-    num_zero_match = np.count_nonzero(zeros_match)
+    # match = acc_query1 == acc_var
+    # zeros_match = match[acc_query1 == 0]
+    # num_zero_match = np.count_nonzero(zeros_match)
+    #
+    # pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
 
-    pangenome_frac = (acc_query1.size - num_zero_match) / acc_query1.size
+    # hamming_core = distance.hamming(core_query1, core_var)
+    # hamming_acc = distance.hamming(acc_query1, acc_var)
+    # jaccard_core = distance.jaccard(core_query1, core_var)
+    # jaccard_acc = distance.jaccard(acc_query1, acc_var)
 
-    hamming_core = distance.hamming(core_query1, core_var)
-    hamming_acc = distance.hamming(acc_query1, acc_var)
-    jaccard_core = distance.jaccard(core_query1, core_var)
-    jaccard_acc = distance.jaccard(acc_query1, acc_var)
-
-    return (index, hamming_core, hamming_acc, jaccard_core, jaccard_acc, acc_vs_core, pangenome_frac)
+    return (index, core_query, acc_query)
 
 def model(x, c0, c1, c2, c3):
     return (1/2 * (1 - np.sqrt((1 - (4/3 * x)) ** (3 * c0)))) / (c1 + c2 * x + c3 * (x ** 2))
@@ -410,12 +410,11 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
             # plot
             fig, ax = plt.subplots()
 
-            # make data, as comparing two diverged sequences, multiply by 2
+            # make data, as comparing two diverged sequences
             x = np.array(var1)
-            for j in range(len(var2)):
-                y = np.array(var2[j])
+            y = np.array(var2)
 
-                ax.plot(x, y, linewidth=2.0, label="Sim" + str(j + 1))
+            ax.plot(x, y, linewidth=2.0)
 
             lims = [
                 np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
@@ -437,11 +436,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
 
             ax.plot(lims, lims, 'k-', alpha=0.75, zorder=0, label="y=x")
             ax.set_aspect('equal')
-            #ax.set_xlim(lims)
-            #ax.set_ylim(0, 1)
             ax.set_xlabel(name1)
             ax.set_ylabel(name2)
-            #ax.legend()
 
             fig.savefig(outpref + "_" + name2 + ".png")
 
@@ -452,20 +448,16 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     # plot core hamming vs. accessory jaccard, predict relationship
     fig, ax = plt.subplots()
     sim = 1
-    reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
-    reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
-    for hamming_core, jaccard_accessory in zip(distances[0], distances[3]):
-        # make data, as comparing two diverged sequences, multiply by 2
-        x = np.array(hamming_core)
-        y = np.array(jaccard_accessory)
+    # reg_x = np.zeros(len(distances[0]) * len(distances[0][0]))
+    # reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
+    x = np.array(distances[0])
+    y = np.array(distances[3])
 
-        #ax.plot(x, y, linewidth=2.0, label="Sim" + str(sim))
-        ax.scatter(x, y)
+    #ax.plot(x, y, linewidth=2.0, label="Sim" + str(sim))
+    ax.scatter(x, y)
 
-        reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
-        reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
-
-        sim += 1
+    # reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
+    # reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
 
     #fit model, determine uncertainty
     # c, cov = curve_fit(model, reg_x, reg_y, maxfev=5000, bounds=(([0,0,0,-np.inf]), (np.inf,1,np.inf,0)))
@@ -491,11 +483,8 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     #     np.max([ax.get_xlim(), ax.get_xlim()]),  # max of both axes
     # ]
 
-    # ax.set_ylim(0, 1)
-    # ax.set_xlim(lims)
     ax.set_xlabel("Core Hamming distance")
     ax.set_ylabel("Accessory Jaccard Distance")
-    #ax.legend()
 
     fig.savefig(outpref + "_core_vs_acc.png")
     plt.cla
@@ -505,18 +494,14 @@ def generate_graph(mu_rates, distances, mu_names, distance_names, outpref, core_
     if gen_graph:
         # plot accessory jaccard vs. accessory hamming
         fig, ax = plt.subplots()
-        sim = 1
         reg_x = np.zeros(len(distances[1]) * len(distances[1][0]))
         reg_y = np.zeros(len(distances[3]) * len(distances[3][0]))
-        for hamming, jaccard in zip(distances[1], distances[3]):
-            # make data, as comparing two diverged sequences, multiply by 2
-            x = np.array(hamming)
-            y = np.array(jaccard)
-            reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
-            reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
+        x = np.array(distances[1])
+        y = np.array(distances[3])
+        reg_x[(sim - 1) * x.size : ((sim - 1) * x.size) + x.size] = x
+        reg_y[(sim - 1) * y.size : ((sim - 1) * y.size) + y.size] = y
 
-            ax.plot(x, y, linewidth=2.0, label="Sim " + str(sim))
-            sim += 1
+        ax.plot(x, y)
 
         # try:
         #     c, cov = curve_fit(model2, reg_x, reg_y, maxfev=5000)
