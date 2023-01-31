@@ -99,8 +99,8 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
 
     return site_mu
 
-@jit(nopython=True)
-def sim_divergence_vec(ref, mu, core, freq, site_mu):
+#@jit(nopython=True)
+def sim_divergence_vec(ref, mu, core, freq, site_mu, pop_size):
     num_sites_vec = np.empty_like(mu)
     np.round(ref.shape[1] * mu, 0, num_sites_vec)
     num_sites_vec = num_sites_vec.astype(np.int64)
@@ -114,23 +114,23 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
 
     #total_sites_vec = np.zeros((mu.shape[0]))
 
-    # create 3d array, columns are each base, rows are each mu rate, depth is num batches
-    query = np.zeros((mu.shape[0], mu.shape[1], ref.shape[1]))
+    # create 3d array, depth is popsize (0), rows are batches (1), columns are each base (2)
+    query = np.zeros(shape=np.shape(ref))
 
     # iterate until all required sites mutated for given mutation rate
-    for i in range(mu.shape[0]):
-        for j in range(mu.shape[1]):
-            query[i][j] = ref[i].copy()
+    for i in range(pop_size):
+        for j in range(mu.shape[0]):
+            query[i][j] = ref[i][j].copy()
+            #print(query[i][j])
 
-            num_sites = num_sites_vec[i][j]
+            num_sites = num_sites_vec[j]
             if num_sites > 0:
                 total_sites = 0
                 while total_sites < num_sites:
                     to_sample = num_sites - total_sites
 
                     # pick all sites to be mutated (first is vectorised)
-                    sites = index_array[np.searchsorted(np.cumsum(site_mu[i]), np.random.rand(to_sample))]
-                    #sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(to_sample))]
+                    sites = index_array[np.searchsorted(np.cumsum(site_mu[j]), np.random.rand(to_sample))]
 
                     unique = np.array(list(set(sites)))
                     counts = np.array([np.count_nonzero(sites == val) for val in unique])
@@ -142,7 +142,7 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                         sample_sites = unique[counts >= count]
 
                         # determine sites with and without change (first is vectorised)
-                        changes = choices[np.searchsorted(np.cumsum(freq[i]), np.random.rand(sample_sites.size))]
+                        changes = choices[np.searchsorted(np.cumsum(freq[j]), np.random.rand(sample_sites.size))]
                         #changes = choices[np.searchsorted(np.cumsum(freq), np.random.rand(sample_sites.size))]
 
                         non_mutated = query[i][j][sample_sites] == changes
@@ -152,6 +152,7 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu):
                         # determine number of actual changes
                         total_sites += changes.size - np.count_nonzero(non_mutated)
 
+    #print(query)
     return query
 
 

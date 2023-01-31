@@ -169,8 +169,7 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        pop_size, n_gen, batch_size=1, random_state=None):
-    # determine vectors of core per-site mutation rate
-    # TODO core should start at very low value, not 0
+    # determine vectors of core and accessory per-site mutation rate
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl
 
@@ -194,20 +193,40 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
 
     # calculate accessory total gene gain/loss
 
-    # generate starting genomes
+    # generate starting genomes, rows are batches, columns are positions
     core_ref = np.zeros((batch_size, size_core))
     acc_ref = np.zeros((batch_size, size_pan))
     for i in range(batch_size):
         core_ref[i] = np.random.choice([1, 2, 3, 4], size_core, p=base_mu[i])
         acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
 
-    # simulate population forward using fisher-wright
+    pop_core = np.array([core_ref] * pop_size)
+    pop_acc = np.array([acc_ref] * pop_size)
 
-    # mutate genomes
-    core_query1 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
-    #core_query2 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
-    acc_query1 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
-    #acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
+    # simulate population forward using fisher-wright
+    for gen in range(1, n_gen):
+        # sample from previous generation in each batch with replacement
+        #print("before")
+        #print(pop_core)
+        if gen > 1:
+            sample = np.random.choice(pop_core.shape[2], pop_size, replace=True)
+            #print(sample)
+            pop_core = pop_core[:, :, sample]
+            pop_acc = pop_core[:, :, sample]
+        #print("after")
+        #print(pop_core)
+
+        # mutate genomes
+        #print("before")
+        #print(pop_core)
+        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
+        #print("after")
+        #print(pop_core_new)
+        #core_query2 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
+        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+
+
+        #acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
 
     # determine hamming and core distances
     hamming_core = np.zeros((batch_size, core_mu_arr.shape[1]))
@@ -225,10 +244,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
 
 if __name__ == "__main__":
     #testing
-    size_core = 100
-    size_pan = 100
+    size_core = 2
+    size_pan = 3
     avg_gene_freq = 0.5
-    batch_size = 10
+    batch_size = 4
     N_samples = 10
     qnt = 0.01
     seed = 254
@@ -236,7 +255,7 @@ if __name__ == "__main__":
     data_dir = "distances"
     data_pref = "Pneumo_sim_simulation"
     num_steps = 10
-    threads = 4
+    threads = 1
     mode = "rejection"
     outpref = "test_"
     initial_evidence = 20
@@ -248,7 +267,7 @@ if __name__ == "__main__":
     cluster = False
     complexity = "simple"
     schedule = "0.7,0.2,0.05"
-    pop_size = 1000
+    pop_size = 5
     n_gen = 100
 
     # options = get_options()
@@ -290,9 +309,9 @@ if __name__ == "__main__":
 
     # set constants
     # set evenly spaced core hamming values
-    core_mu = np.linspace(0, max_real_core, num=num_steps)
+    #core_mu = np.linspace(0, max_real_core, num=num_steps)
+    core_mu = max_real_core / n_gen
     # set zero value to be non-zero
-    core_mu[0] = 10**-6
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 4 at the moment)
     min_prop_core_var = 4 / size_core
