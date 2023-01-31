@@ -77,10 +77,9 @@ def get_options():
                     default=5000,
                     help='Evidence points requested (including init-evidence). '
                          'Default = 5000 ')
-    IO.add_argument('--data-dir',
-                    help='Directory containing popPUNK distance files. ')
-    IO.add_argument('--data-pref',
-                    help='Prefix of popPUNK distance file(s). ')
+    IO.add_argument('--distfile',
+                    required=True,
+                    help='popPUNK distance file to fit to. ')
     IO.add_argument('--seed',
                     type=int,
                     default=254,
@@ -243,8 +242,7 @@ if __name__ == "__main__":
 
     options = get_options()
     threads = options.threads
-    data_dir = options.data_dir
-    data_pref = options.data_pref
+    distfile = options.distfile
     size_core = options.core_size
     size_pan = options.pan_size
     batch_size = options.batch_size
@@ -269,7 +267,7 @@ if __name__ == "__main__":
     schedule = [float(x) for x in schedule.split(",")]
 
     # read in real files
-    df = read_files(data_dir, data_pref)
+    df = read_file(distfile)
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
