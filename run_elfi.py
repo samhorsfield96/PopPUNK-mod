@@ -174,7 +174,7 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
         #print("before")
         #print(pop_core)
         if gen > 1:
-            sample = np.random.choice(pop_core.shape[2], pop_size, replace=True)
+            sample = np.random.choice(pop_size, pop_size, replace=True)
             #print(sample)
             pop_core = pop_core[sample, :, :]
             pop_acc = pop_acc[sample, :, :]
