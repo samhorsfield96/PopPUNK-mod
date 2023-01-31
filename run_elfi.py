@@ -211,8 +211,8 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
         if gen > 1:
             sample = np.random.choice(pop_core.shape[2], pop_size, replace=True)
             #print(sample)
-            pop_core = pop_core[:, :, sample]
-            pop_acc = pop_core[:, :, sample]
+            pop_core = pop_core[sample, :, :]
+            pop_acc = pop_acc[sample, :, :]
         #print("after")
         #print(pop_core)
 
@@ -229,18 +229,33 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
         #acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
 
     # determine hamming and core distances
-    hamming_core = np.zeros((batch_size, core_mu_arr.shape[1]))
-    jaccard_acc = np.zeros((batch_size, core_mu_arr.shape[1]))
+    # hamming_core = np.zeros((pop_size, batch_size))
+    # jaccard_acc = np.zeros((pop_size, batch_size))
 
-    for i in range(batch_size):
-        for j in range(core_mu_arr.shape[1]):
-            hamming_core[i][j] = distance.hamming(core_ref[i], core_query1[i][j])
-            jaccard_acc[i][j] = distance.jaccard(acc_ref[i], acc_query1[i][j])
+    for j in range(0, batch_size):
+        pop_core_slice = pop_core[:, j, :]
+        pop_acc_slice = pop_acc[:, j, :]
+        #print(pop_core_slice)
+        #print(pop_acc_slice)
 
-    # calculate euclidean distance to origin
-    eucl = np.sqrt((hamming_core ** 2) + (jaccard_acc ** 2))
+        #hamming_core = []
+        #jaccard_acc = []
+        eucl = []
 
-    return eucl
+        # iterate over all genomes in population, calculating gamming distance
+        for k in range(0, pop_size):
+            for l in range(0, pop_size):
+                if l < k:
+                    hamming_core = distance.hamming(pop_core_slice[k], pop_core_slice[l])
+                    jaccard_acc = distance.jaccard(pop_acc_slice[k], pop_acc_slice[l])
+                    eucl.append(math.sqrt((hamming_core ** 2) + (jaccard_acc ** 2)))
+
+        #print(eucl)
+        if j == 0:
+            eucl_mat = np.zeros((batch_size, len(eucl)))
+        eucl_mat[j] = np.array(eucl)
+
+    return eucl_mat
 
 if __name__ == "__main__":
     #testing
