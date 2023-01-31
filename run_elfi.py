@@ -248,8 +248,6 @@ if __name__ == "__main__":
     size_core = options.core_size
     size_pan = options.pan_size
     batch_size = options.batch_size
-    max_acc_vs_core = options.max_acc_vs_core
-    num_steps = options.num_steps
     qnt = options.qnt
     N_samples = options.samples
     seed = options.seed
@@ -263,7 +261,6 @@ if __name__ == "__main__":
     avg_gene_freq = options.avg_gene_freq
     base_mu = [float(i) for i in options.base_mu.split(",")]
     cluster = options.cluster
-    complexity = options.complexity
     schedule = options.schedule
     n_gen = options.ngen
     pop_size = options.pop_size
