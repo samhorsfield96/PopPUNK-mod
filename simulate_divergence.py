@@ -100,7 +100,7 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
     return site_mu
 
 @jit(nopython=True)
-def sim_divergence_vec(ref, mu, core, freq, site_mu, negative_value):
+def sim_divergence_vec(ref, mu, core, freq, site_mu):
     num_sites_vec = np.empty_like(mu)
     np.round(ref.shape[1] * mu, 0, num_sites_vec)
     num_sites_vec = num_sites_vec.astype(np.int64)
@@ -119,8 +119,6 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu, negative_value):
 
     # iterate until all required sites mutated for given mutation rate
     for i in range(mu.shape[0]):
-        if negative_value[i]:
-            continue
         for j in range(mu.shape[1]):
             query[i][j] = ref[i].copy()
 

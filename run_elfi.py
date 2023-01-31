@@ -165,13 +165,14 @@ def stddev(x):
     C = np.std(x, axis=1)
     return C
 
-def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1,
+def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        pop_size, n_gen, batch_size=1, random_state=None):
     # determine vectors of core per-site mutation rate
     # TODO core should start at very low value, not 0
     core_mu_arr = np.array([core_mu] * batch_size)
+    acc_mu_arr = core_mu_arr * gene_gl
 
     # generate vectors for mutation rates
     base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
@@ -179,13 +180,19 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1,
     acc_site_1 = prop_comp1
     acc_site_2 = 1 - acc_site_1
     acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
-    gene_mu = np.stack((1 - avg_gene_freq, avg_gene_freq), axis=1)
+    #print(acc_site)
+    gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
+    #print(gene_mu)
 
     # simulate population forward using fisher-wright
 
     # TODO need a way to determine which sites will be fast or slow
     core_site_mu = calc_man_vec(size_core, size_core, core_site, batch_size)
     acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size)
+    #print(core_site_mu)
+    #print(acc_site_mu)
+
+    # calculate accessory total gene gain/loss
 
     # generate starting genomes
     core_ref = np.zeros((batch_size, size_core))
@@ -218,8 +225,8 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1,
 
 if __name__ == "__main__":
     #testing
-    size_core = 1000
-    size_pan = 1000
+    size_core = 100
+    size_pan = 100
     avg_gene_freq = 0.5
     batch_size = 10
     N_samples = 10
@@ -284,6 +291,8 @@ if __name__ == "__main__":
     # set constants
     # set evenly spaced core hamming values
     core_mu = np.linspace(0, max_real_core, num=num_steps)
+    # set zero value to be non-zero
+    core_mu[0] = 10**-6
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 4 at the moment)
     min_prop_core_var = 4 / size_core
@@ -292,11 +301,11 @@ if __name__ == "__main__":
     # set priors
     # priors for gene gain and loss rates per site
     max_value = 10**6
-    gene_gl1 = elfi.Prior('uniform', 0, max_value)
-    gene_gl2 = elfi.Prior('uniform', 0, max_value)
+    gene_gl = elfi.Prior('uniform', 0, max_value)
+    #gene_gl2 = elfi.Prior('uniform', 0, max_value)
 
     # prior for size two gene compartments
-    prop_gene_comp1 = elfi.Prior('uniform', 0, 1)
+    prop_gene_comp1 = elfi.Prior('uniform', 0.5, 1 - 0.5)
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -330,7 +339,7 @@ if __name__ == "__main__":
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene_comp1,
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene_comp1, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                        core_site_mu4, pop_size, n_gen, observed=obs)
 
