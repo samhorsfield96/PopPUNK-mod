@@ -24,11 +24,14 @@ def get_options():
                     type=int,
                     default=10000,
                     help='Number of positions in pangenome. Default = 10000 ')
-
-    IO.add_argument('--num-steps',
+    IO.add_argument('--pop-size',
                     type=int,
-                    default=50,
-                    help='Number of steps to take in increasing divergence. Default = 50 ')
+                    default=1000,
+                    help='Population size for Wright-Fisher model. Default = 1000 ')
+    IO.add_argument('--ngen',
+                    type=int,
+                    default=100,
+                    help='Number of generations for Wright-Fisher model. Default = 100 ')
     IO.add_argument('--base-mu',
                     default="0.25,0.25,0.25,0.25",
                     help='Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
@@ -104,43 +107,6 @@ def get_options():
 
     return parser.parse_args()
 
-class CustomPrior_s1(elfi.Distribution):
-    def rvs(vec, size=1, random_state=None):
-        locs = np.zeros(size)
-        scales = 1 - vec
-        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t
-
-class CustomPrior_s2(elfi.Distribution):
-    def rvs(p1, p2, size=1, random_state=None):
-        locs = np.zeros(size)
-        scales = 1 - np.sum(np.array([p1, p2]), axis=0)
-        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t
-
-class CustomPrior_s3(elfi.Distribution):
-    def rvs(p1, p2, p3, size=1, random_state=None):
-        locs = np.zeros(size)
-        scales = 1 - np.sum(np.array([p1, p2, p3]), axis=0)
-        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t
-
-class CustomPrior_s4(elfi.Distribution):
-    def rvs(p1, p2, p3, p4, size=1, random_state=None):
-        locs = np.zeros(size)
-        scales = 1 - np.sum(np.array([p1, p2, p3, p4]), axis=0)
-        t = scipy.stats.uniform.rvs(loc=locs, scale=scales, size=size, random_state=random_state)
-        return t
-
-class CustomPrior_acc2(elfi.Distribution):
-    def rvs(p1, p2, p3, scale, size=1, random_state=None):
-        locs = np.zeros(size)
-        #u = scipy.stats.cauchy.rvs(loc=locs, scale=scale, size=size, random_state=random_state)
-        u = elfi.Prior('cauchy', 0, scale)
-        limit = np.sum(np.array([np.multiply(u, np.square(p2)), np.multiply(p2, p2), p3]), axis=0)
-        t = np.where(limit <= 0, u, -u)
-        return t
-
 def mean(x):
     C = np.mean(x, axis=1)
     return C
@@ -165,7 +131,7 @@ def stddev(x):
     C = np.std(x, axis=1)
     return C
 
-def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, gene_gl,
+def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        pop_size, n_gen, batch_size=1, random_state=None):
@@ -176,7 +142,7 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
     # generate vectors for mutation rates
     base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
     core_site = np.tile(np.array([core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4]), (batch_size, 1))
-    acc_site_1 = prop_comp1
+    acc_site_1 = prop_gene
     acc_site_2 = 1 - acc_site_1
     acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
     #print(acc_site)
@@ -222,24 +188,14 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
         pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
         #print("after")
         #print(pop_core_new)
-        #core_query2 = sim_divergence_vec(core_ref, core_mu_arr, True, base_mu, core_site_mu)
         pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
 
-
-        #acc_query2 = sim_divergence_vec(acc_ref, acc_mu_arr, False, gene_mu, acc_site_mu)
-
-    # determine hamming and core distances
-    # hamming_core = np.zeros((pop_size, batch_size))
-    # jaccard_acc = np.zeros((pop_size, batch_size))
 
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
         #print(pop_core_slice)
         #print(pop_acc_slice)
-
-        #hamming_core = []
-        #jaccard_acc = []
         eucl = []
 
         # iterate over all genomes in population, calculating gamming distance
@@ -259,58 +215,58 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_comp1, 
 
 if __name__ == "__main__":
     #testing
-    size_core = 2
-    size_pan = 3
-    avg_gene_freq = 0.5
-    batch_size = 4
-    N_samples = 10
-    qnt = 0.01
-    seed = 254
-    summary = "quantile"
-    data_dir = "distances"
-    data_pref = "Pneumo_sim_simulation"
-    num_steps = 10
-    threads = 1
-    mode = "rejection"
-    outpref = "test_"
-    initial_evidence = 20
-    update_interval = 10
-    acq_noise_var = 0.1
-    n_evidence = 200
-    info_freq = 1000
-    base_mu = [0.25, 0.25, 0.25, 0.25]
-    cluster = False
-    complexity = "simple"
-    schedule = "0.7,0.2,0.05"
-    pop_size = 5
-    n_gen = 100
+    # size_core = 2
+    # size_pan = 3
+    # avg_gene_freq = 0.5
+    # batch_size = 10
+    # N_samples = 10
+    # qnt = 0.01
+    # seed = 254
+    # summary = "quantile"
+    # data_dir = "distances"
+    # data_pref = "Pneumo_sim_simulation"
+    # num_steps = 10
+    # threads = 4
+    # mode = "rejection"
+    # outpref = "test"
+    # initial_evidence = 20
+    # update_interval = 10
+    # acq_noise_var = 0.1
+    # n_evidence = 200
+    # info_freq = 1000
+    # base_mu = [0.25, 0.25, 0.25, 0.25]
+    # cluster = False
+    # complexity = "simple"
+    # schedule = "0.7,0.2,0.05"
+    # pop_size = 5
+    # n_gen = 100
 
-    # options = get_options()
-    # threads = options.threads
-    # data_dir = options.data_dir
-    # data_pref = options.data_pref
-    # size_core = options.core_size
-    # size_pan = options.pan_size
-    # batch_size = options.batch_size
-    # max_acc_vs_core = options.max_acc_vs_core
-    # num_steps = options.num_steps
-    # qnt = options.qnt
-    # N_samples = options.samples
-    # seed = options.seed
-    # outpref = options.outpref
-    # summary = options.summary
-    # mode = options.mode
-    # initial_evidence = options.init_evidence
-    # update_interval = options.update_int
-    # acq_noise_var = options.acq_noise_var
-    # n_evidence = options.n_evidence
-    # avg_gene_freq = options.avg_gene_freq
-    # base_mu = [float(i) for i in options.base_mu.split(",")]
-    # cluster = options.cluster
-    # complexity = options.complexity
-    # schedule = options.schedule
-    # shape_acc_vs_core2 = options.shape_acc_vs_core2
-    # max_acc_vs_core_intercept = options.max_intercept
+    options = get_options()
+    threads = options.threads
+    data_dir = options.data_dir
+    data_pref = options.data_pref
+    size_core = options.core_size
+    size_pan = options.pan_size
+    batch_size = options.batch_size
+    max_acc_vs_core = options.max_acc_vs_core
+    num_steps = options.num_steps
+    qnt = options.qnt
+    N_samples = options.samples
+    seed = options.seed
+    outpref = options.outpref
+    summary = options.summary
+    mode = options.mode
+    initial_evidence = options.init_evidence
+    update_interval = options.update_int
+    acq_noise_var = options.acq_noise_var
+    n_evidence = options.n_evidence
+    avg_gene_freq = options.avg_gene_freq
+    base_mu = [float(i) for i in options.base_mu.split(",")]
+    cluster = options.cluster
+    complexity = options.complexity
+    schedule = options.schedule
+    n_gen = options.ngen
+    pop_size = options.pop_size
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -323,10 +279,8 @@ if __name__ == "__main__":
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
 
     # set constants
-    # set evenly spaced core hamming values
-    #core_mu = np.linspace(0, max_real_core, num=num_steps)
+    # set evenly spaced core hamming values across generations
     core_mu = max_real_core / n_gen
-    # set zero value to be non-zero
 
     # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 4 at the moment)
     min_prop_core_var = 4 / size_core
@@ -336,10 +290,9 @@ if __name__ == "__main__":
     # priors for gene gain and loss rates per site
     max_value = 10**6
     gene_gl = elfi.Prior('uniform', 0, max_value)
-    #gene_gl2 = elfi.Prior('uniform', 0, max_value)
 
     # prior for size two gene compartments
-    prop_gene_comp1 = elfi.Prior('uniform', 0.5, 1 - 0.5)
+    prop_gene = elfi.Prior('uniform', 0.5, 1 - 0.5)
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -373,7 +326,7 @@ if __name__ == "__main__":
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene_comp1, gene_gl,
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                        core_site_mu4, pop_size, n_gen, observed=obs)
 
@@ -419,34 +372,29 @@ if __name__ == "__main__":
         result = smc.sample(N_samples, schedule)
     else:
         log_d = elfi.Operation(np.log, d)
-        # calculate max value based on cauchy
-        max_acc_vs_core2 = np.max(np.abs(scipy.stats.cauchy.rvs(0, shape_acc_vs_core2, batch_size)))
-
         bounds = {
-            'acc_vs_core' : (0, max_acc_vs_core),
-            'acc_vs_core2' : (-max_acc_vs_core2, max_acc_vs_core2),
-            'acc_vs_core_intercept' : (-max_acc_vs_core, max_acc_vs_core),
-            'avg_gene_freq' : (0, 1)
+            'gene_gl' : (0, max_value),
+            'prop_gene' : (0, 1),
         }
         bolfi = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
         post = bolfi.fit(n_evidence=n_evidence)
         result = bolfi.sample(N_samples)
 
-    with open(outpref + "ELFI_summary.txt", "w") as f:
+    with open(outpref + "_ELFI_summary.txt", "w") as f:
         print(result, file=f)
 
     # plot graphs
     # plot marginals
     result.plot_marginals()
-    plt.savefig(outpref + 'marginals.png')
+    plt.savefig(outpref + '_marginals.png')
 
     plt.clf
     plt.cla
 
     # plot paired marginals
     result.plot_pairs()
-    plt.savefig(outpref + 'pairs.png')
+    plt.savefig(outpref + '_pairs.png')
 
     plt.clf
     plt.cla
@@ -455,7 +403,7 @@ if __name__ == "__main__":
     if mode == "BOLFI":
         #plot MCMC traces
         result.plot_traces();
-        plt.savefig(outpref + 'BOLFI_traces.png')
+        plt.savefig(outpref + '_BOLFI_traces.png')
 
         plt.clf
         plt.cla
@@ -463,7 +411,7 @@ if __name__ == "__main__":
         # plot discrepancies
         bolfi.plot_discrepancy()
 
-        plt.savefig(outpref + 'BOLFI_discepancy.png')
+        plt.savefig(outpref + '_BOLFI_discepancy.png')
 
         plt.clf
         plt.cla
