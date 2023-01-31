@@ -99,7 +99,7 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
 
     return site_mu
 
-#@jit(nopython=True)
+@jit(nopython=True)
 def sim_divergence_vec(ref, mu, core, freq, site_mu, pop_size):
     num_sites_vec = np.empty_like(mu)
     np.round(ref.shape[1] * mu, 0, num_sites_vec)
