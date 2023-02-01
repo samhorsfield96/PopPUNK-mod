@@ -133,7 +133,7 @@ def stddev(x):
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, batch_size=1, random_state=None):
+                       pop_size, n_gen, max_hamming_core, max_jaccard_acc, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rate
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl
@@ -144,19 +144,11 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
     acc_site_1 = prop_gene
     acc_site_2 = 1 - acc_site_1
     acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
-    #print(acc_site)
     gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
-    #print(gene_mu)
 
-    # simulate population forward using fisher-wright
-
-    # TODO need a way to determine which sites will be fast or slow
+    # calculate per-site mutation rate
     core_site_mu = calc_man_vec(size_core, size_core, core_site, batch_size)
     acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size)
-    #print(core_site_mu)
-    #print(acc_site_mu)
-
-    # calculate accessory total gene gain/loss
 
     # generate starting genomes, rows are batches, columns are positions
     core_ref = np.zeros((batch_size, size_core))
@@ -171,38 +163,27 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
     # simulate population forward using fisher-wright
     for gen in range(1, n_gen):
         # sample from previous generation in each batch with replacement
-        #print("before")
-        #print(pop_core)
         if gen > 1:
             sample = np.random.choice(pop_size, pop_size, replace=True)
-            #print(sample)
             pop_core = pop_core[sample, :, :]
             pop_acc = pop_acc[sample, :, :]
-        #print("after")
-        #print(pop_core)
 
         # mutate genomes
-        #print("before")
-        #print(pop_core)
         pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        #print("after")
-        #print(pop_core_new)
         pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
 
 
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
-        #print(pop_core_slice)
-        #print(pop_acc_slice)
         eucl = []
 
         # iterate over all genomes in population, calculating gamming distance
         for k in range(0, pop_size):
             for l in range(0, pop_size):
                 if l < k:
-                    hamming_core = distance.hamming(pop_core_slice[k], pop_core_slice[l])
-                    jaccard_acc = distance.jaccard(pop_acc_slice[k], pop_acc_slice[l])
+                    hamming_core = distance.hamming(pop_core_slice[k], pop_core_slice[l]) / max_hamming_core
+                    jaccard_acc = distance.jaccard(pop_acc_slice[k], pop_acc_slice[l]) / max_jaccard_acc
                     eucl.append(math.sqrt((hamming_core ** 2) + (jaccard_acc ** 2)))
 
         #print(eucl)
@@ -271,15 +252,12 @@ if __name__ == "__main__":
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
+    max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
 
     # set constants
     # set evenly spaced core hamming values across generations
     core_mu = max_real_core / n_gen
-
-    # set minimum prop_core_var and prop_acc_var based on number of sequence bins (hard coded at 4 at the moment)
-    min_prop_core_var = 4 / size_core
-    min_prop_acc_var = 2 / size_pan
 
     # set priors
     # priors for gene gain and loss rates per site
@@ -314,16 +292,16 @@ if __name__ == "__main__":
     # core_site_mu4 = elfi.Prior('uniform', 0, 1)
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
-    #get observed data
-    obs_core = df['Core'].to_numpy()
-    obs_acc = df['Accessory'].to_numpy()
+    #get observed data, normalise
+    obs_core = df['Core'].to_numpy() / max_hamming_core
+    obs_acc = df['Accessory'].to_numpy() / max_jaccard_acc
 
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                       core_site_mu4, pop_size, n_gen, observed=obs)
+                       core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, observed=obs)
 
     S_min = elfi.Summary(min, Y)
     S_max = elfi.Summary(max, Y)
