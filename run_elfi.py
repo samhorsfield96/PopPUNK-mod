@@ -80,6 +80,9 @@ def get_options():
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
+    IO.add_argument('--load',
+                    default=None,
+                    help='Directory of previous ELFI model. ')
     IO.add_argument('--seed',
                     type=int,
                     default=254,
@@ -203,8 +206,7 @@ if __name__ == "__main__":
     # qnt = 0.01
     # seed = 254
     # summary = "quantile"
-    # data_dir = "distances"
-    # data_pref = "Pneumo_sim_simulation"
+    # distfile = "distances/GPSv4_distances_sample1.txt"
     # num_steps = 10
     # threads = 4
     # mode = "rejection"
@@ -220,6 +222,7 @@ if __name__ == "__main__":
     # schedule = "0.7,0.2,0.05"
     # pop_size = 5
     # n_gen = 100
+    # load = "test_pools/arraypool_254"
 
     options = get_options()
     threads = options.threads
@@ -243,6 +246,7 @@ if __name__ == "__main__":
     schedule = options.schedule
     n_gen = options.ngen
     pop_size = options.pop_size
+    load = options.load
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -258,14 +262,6 @@ if __name__ == "__main__":
     # set constants
     # set evenly spaced core hamming values across generations
     core_mu = max_real_core / n_gen
-
-    # set priors
-    # priors for gene gain and loss rates per site
-    max_value = 10**6
-    gene_gl = elfi.Prior('uniform', 0, max_value)
-
-    # prior for size two gene compartments
-    prop_gene = elfi.Prior('uniform', 0.5, 1 - 0.5)
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -299,9 +295,24 @@ if __name__ == "__main__":
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
+    if load != None:
+        # parse filename
+        load_pref = load.rsplit('/', 1)[0]
+        load_name = load.rsplit('/', 1)[-1]
+
+        arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
+
+    # set priors
+    # priors for gene gain and loss rates per site
+    max_value = 10 ** 6
+    gene_gl = elfi.Prior('uniform', 0, max_value)
+
+    # prior for size two gene compartments
+    prop_gene = elfi.Prior('uniform', 0.5, 1 - 0.5)
+
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
-                       base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                       core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, observed=obs)
+                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
+                        core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, observed=obs)
 
     S_min = elfi.Summary(min, Y)
     S_max = elfi.Summary(max, Y)
@@ -337,22 +348,35 @@ if __name__ == "__main__":
     os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
     if mode == "rejection":
-        rej = elfi.Rejection(d, batch_size=batch_size, seed=seed)
+        if load != None:
+            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed, pool=arraypool)
+        else:
+            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed)
 
-        result = rej.sample(N_samples, quantile=qnt)
+        result = mod.sample(N_samples, quantile=qnt)
     elif mode == "SMC":
-        smc = elfi.SMC(d, batch_size=batch_size, seed=seed)
-        result = smc.sample(N_samples, schedule)
+        if load != None:
+            mod = elfi.SMC(d, batch_size=batch_size, seed=seed, pool=arraypool)
+        else:
+            mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
+
+        mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
+        result = mod.sample(N_samples, schedule)
     else:
         log_d = elfi.Operation(np.log, d)
         bounds = {
             'gene_gl' : (0, max_value),
             'prop_gene' : (0, 1),
         }
-        bolfi = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                           acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
-        post = bolfi.fit(n_evidence=n_evidence)
-        result = bolfi.sample(N_samples)
+        if load != None:
+            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+        else:
+            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                               acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
+
+        post = mod.fit(n_evidence=n_evidence)
+        result = mod.sample(N_samples)
 
     with open(outpref + "_ELFI_summary.txt", "w") as f:
         print(result, file=f)
@@ -382,9 +406,16 @@ if __name__ == "__main__":
         plt.cla
 
         # plot discrepancies
-        bolfi.plot_discrepancy()
+        mod.plot_discrepancy()
 
         plt.savefig(outpref + '_BOLFI_discepancy.png')
 
         plt.clf
         plt.cla
+
+    # save model
+    save_path = outpref + '_pools'
+    os.makedirs(save_path, exist_ok=True)
+    arraypool = elfi.ArrayPool(['prop_gene', 'gene_gl', 'Y', 'd'], prefix=save_path)
+    arraypool.set_context(mod)
+    arraypool.save()
