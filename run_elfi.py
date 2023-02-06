@@ -9,6 +9,7 @@ import elfi
 from simulate_divergence import *
 import os
 import sys
+import dill
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -16,6 +17,10 @@ def get_options():
                                      prog='python run_ELFI.py')
 
     IO = parser.add_argument_group('Input/Output options')
+    IO.add_argument('--run-mode',
+                    required=True,
+                    choices=['sim', 'sample'],
+                    help='Which run mode to specify. Choices are "sim" or "sample".')
     IO.add_argument('--core-size',
                     type=int,
                     default=10000,
@@ -82,7 +87,7 @@ def get_options():
                     help='popPUNK distance file to fit to. ')
     IO.add_argument('--load',
                     default=None,
-                    help='Directory of previous ELFI model. ')
+                    help='Directory of previous ELFI model. Required if running "sample" mode ')
     IO.add_argument('--seed',
                     type=int,
                     default=254,
@@ -209,7 +214,7 @@ if __name__ == "__main__":
     # distfile = "distances/GPSv4_distances_sample1.txt"
     # num_steps = 10
     # threads = 4
-    # mode = "rejection"
+    # mode = "BOLFI"
     # outpref = "test"
     # initial_evidence = 20
     # update_interval = 10
@@ -222,7 +227,9 @@ if __name__ == "__main__":
     # schedule = "0.7,0.2,0.05"
     # pop_size = 5
     # n_gen = 100
-    # load = "test_pools/arraypool_254"
+    # load = "test_pools/outputpool_254"
+    # run_mode = "sample"
+
 
     options = get_options()
     threads = options.threads
@@ -247,6 +254,7 @@ if __name__ == "__main__":
     n_gen = options.ngen
     pop_size = options.pop_size
     load = options.load
+    run_mode = options.run_mode
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -295,13 +303,6 @@ if __name__ == "__main__":
     # calculate euclidean distance to origin
     obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
 
-    if load != None:
-        # parse filename
-        load_pref = load.rsplit('/', 1)[0]
-        load_name = load.rsplit('/', 1)[-1]
-
-        arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
-
     # set priors
     # priors for gene gain and loss rates per site
     max_value = 10 ** 6
@@ -347,75 +348,108 @@ if __name__ == "__main__":
 
     os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
 
-    if mode == "rejection":
-        if load != None:
-            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed, pool=arraypool)
-        else:
+    if run_mode == "sim":
+        print("Simulating data...")
+        if mode == "rejection":
             mod = elfi.Rejection(d, batch_size=batch_size, seed=seed)
 
-        result = mod.sample(N_samples, quantile=qnt)
-    elif mode == "SMC":
-        if load != None:
-            mod = elfi.SMC(d, batch_size=batch_size, seed=seed, pool=arraypool)
-        else:
+        elif mode == "SMC":
             mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
-
-        mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
-        result = mod.sample(N_samples, schedule)
-    else:
-        log_d = elfi.Operation(np.log, d)
-        bounds = {
-            'gene_gl' : (0, max_value),
-            'prop_gene' : (0, 1),
-        }
-        if load != None:
-            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
         else:
+            log_d = elfi.Operation(np.log, d)
+            bounds = {
+                'gene_gl' : (0, max_value),
+                'prop_gene' : (0.5, 1),
+            }
             mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                                acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
+            post = mod.fit(n_evidence=n_evidence)
 
-        post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples)
+        # save model
+        save_path = outpref + '_pools'
+        os.makedirs(save_path, exist_ok=True)
+        arraypool = elfi.OutputPool(['prop_gene', 'gene_gl', 'Y', 'd'], prefix=save_path)
+        arraypool.set_context(mod)
+        arraypool.save()
 
-    with open(outpref + "_ELFI_summary.txt", "w") as f:
-        print(result, file=f)
+    else:
+        print("Loading models in {}".format(load))
+        if load == None:
+            print('Preivously saved ELFI pool required for "sample" mode. Please specify "--load."')
+            sys.exit(1)
 
-    # plot graphs
-    # plot marginals
-    result.plot_marginals()
-    plt.savefig(outpref + '_marginals.png')
+        # parse filename
+        load_pref = load.rsplit('/', 1)[0]
+        load_name = load.rsplit('/', 1)[-1]
 
-    plt.clf
-    plt.cla
+        arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
 
-    # plot paired marginals
-    result.plot_pairs()
-    plt.savefig(outpref + '_pairs.png')
+        if mode == "rejection":
+            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed, pool=arraypool)
+            result = mod.sample(N_samples, quantile=qnt)
+        elif mode == "SMC":
+            mod = elfi.SMC(d, batch_size=batch_size, seed=seed, pool=arraypool)
+            result = mod.sample(N_samples, schedule)
+        else:
+            log_d = elfi.Operation(np.log, d)
+            bounds = {
+                'gene_gl' : (0, max_value),
+                'prop_gene' : (0.5, 1),
+            }
+            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+            #post = mod.fit(n_evidence=n_evidence)
 
-    plt.clf
-    plt.cla
+            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
 
-    # plot BOLFI specific graphs
-    if mode == "BOLFI":
-        #plot MCMC traces
-        result.plot_traces();
-        plt.savefig(outpref + '_BOLFI_traces.png')
+            mod.plot_discrepancy()
+            plt.savefig(outpref + "_BOLFI_discrepancy.pdf")
+            plt.close()
+
+            # plot results
+            mod.plot_state()
+            plt.savefig(outpref + "_" + mode + "_state.pdf")
+            plt.close()
+
+            # post.plot(logpdf=True)
+            # plt.savefig("posterior.pdf")
+            # plt.close()
+            #
+            # dill.dump(post, open(outpref + "_posterior.pkl", "wb"))
+
+        with open(outpref + "_ELFI_summary.txt", "w") as f:
+            print(result, file=f)
+
+        # plot graphs
+        # plot marginals
+        result.plot_marginals()
+        plt.savefig(outpref + "_" + mode + '_marginals.png')
 
         plt.clf
         plt.cla
 
-        # plot discrepancies
-        mod.plot_discrepancy()
-
-        plt.savefig(outpref + '_BOLFI_discepancy.png')
+        # plot paired marginals
+        result.plot_pairs()
+        plt.savefig(outpref + "_" + mode + '_pairs.png')
 
         plt.clf
         plt.cla
 
-    # save model
-    save_path = outpref + '_pools'
-    os.makedirs(save_path, exist_ok=True)
-    arraypool = elfi.ArrayPool(['prop_gene', 'gene_gl', 'Y', 'd'], prefix=save_path)
-    arraypool.set_context(mod)
-    arraypool.save()
+        # plot BOLFI specific graphs
+        if mode == "BOLFI":
+            #plot MCMC traces
+            result.plot_traces();
+            plt.savefig(outpref + '_BOLFI_traces.png')
+
+            plt.clf
+            plt.cla
+
+            # plot discrepancies
+            mod.plot_discrepancy()
+
+            plt.savefig(outpref + '_BOLFI_discepancy.png')
+
+            plt.clf
+            plt.cla
+
+    sys.exit(0)
