@@ -114,29 +114,6 @@ def get_options():
 
     return parser.parse_args()
 
-def mean(x):
-    C = np.mean(x, axis=1)
-    return C
-
-def median(x):
-    C = np.median(x, axis=1)
-    return C
-
-def max(x):
-    C = np.max(x, axis=1)
-    return C
-
-def min(x):
-    C = np.min(x, axis=1)
-    return C
-
-def quantile(x, q):
-    C = np.quantile(x, q, axis=1)
-    return C
-
-def stddev(x):
-    C = np.std(x, axis=1)
-    return C
 
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4,
@@ -168,93 +145,72 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
     pop_core = np.array([core_ref] * pop_size)
     pop_acc = np.array([acc_ref] * pop_size)
 
-    # simulate population forward using fisher-wright
-    for gen in range(1, n_gen):
-        # sample from previous generation in each batch with replacement
-        if gen > 1:
-            sample = np.random.choice(pop_size, pop_size, replace=True)
-            pop_core = pop_core[sample, :, :]
-            pop_acc = pop_acc[sample, :, :]
+    # run numba-backed WF model
+    pop_core, pop_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
+                                     core_site_mu, acc_site_mu)
 
-        # mutate genomes
-        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
-
-
+    # run numba-backed distance calculator
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc)
+    dist_mat = np.zeros((batch_size, (core_mat.shape[1] * 2)))
     for j in range(0, batch_size):
-        pop_core_slice = pop_core[:, j, :]
-        pop_acc_slice = pop_acc[:, j, :]
-        eucl = []
+        dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
 
-        # iterate over all genomes in population, calculating gamming distance
-        for k in range(0, pop_size):
-            for l in range(0, pop_size):
-                if l < k:
-                    hamming_core = distance.hamming(pop_core_slice[k], pop_core_slice[l]) / max_hamming_core
-                    jaccard_acc = distance.jaccard(pop_acc_slice[k], pop_acc_slice[l]) / max_jaccard_acc
-                    eucl.append(math.sqrt((hamming_core ** 2) + (jaccard_acc ** 2)))
-
-        #print(eucl)
-        if j == 0:
-            eucl_mat = np.zeros((batch_size, len(eucl)))
-        eucl_mat[j] = np.array(eucl)
-
-    return eucl_mat
+    return dist_mat
 
 if __name__ == "__main__":
     #testing
-    # size_core = 2
-    # size_pan = 3
-    # avg_gene_freq = 0.5
-    # batch_size = 10
-    # N_samples = 10
-    # qnt = 0.01
-    # seed = 254
-    # summary = "quantile"
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # num_steps = 10
-    # threads = 4
-    # mode = "BOLFI"
-    # outpref = "test"
-    # initial_evidence = 20
-    # update_interval = 10
-    # acq_noise_var = 0.1
-    # n_evidence = 200
-    # info_freq = 1000
-    # base_mu = [0.25, 0.25, 0.25, 0.25]
-    # cluster = False
-    # complexity = "simple"
-    # schedule = "0.7,0.2,0.05"
-    # pop_size = 5
-    # n_gen = 100
-    # load = "test_pools/outputpool_254"
-    # run_mode = "sample"
+    size_core = 2
+    size_pan = 3
+    avg_gene_freq = 0.5
+    batch_size = 10
+    N_samples = 10
+    qnt = 0.01
+    seed = 254
+    summary = "quantile"
+    distfile = "distances/GPSv4_distances_sample1.txt"
+    num_steps = 10
+    threads = 1
+    mode = "BOLFI"
+    outpref = "test"
+    initial_evidence = 20
+    update_interval = 10
+    acq_noise_var = 0.1
+    n_evidence = 200
+    info_freq = 1000
+    base_mu = [0.25, 0.25, 0.25, 0.25]
+    cluster = False
+    complexity = "simple"
+    schedule = "0.7,0.2,0.05"
+    pop_size = 5
+    n_gen = 100
+    load = "test_pools/outputpool_254"
+    run_mode = "sim"
 
 
-    options = get_options()
-    threads = options.threads
-    distfile = options.distfile
-    size_core = options.core_size
-    size_pan = options.pan_size
-    batch_size = options.batch_size
-    qnt = options.qnt
-    N_samples = options.samples
-    seed = options.seed
-    outpref = options.outpref
-    summary = options.summary
-    mode = options.mode
-    initial_evidence = options.init_evidence
-    update_interval = options.update_int
-    acq_noise_var = options.acq_noise_var
-    n_evidence = options.n_evidence
-    avg_gene_freq = options.avg_gene_freq
-    base_mu = [float(i) for i in options.base_mu.split(",")]
-    cluster = options.cluster
-    schedule = options.schedule
-    n_gen = options.ngen
-    pop_size = options.pop_size
-    load = options.load
-    run_mode = options.run_mode
+    # options = get_options()
+    # threads = options.threads
+    # distfile = options.distfile
+    # size_core = options.core_size
+    # size_pan = options.pan_size
+    # batch_size = options.batch_size
+    # qnt = options.qnt
+    # N_samples = options.samples
+    # seed = options.seed
+    # outpref = options.outpref
+    # summary = options.summary
+    # mode = options.mode
+    # initial_evidence = options.init_evidence
+    # update_interval = options.update_int
+    # acq_noise_var = options.acq_noise_var
+    # n_evidence = options.n_evidence
+    # avg_gene_freq = options.avg_gene_freq
+    # base_mu = [float(i) for i in options.base_mu.split(",")]
+    # cluster = options.cluster
+    # schedule = options.schedule
+    # n_gen = options.ngen
+    # pop_size = options.pop_size
+    # load = options.load
+    # run_mode = options.run_mode
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -297,11 +253,11 @@ if __name__ == "__main__":
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
     #get observed data, normalise
-    obs_core = df['Core'].to_numpy() / max_hamming_core
-    obs_acc = df['Accessory'].to_numpy() / max_jaccard_acc
+    obs_core = get_percentile(df['Core'].to_numpy() / max_hamming_core)
+    obs_acc = get_percentile(df['Accessory'].to_numpy() / max_jaccard_acc)
 
     # calculate euclidean distance to origin
-    obs = np.sqrt((obs_core ** 2) + (obs_acc ** 2)).reshape(1, -1)
+    obs = np.concatenate([obs_core, obs_acc])
 
     # set priors
     # priors for gene gain and loss rates per site
@@ -315,25 +271,25 @@ if __name__ == "__main__":
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                         core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, observed=obs)
 
-    S_min = elfi.Summary(min, Y)
-    S_max = elfi.Summary(max, Y)
-    if summary == "quantile":
-        # generate summary statitics as quantiles of data
-        S_q1 = elfi.Summary(quantile, Y, 0.1)
-        S_q2 = elfi.Summary(quantile, Y, 0.2)
-        S_q3 = elfi.Summary(quantile, Y, 0.3)
-        S_q4 = elfi.Summary(quantile, Y, 0.4)
-        S_q5 = elfi.Summary(quantile, Y, 0.5)
-        S_q6 = elfi.Summary(quantile, Y, 0.6)
-        S_q7 = elfi.Summary(quantile, Y, 0.7)
-        S_q8 = elfi.Summary(quantile, Y, 0.8)
-        S_q9 = elfi.Summary(quantile, Y, 0.9)
-
-        d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
-    else:
-        S_mean = elfi.Summary(mean, Y)
-        S_stddev = elfi.Summary(stddev, Y)
-        d = elfi.Distance('euclidean', S_min, S_mean, S_stddev, S_max)
+    # S_min = elfi.Summary(min, Y)
+    # S_max = elfi.Summary(max, Y)
+    # if summary == "quantile":
+    #     # generate summary statitics as quantiles of data
+    #     S_q1 = elfi.Summary(quantile, Y, 0.1)
+    #     S_q2 = elfi.Summary(quantile, Y, 0.2)
+    #     S_q3 = elfi.Summary(quantile, Y, 0.3)
+    #     S_q4 = elfi.Summary(quantile, Y, 0.4)
+    #     S_q5 = elfi.Summary(quantile, Y, 0.5)
+    #     S_q6 = elfi.Summary(quantile, Y, 0.6)
+    #     S_q7 = elfi.Summary(quantile, Y, 0.7)
+    #     S_q8 = elfi.Summary(quantile, Y, 0.8)
+    #     S_q9 = elfi.Summary(quantile, Y, 0.9)
+    #
+    #     d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
+    # else:
+    #     S_mean = elfi.Summary(mean, Y)
+    #     S_stddev = elfi.Summary(stddev, Y)
+    d = elfi.Distance('euclidean', Y)
 
     #set multiprocessing client
     if cluster == True:

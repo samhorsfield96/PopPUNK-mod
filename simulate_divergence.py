@@ -12,6 +12,14 @@ from math import e
 from scipy.stats import gamma
 from numba import jit
 
+def get_percentile(res_list):
+    return np.array([np.percentile(res_list, q) for q in range(0, 101, 1)])
+
+def jaccard(list1, list2):
+    intersection = len(list(set(list1).intersection(list2)))
+    union = (len(list1) + len(list2)) - intersection
+    return float(intersection) / union
+
 def read_file(filename):
     df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
@@ -140,6 +148,58 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu, pop_size):
     #print(query)
     return query
 
+@jit(nopython=True)
+def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu):
+    # simulate population forward using fisher-wright
+    for gen in range(1, n_gen):
+        # sample from previous generation in each batch with replacement
+        if gen > 1:
+            sample = np.random.choice(pop_size, pop_size, replace=True)
+            pop_core = pop_core[sample, :, :]
+            pop_acc = pop_acc[sample, :, :]
+
+        # mutate genomes
+        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
+        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+
+    return pop_core, pop_acc
+
+@jit(nopython=False)
+def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc):
+    for j in range(0, batch_size):
+        pop_core_slice = pop_core[:, j, :]
+        pop_acc_slice = pop_acc[:, j, :]
+        #eucl = []
+
+        # calulate quantiles for core and accessory distance
+        hamming_core = []
+        jaccard_acc = []
+
+        # iterate over all genomes in population, calculating hamming distance
+        for k in range(0, pop_size):
+            for l in range(0, pop_size):
+                if l < k:
+                    # calculate hamming
+                    hamming_core.append((np.count_nonzero(pop_core_slice[k] != pop_core_slice[l]) / pop_core_slice[k].size) / max_hamming_core)
+
+                    # calculate jaccard
+                    intersection = np.count_nonzero((pop_acc_slice[k] == 1) & (pop_acc_slice[l] == 1))
+                    union = np.count_nonzero((pop_acc_slice[k] != pop_acc_slice[l])) + intersection
+                    if union == 0:
+                        jaccard_acc.append(1.0 / max_jaccard_acc)
+                    else:
+                        jaccard_acc.append((1 - (float(intersection) / union)) / max_jaccard_acc)
+
+        core_quant = np.array([np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)])
+        acc_quant = np.array([np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)])
+
+        if j == 0:
+            core_mat = np.zeros((batch_size, core_quant.size))
+            acc_mat = np.zeros((batch_size, acc_quant.size))
+        core_mat[j] = core_quant
+        acc_mat[j] = acc_quant
+
+    return core_mat, acc_mat
 
 def calc_man(vec_size, bin_probs):
     no_split = len(bin_probs)
