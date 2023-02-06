@@ -126,7 +126,7 @@ if __name__ == "__main__":
         for line in f:
             params_list.append(line.rstrip().split("\t"))
 
-    print("Running Simulations")
+    print("Running Simulations...")
     with Pool(processes=threads) as pool:
         for index, dist_mat in tqdm.tqdm(pool.imap(
                 partial(run_sim, params_list=params_list, max_hamming_core=max_hamming_core, max_jaccard_acc=max_jaccard_acc),
