@@ -10,40 +10,11 @@ import tqdm
 import matplotlib.pyplot as plt
 
 def get_options():
-    description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
+    description = 'Run simulator of gene gain model'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_ELFI.py')
+                                     prog='python run_elfi_simulator.py')
 
     IO = parser.add_argument_group('Input/Output options')
-    IO.add_argument('--run-mode',
-                    required=True,
-                    choices=['sim', 'sample'],
-                    help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--core-size',
-                    type=int,
-                    default=10000,
-                    help='Number of positions in core genome. Default = 10000 ')
-    IO.add_argument('--pan-size',
-                    type=int,
-                    default=10000,
-                    help='Number of positions in pangenome. Default = 10000 ')
-    IO.add_argument('--pop-size',
-                    type=int,
-                    default=1000,
-                    help='Population size for Wright-Fisher model. Default = 1000 ')
-    IO.add_argument('--ngen',
-                    type=int,
-                    default=100,
-                    help='Number of generations for Wright-Fisher model. Default = 100 ')
-    IO.add_argument('--base-mu',
-                    default="0.25,0.25,0.25,0.25",
-                    help='Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
-    IO.add_argument('--avg-gene-freq',
-                    type=float,
-                    default=0.5,
-                    help='Average gene frequency in accessory genome. '
-                         'Determines gene gain/loss rate e.g. 0.1 = gene gain/loss rate 1:9 '
-                         'Default = "0.5" ')
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
