@@ -364,6 +364,11 @@ if __name__ == "__main__":
             mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                                acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
             post = mod.fit(n_evidence=n_evidence)
+            post.plot(logpdf=True)
+            plt.savefig("posterior.pdf")
+            plt.close()
+
+            dill.dump(post, open(outpref + "_posterior.pkl", "wb"))
 
         # save model
         save_path = outpref + '_pools'
@@ -375,7 +380,7 @@ if __name__ == "__main__":
     else:
         print("Loading models in {}".format(load))
         if load == None:
-            print('Preivously saved ELFI pool required for "sample" mode. Please specify "--load."')
+            print('Previously saved ELFI pool required for "sample" mode. Please specify "--load."')
             sys.exit(1)
 
         # parse filename
@@ -398,7 +403,6 @@ if __name__ == "__main__":
             }
             mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                              acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
-            #post = mod.fit(n_evidence=n_evidence)
 
             result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
 
@@ -410,12 +414,6 @@ if __name__ == "__main__":
             mod.plot_state()
             plt.savefig(outpref + "_" + mode + "_state.pdf")
             plt.close()
-
-            # post.plot(logpdf=True)
-            # plt.savefig("posterior.pdf")
-            # plt.close()
-            #
-            # dill.dump(post, open(outpref + "_posterior.pkl", "wb"))
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
