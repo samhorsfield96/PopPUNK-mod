@@ -20,7 +20,7 @@ def jaccard(list1, list2):
     union = (len(list1) + len(list2)) - intersection
     return float(intersection) / union
 
-def read_file(filename):
+def read_distfile(filename):
     df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
     # rename columns
@@ -93,30 +93,23 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
     return site_mu
 
 @jit(nopython=True)
-def sim_divergence_vec(ref, mu, core, freq, site_mu, pop_size):
-    num_sites_vec = np.empty_like(mu)
-    np.round(ref.shape[1] * mu, 0, num_sites_vec)
-    num_sites_vec = num_sites_vec.astype(np.int64)
-
+def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
     if core:
         choices = np.array([1, 2, 3, 4])
     else:
         choices = np.array([0, 1])
 
-    index_array = np.arange(ref[0].size)
+    index_array = np.arange(query[0].size)
 
-    #total_sites_vec = np.zeros((mu.shape[0]))
-
-    # create 3d array, depth is popsize (0), rows are batches (1), columns are each base (2)
-    query = np.zeros(shape=np.shape(ref))
+    # query is 3d array, depth is popsize (0), rows are batches (1), columns are each base (2)
 
     # iterate until all required sites mutated for given mutation rate
     for i in range(pop_size):
         for j in range(mu.shape[0]):
-            query[i][j] = ref[i][j].copy()
             #print(query[i][j])
 
-            num_sites = num_sites_vec[j]
+
+            num_sites = np.random.poisson(query[i][j].size * mu[j], 1)[0]
             if num_sites > 0:
                 total_sites = 0
                 while total_sites < num_sites:
@@ -145,9 +138,6 @@ def sim_divergence_vec(ref, mu, core, freq, site_mu, pop_size):
                         # determine number of actual changes
                         total_sites += changes.size - np.count_nonzero(non_mutated)
 
-    #print(query)
-    return query
-
 @jit(nopython=True)
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu):
     # simulate population forward using fisher-wright
@@ -159,17 +149,14 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
             pop_acc = pop_acc[sample, :, :]
 
         # mutate genomes
-        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+        sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
+        sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
 
-    return pop_core, pop_acc
-
-@jit(nopython=False)
-def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc):
+#@jit(nopython=False)
+def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
-        #eucl = []
 
         # calulate quantiles for core and accessory distance
         hamming_core = []
@@ -190,14 +177,18 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
                     else:
                         jaccard_acc.append((1 - (float(intersection) / union)) / max_jaccard_acc)
 
-        core_quant = np.array([np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)])
-        acc_quant = np.array([np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)])
+        if simulate:
+            core_mat = np.array(hamming_core)
+            acc_mat = np.array(jaccard_acc)
+        else:
+            core_quant = np.array([np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)])
+            acc_quant = np.array([np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)])
 
-        if j == 0:
-            core_mat = np.zeros((batch_size, core_quant.size))
-            acc_mat = np.zeros((batch_size, acc_quant.size))
-        core_mat[j] = core_quant
-        acc_mat[j] = acc_quant
+            if j == 0:
+                core_mat = np.zeros((batch_size, core_quant.size), dtype=np.float64)
+                acc_mat = np.zeros((batch_size, acc_quant.size), dtype=np.float64)
+            core_mat[j] = core_quant
+            acc_mat[j] = acc_quant
 
     return core_mat, acc_mat
 

@@ -118,7 +118,7 @@ def get_options():
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, max_hamming_core, max_jaccard_acc, batch_size=1, random_state=None):
+                       pop_size, n_gen, max_hamming_core, max_jaccard_acc, simulate, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rate
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl
@@ -128,7 +128,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
     core_site = np.tile(np.array([core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4]), (batch_size, 1))
     acc_site_1 = prop_gene
     acc_site_2 = 1 - acc_site_1
-    acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
+    if simulate:
+        acc_site = np.stack(([acc_site_1], [acc_site_2]), axis=1)
+    else:
+        acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
     gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
 
     # calculate per-site mutation rate
@@ -142,18 +145,24 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
         core_ref[i] = np.random.choice([1, 2, 3, 4], size_core, p=base_mu[i])
         acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
 
-    pop_core = np.array([core_ref] * pop_size)
-    pop_acc = np.array([acc_ref] * pop_size)
+    pop_core = np.array([core_ref.copy()] * pop_size)
+    pop_acc = np.array([acc_ref.copy()] * pop_size)
 
     # run numba-backed WF model
-    pop_core, pop_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
-                                     core_site_mu, acc_site_mu)
+    run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
+                 core_site_mu, acc_site_mu)
 
     # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc)
-    dist_mat = np.zeros((batch_size, (core_mat.shape[1] * 2)))
-    for j in range(0, batch_size):
-        dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate)
+
+    if simulate:
+        dist_mat = np.zeros((core_mat.shape[0], 2))
+        dist_mat[:, 0] = core_mat
+        dist_mat[:, 1] = acc_mat
+    else:
+        dist_mat = np.zeros((batch_size, (core_mat.shape[1] * 2)))
+        for j in range(0, batch_size):
+            dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
 
     return dist_mat
 
@@ -216,7 +225,7 @@ if __name__ == "__main__":
     schedule = [float(x) for x in schedule.split(",")]
 
     # read in real files
-    df = read_file(distfile)
+    df = read_distfile(distfile)
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
@@ -269,26 +278,8 @@ if __name__ == "__main__":
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                        core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, observed=obs)
+                        core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, False, observed=obs)
 
-    # S_min = elfi.Summary(min, Y)
-    # S_max = elfi.Summary(max, Y)
-    # if summary == "quantile":
-    #     # generate summary statitics as quantiles of data
-    #     S_q1 = elfi.Summary(quantile, Y, 0.1)
-    #     S_q2 = elfi.Summary(quantile, Y, 0.2)
-    #     S_q3 = elfi.Summary(quantile, Y, 0.3)
-    #     S_q4 = elfi.Summary(quantile, Y, 0.4)
-    #     S_q5 = elfi.Summary(quantile, Y, 0.5)
-    #     S_q6 = elfi.Summary(quantile, Y, 0.6)
-    #     S_q7 = elfi.Summary(quantile, Y, 0.7)
-    #     S_q8 = elfi.Summary(quantile, Y, 0.8)
-    #     S_q9 = elfi.Summary(quantile, Y, 0.9)
-    #
-    #     d = elfi.Distance('euclidean', S_min, S_q1, S_q2, S_q3, S_q4, S_q5, S_q6, S_q7, S_q8, S_q9, S_max)
-    # else:
-    #     S_mean = elfi.Summary(mean, Y)
-    #     S_stddev = elfi.Summary(stddev, Y)
     d = elfi.Distance('euclidean', Y)
 
     #set multiprocessing client
