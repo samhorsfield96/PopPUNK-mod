@@ -41,13 +41,14 @@ def recurse_prob(x, weight):
 def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
     no_split = np.shape(bin_probs)[1]
 
-    vec_size = np.repeat([vec_size], batch_size)
+    vec_size = np.repeat(vec_size, batch_size)
 
     # get bins for pdf
     integer = vec_size // no_split
     mod = np.reshape((vec_size % no_split).astype(np.int64), (-1, 1))
 
-    bins = np.transpose(np.array([integer] * np.shape(bin_probs)[1]).astype(int))
+    integer = np.reshape(np.repeat(integer, np.shape(bin_probs)[1]), (np.shape(bin_probs)[1], integer.size))
+    bins = np.transpose(integer)
 
     # add modulus to bins to assign all sites (first is vectorised)
     bins[:, 0] += mod[:, 0]
