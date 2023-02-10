@@ -72,16 +72,16 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
     return index, dist_mat, avg_core, avg_acc
 
 if __name__ == "__main__":
-    distfile = "distances/GPSv4_distances_sample1.txt"
-    threads = 1
-    paramsfile = "parameter_example_test.txt"
-    outpref = "test"
+    # distfile = "distances/GPSv4_distances_sample1.txt"
+    # threads = 1
+    # paramsfile = "parameter_example_test.txt"
+    # outpref = "test"
 
-    # options = get_options()
-    # threads = options.threads
-    # distfile = options.distfile
-    # paramsfile = options.params
-    # outpref = options.outpref
+    options = get_options()
+    threads = options.threads
+    distfile = options.distfile
+    paramsfile = options.params
+    outpref = options.outpref
 
     # read in real files
     df = read_distfile(distfile)
