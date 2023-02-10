@@ -90,6 +90,10 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
     # for row in range(site_mu.shape[0]):
     #     sum_sites_mu = np.sum(site_mu[row])
 
+    # check site mu sums to 1, if not normalise
+    sum_mu = np.sum(site_mu, axis=1)
+    site_mu = site_mu / sum_mu[:,None]
+
     return site_mu
 
 @jit(nopython=True)
@@ -99,7 +103,7 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
     else:
         choices = np.array([0, 1])
 
-    index_array = np.arange(query[0].size)
+    index_array = np.arange(query.shape[2])
 
     # query is 3d array, depth is popsize (0), rows are batches (1), columns are each base (2)
 
@@ -107,8 +111,6 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
     for i in range(pop_size):
         for j in range(mu.shape[0]):
             #print(query[i][j])
-
-
             num_sites = np.random.poisson(query[i][j].size * mu[j], 1)[0]
             if num_sites > 0:
                 total_sites = 0
@@ -129,7 +131,6 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
 
                         # determine sites with and without change (first is vectorised)
                         changes = choices[np.searchsorted(np.cumsum(freq[j]), np.random.rand(sample_sites.size))]
-                        #changes = choices[np.searchsorted(np.cumsum(freq), np.random.rand(sample_sites.size))]
 
                         non_mutated = query[i][j][sample_sites] == changes
 
