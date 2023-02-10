@@ -31,7 +31,7 @@ def get_options():
 
     return parser.parse_args()
 
-def run_sim(index, params_list, max_hamming_core, max_jaccard_acc):
+def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc):
     param_set = params_list[index]
     size_pan = int(param_set[0])
     size_core = int(param_set[1])
@@ -62,26 +62,26 @@ def run_sim(index, params_list, max_hamming_core, max_jaccard_acc):
     core_site_mu3 = 0.25
     core_site_mu4 = 0.25
 
-    dist_mat = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
-                                  base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                                  core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, True)
+    dist_mat, avg_core, avg_acc = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
+                                                     base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
+                                                     core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, True)
 
     dist_mat[:, 0] = dist_mat[:, 0] * max_hamming_core
     dist_mat[:, 1] = dist_mat[:, 1] * max_jaccard_acc
 
-    return index, dist_mat
+    return index, dist_mat, avg_core, avg_acc
 
 if __name__ == "__main__":
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # threads = 1
-    # paramsfile = "parameter_example.txt"
-    # outpref = "test"
+    distfile = "distances/GPSv4_distances_sample1.txt"
+    threads = 1
+    paramsfile = "parameter_example_test.txt"
+    outpref = "test"
 
-    options = get_options()
-    threads = options.threads
-    distfile = options.distfile
-    paramsfile = options.params
-    outpref = options.outpref
+    # options = get_options()
+    # threads = options.threads
+    # distfile = options.distfile
+    # paramsfile = options.params
+    # outpref = options.outpref
 
     # read in real files
     df = read_distfile(distfile)
@@ -90,6 +90,7 @@ if __name__ == "__main__":
     max_hamming_core = float(df["Core"].max())
     max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
+    #mode_hamming_core = float(df["Core"].mode())
 
     params_list = []
     with open(paramsfile, "r") as f:
@@ -99,8 +100,8 @@ if __name__ == "__main__":
 
     print("Running Simulations...")
     with Pool(processes=threads) as pool:
-        for index, dist_mat in tqdm.tqdm(pool.imap(
-                partial(run_sim, params_list=params_list, max_hamming_core=max_hamming_core, max_jaccard_acc=max_jaccard_acc),
+        for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
+                partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core, max_jaccard_acc=max_jaccard_acc),
                 range(0, len(params_list))), total=len(params_list)):
             fig, ax = plt.subplots()
 
@@ -118,6 +119,34 @@ if __name__ == "__main__":
             ax.set_ylabel("Accessory Jaccard")
 
             fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
+
+            ax.clear()
+            plt.clf
+            plt.cla
+
+            # plot average distances over time
+            y = avg_core
+
+            ax.plot(y)
+
+            ax.set_xlabel("Generation")
+            ax.set_ylabel("Average Core Hamming")
+
+            fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
+
+            ax.clear()
+            plt.clf
+            plt.cla
+
+            # plot average distances over time
+            y = avg_acc
+
+            ax.plot(y)
+
+            ax.set_xlabel("Generation")
+            ax.set_ylabel("Average Acc Jaccard")
+
+            fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
 
             ax.clear()
             plt.clf

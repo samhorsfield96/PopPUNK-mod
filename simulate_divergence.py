@@ -139,20 +139,6 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
                         total_sites += changes.size - np.count_nonzero(non_mutated)
 
 @jit(nopython=True)
-def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu):
-    # simulate population forward using fisher-wright
-    for gen in range(1, n_gen):
-        # sample from previous generation in each batch with replacement
-        if gen > 1:
-            sample = np.random.choice(pop_size, pop_size, replace=True)
-            pop_core = pop_core[sample, :, :]
-            pop_acc = pop_acc[sample, :, :]
-
-        # mutate genomes
-        sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
-
-#@jit(nopython=False)
 def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
@@ -178,19 +164,48 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
                         jaccard_acc.append((1 - (float(intersection) / union)) / max_jaccard_acc)
 
         if simulate:
-            core_mat = np.array(hamming_core)
-            acc_mat = np.array(jaccard_acc)
+            core_mat = np.array([hamming_core])
+            acc_mat = np.array([jaccard_acc])
         else:
-            core_quant = np.array([np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)])
-            acc_quant = np.array([np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)])
+            core_quant = np.array([[np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)]])
+            acc_quant = np.array([[np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)]])
 
             if j == 0:
-                core_mat = np.zeros((batch_size, core_quant.size), dtype=np.float64)
-                acc_mat = np.zeros((batch_size, acc_quant.size), dtype=np.float64)
+                core_mat = np.zeros((batch_size, core_quant.size))
+                acc_mat = np.zeros((batch_size, acc_quant.size))
             core_mat[j] = core_quant
             acc_mat[j] = acc_quant
 
     return core_mat, acc_mat
+
+@jit(nopython=True)
+def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
+                 max_hamming_core, max_jaccard_acc, simulate):
+    if simulate:
+        avg_core = np.zeros(n_gen, dtype=np.float64)
+        avg_acc = np.zeros(n_gen, dtype=np.float64)
+
+    # simulate population forward using fisher-wright
+    for gen in range(1, n_gen):
+        # sample from previous generation in each batch with replacement
+        if gen > 1:
+            sample = np.random.choice(pop_size, pop_size, replace=True)
+            pop_core = pop_core[sample, :, :]
+            pop_acc = pop_acc[sample, :, :]
+
+        # mutate genomes
+        sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
+        sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+
+        if simulate:
+            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, pop_size, max_hamming_core, max_jaccard_acc, True)
+            avg_core[gen] = np.mean(core_mat) * max_hamming_core
+            avg_acc[gen] = np.mean(acc_mat) * max_jaccard_acc
+
+    if simulate:
+        return avg_core, avg_acc
+    else:
+        return None, None
 
 def calc_man(vec_size, bin_probs):
     no_split = len(bin_probs)
