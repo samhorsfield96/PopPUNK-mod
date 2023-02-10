@@ -140,6 +140,8 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
                         # determine number of actual changes
                         total_sites += changes.size - np.count_nonzero(non_mutated)
 
+    return query
+
 @jit(nopython=True)
 def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate):
     for j in range(0, batch_size):
@@ -196,8 +198,8 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
             pop_acc = pop_acc[sample, :, :]
 
         # mutate genomes
-        sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
+        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
 
         if simulate:
             core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, pop_size, max_hamming_core, max_jaccard_acc, True)
@@ -205,9 +207,9 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
             avg_acc[gen] = np.mean(acc_mat) * max_jaccard_acc
 
     if simulate:
-        return avg_core, avg_acc
+        return pop_core, pop_acc, avg_core, avg_acc
     else:
-        return None, None
+        return pop_core, pop_acc, None, None
 
 def calc_man(vec_size, bin_probs):
     no_split = len(bin_probs)

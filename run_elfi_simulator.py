@@ -103,6 +103,13 @@ if __name__ == "__main__":
         for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
                 partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core, max_jaccard_acc=max_jaccard_acc),
                 range(0, len(params_list))), total=len(params_list)):
+            # save to file
+            np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")
+            avg_mat = np.zeros((avg_core.shape[0], 2))
+            avg_mat[:, 0] = avg_core
+            avg_mat[:, 1] = avg_acc
+            np.savetxt(outpref + "_averages_sim_" + str(index + 1) + ".csv", avg_mat, delimiter=",")
+
             fig, ax = plt.subplots()
 
             x = df["Core"]

@@ -145,20 +145,20 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
         core_ref[i] = np.random.choice([1, 2, 3, 4], size_core, p=base_mu[i])
         acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
 
-    pop_core = np.array([core_ref.copy()] * pop_size)
-    pop_acc = np.array([acc_ref.copy()] * pop_size)
+    pop_core = np.repeat([core_ref.copy()], pop_size, axis=0)
+    pop_acc = np.repeat([acc_ref.copy()], pop_size, axis=0)
 
     # run numba-backed WF model
-    avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
-                                     core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate)
+    pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
+                                                        core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate)
 
     # run numba-backed distance calculator
     core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate)
 
     if simulate:
         dist_mat = np.zeros((core_mat.shape[1], 2))
-        dist_mat[:, 0] = core_mat[0]
-        dist_mat[:, 1] = acc_mat[0]
+        dist_mat[:, 0] = core_mat
+        dist_mat[:, 1] = acc_mat
         return dist_mat, avg_core, avg_acc
     else:
         dist_mat = np.zeros((batch_size, (core_mat.shape[1] * 2)))
