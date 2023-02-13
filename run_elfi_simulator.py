@@ -44,8 +44,8 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
 
     base_mu = [float(i) for i in base_mu.split(",")]
 
-    # set evenly spaced core hamming values across generations
-    core_mu = max_real_core / n_gen
+    # set evenly spaced core hamming values across generations. Divide by two as pairwise divergence
+    core_mu = (max_real_core / n_gen) / 2
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]

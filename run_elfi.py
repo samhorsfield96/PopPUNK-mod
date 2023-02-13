@@ -233,7 +233,7 @@ if __name__ == "__main__":
 
     # set constants
     # set evenly spaced core hamming values across generations
-    core_mu = max_real_core / n_gen
+    core_mu = (max_real_core / n_gen) / 2
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
