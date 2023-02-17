@@ -125,7 +125,7 @@ if __name__ == "__main__":
             ax.set_xlabel("Core Hamming")
             ax.set_ylabel("Accessory Jaccard")
 
-            fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".svg")
+            fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
 
             ax.clear()
             plt.clf
@@ -139,7 +139,7 @@ if __name__ == "__main__":
             ax.set_xlabel("Generation")
             ax.set_ylabel("Average Core Hamming")
 
-            fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".svg")
+            fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
 
             ax.clear()
             plt.clf
@@ -153,7 +153,7 @@ if __name__ == "__main__":
             ax.set_xlabel("Generation")
             ax.set_ylabel("Average Acc Jaccard")
 
-            fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".svg")
+            fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
 
             ax.clear()
             plt.clf
