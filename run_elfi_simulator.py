@@ -41,6 +41,7 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
     pop_size = int(param_set[5])
     prop_gene = float(param_set[6])
     gene_gl = float(param_set[7])
+    acc_site_diff = float(param_set[8])
 
     base_mu = [float(i) for i in base_mu.split(",")]
 
@@ -62,7 +63,7 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
     core_site_mu3 = 0.25
     core_site_mu4 = 0.25
 
-    dist_mat, avg_core, avg_acc = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
+    dist_mat, avg_core, avg_acc = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl, acc_site_diff,
                                                      base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                                                      core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, True)
 
@@ -73,7 +74,7 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
 
 if __name__ == "__main__":
     # distfile = "distances/GPSv4_distances_sample1.txt"
-    # threads = 1
+    # threads = 4
     # paramsfile = "parameter_example_test.txt"
     # outpref = "test"
 
@@ -90,7 +91,6 @@ if __name__ == "__main__":
     max_hamming_core = float(df["Core"].max())
     max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-    #mode_hamming_core = float(df["Core"].mode())
 
     params_list = []
     with open(paramsfile, "r") as f:

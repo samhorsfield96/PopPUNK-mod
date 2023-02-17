@@ -38,21 +38,20 @@ def recurse_prob(x, weight):
     else:
         return (1 - recurse_prob(x - 1, weight)) * weight
 
-def calc_man_vec(array_size, vec_size, bin_probs, batch_size):
+def calc_man_vec(array_size, vec_size, bin_probs, batch_size, acc_site_diff=None):
+    vec_size = np.repeat(vec_size, batch_size)
     no_split = np.shape(bin_probs)[1]
 
-    vec_size = np.repeat(vec_size, batch_size)
-
     # get bins for pdf
-    integer = vec_size // no_split
-    mod = np.reshape((vec_size % no_split).astype(np.int64), (-1, 1))
-
-    integer = np.reshape(np.repeat(integer, np.shape(bin_probs)[1]), (np.shape(bin_probs)[1], integer.size))
-    bins = np.transpose(integer)
-
-    # add modulus to bins to assign all sites (first is vectorised)
-    bins[:, 0] += mod[:, 0]
-    #bins[0] += mod[0]
+    if acc_site_diff is None:
+        integer = vec_size // no_split
+        mod = np.reshape((vec_size % no_split).astype(np.int64), (-1, 1))
+        integer = np.reshape(np.repeat(integer, np.shape(bin_probs)[1]), (np.shape(bin_probs)[1], integer.size))
+        bins = np.transpose(integer)
+        # add modulus to bins to assign all sites (first is vectorised)
+        bins[:, 0] += mod[:, 0]
+    else:
+        bins = np.rint(vec_size / (1 / acc_site_diff)).astype(np.int64)
 
     # assign probabilities to sites
     site_mu = np.zeros((np.shape(bin_probs)[0], array_size))
@@ -182,7 +181,7 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
 
     return core_mat, acc_mat
 
-#@jit(nopython=True)
+@jit(nopython=True)
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
                  max_hamming_core, max_jaccard_acc, simulate):
     if simulate:

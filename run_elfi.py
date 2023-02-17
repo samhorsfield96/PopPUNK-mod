@@ -115,7 +115,7 @@ def get_options():
     return parser.parse_args()
 
 
-def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
+def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl, acc_site_diff,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        pop_size, n_gen, max_hamming_core, max_jaccard_acc, simulate, batch_size=1, random_state=None):
@@ -130,13 +130,15 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, g
     acc_site_2 = 1 - acc_site_1
     if simulate:
         acc_site = np.stack(([acc_site_1], [acc_site_2]), axis=1)
+        acc_site_diff = np.stack(([acc_site_diff], [1 - acc_site_diff]), axis=1)
     else:
         acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
+        acc_site_diff = np.stack((acc_site_diff, 1 - acc_site_diff), axis=1)
     gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
 
     # calculate per-site mutation rate
     core_site_mu = calc_man_vec(size_core, size_core, core_site, batch_size)
-    acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size)
+    acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size, acc_site_diff)
 
     # generate starting genomes, rows are batches, columns are positions
     core_ref = np.zeros((batch_size, size_core))
@@ -272,10 +274,13 @@ if __name__ == "__main__":
     max_value = 10 ** 6
     gene_gl = elfi.Prior('uniform', 0, max_value)
 
-    # prior for size two gene compartments
+    # prior for difference in probability of sample fast vs. slow two gene compartments
     prop_gene = elfi.Prior('uniform', 0.5, 1 - 0.5)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl,
+    # prior for difference size of compartments
+    acc_site_diff = elfi.Prior('uniform', 0, 1)
+
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl, acc_site_diff,
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                         core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, False, observed=obs)
 
