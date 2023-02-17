@@ -119,7 +119,7 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
                     to_sample = num_sites - total_sites
 
                     # pick all sites to be mutated (first is vectorised)
-                    sites = index_array[np.searchsorted(np.cumsum(site_mu[j]), np.random.rand(to_sample))]
+                    sites = index_array[np.searchsorted(np.cumsum(site_mu[j]), np.random.rand(to_sample), side="right")]
 
                     unique = np.array(list(set(sites)))
                     counts = np.array([np.count_nonzero(sites == val) for val in unique])
@@ -131,7 +131,7 @@ def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
                         sample_sites = unique[counts >= count]
 
                         # determine sites with and without change (first is vectorised)
-                        changes = choices[np.searchsorted(np.cumsum(freq[j]), np.random.rand(sample_sites.size))]
+                        changes = choices[np.searchsorted(np.cumsum(freq[j]), np.random.rand(sample_sites.size), side="right")]
 
                         non_mutated = query[i][j][sample_sites] == changes
 
@@ -182,7 +182,7 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
 
     return core_mat, acc_mat
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
                  max_hamming_core, max_jaccard_acc, simulate):
     if simulate:
