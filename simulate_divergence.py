@@ -23,7 +23,13 @@ def jaccard(list1, list2):
     return float(intersection) / union
 
 def read_distfile(filename):
-    df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+    # read first line, determine if csv
+    with open(filename, "r") as f:
+        first_line = f.readline()
+        if "," in first_line:
+            df = pd.read_csv(filename, index_col=None, header=None, sep=",")
+        else:
+            df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
     if len(df.columns) == 2:
         df.rename(columns={df.columns[0]: "Core",
