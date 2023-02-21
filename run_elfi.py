@@ -9,7 +9,6 @@ import elfi
 from simulate_divergence import *
 import os
 import sys
-import dill
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -321,8 +320,6 @@ if __name__ == "__main__":
             post.plot(logpdf=True)
             plt.savefig("posterior.pdf")
             plt.close()
-
-            dill.dump(post, open(outpref + "_posterior.pkl", "wb"))
 
         # save model
         save_path = outpref + '_pools'
