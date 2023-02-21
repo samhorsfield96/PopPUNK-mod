@@ -1,6 +1,8 @@
 import math
 import glob
 import os
+import sys
+
 import pandas as pd
 import scipy.stats
 from scipy.spatial import distance
@@ -23,9 +25,16 @@ def jaccard(list1, list2):
 def read_distfile(filename):
     df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
-    # rename columns
-    df.rename(columns={df.columns[0]: "Sample1", df.columns[1] : "Sample2", df.columns[2]: "Core",
-                       df.columns[3]: "Accessory"}, inplace=True)
+    if len(df.columns) == 2:
+        df.rename(columns={df.columns[0]: "Core",
+                           df.columns[1]: "Accessory"}, inplace=True)
+    elif len(df.columns) == 4:
+        # rename columns
+        df.rename(columns={df.columns[0]: "Sample1", df.columns[1] : "Sample2", df.columns[2]: "Core",
+                           df.columns[3]: "Accessory"}, inplace=True)
+    else:
+        print("Incorrect number of columns in distfile. Should be 2 or 4.")
+        sys.exit(1)
 
     df['Core'] = pd.to_numeric(df['Core'])
     df['Accessory'] = pd.to_numeric(df['Accessory'])
