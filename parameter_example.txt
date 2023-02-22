@@ -1,4 +1,4 @@
-size_pan	size_core	avg_gene_freq	base_mu 	n_gen	pop_size	prop_gene	gene_gl	acc_site_diff
+size_pan	size_core	avg_gene_freq	base_mu 	n_gen	pop_size	ratio_gene_gl	gene_gl_speed	prop_gene
 4622	1335000	0.465	0.3,0.2,0.2,0.3	100	100	0.5	0.5	0.25
 4622	1335000	0.465	0.3,0.2,0.2,0.3	100	100	0.5	0.5	0.5
 4622	1335000	0.465	0.3,0.2,0.2,0.3	100	100	0.5	0.5	0.75

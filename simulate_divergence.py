@@ -14,8 +14,8 @@ from math import e
 from scipy.stats import gamma
 from numba import jit
 
-def get_percentile(res_list):
-    return np.array([np.percentile(res_list, q) for q in range(0, 101, 1)])
+def get_quantile(res_list):
+    return np.array([np.percentile(res_list, q) for q in range(0, 101, 10)])
 
 def jaccard(list1, list2):
     intersection = len(list(set(list1).intersection(list2)))
@@ -185,8 +185,8 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
             core_mat = np.array([hamming_core])
             acc_mat = np.array([jaccard_acc])
         else:
-            core_quant = np.array([[np.percentile(np.array(hamming_core), q) for q in range(0, 101, 1)]])
-            acc_quant = np.array([[np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 1)]])
+            core_quant = np.array([[np.percentile(np.array(hamming_core), q) for q in range(0, 101, 10)]])
+            acc_quant = np.array([[np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 10)]])
 
             if j == 0:
                 core_mat = np.zeros((batch_size, core_quant.size))

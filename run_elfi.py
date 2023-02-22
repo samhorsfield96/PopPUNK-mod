@@ -91,10 +91,6 @@ def get_options():
                     type=int,
                     default=254,
                     help='Seed for random number generation. Default = 254. ')
-    IO.add_argument('--summary',
-                    choices=['quantile', 'mean'],
-                    default="quantile",
-                    help='Mode for summary statistics, either "mean" or "quantile". Default = "quantile". ')
     IO.add_argument('--mode',
                     choices=['rejection', 'SMC', 'BOLFI'],
                     default="rejection",
@@ -114,30 +110,30 @@ def get_options():
     return parser.parse_args()
 
 
-def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl, acc_site_diff,
+def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
                        pop_size, n_gen, max_hamming_core, max_jaccard_acc, simulate, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rate
     core_mu_arr = np.array([core_mu] * batch_size)
-    acc_mu_arr = core_mu_arr * gene_gl
+    acc_mu_arr = core_mu_arr * gene_gl_speed
 
     # generate vectors for mutation rates
     base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
     core_site = np.tile(np.array([core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4]), (batch_size, 1))
-    acc_site_1 = prop_gene
+    acc_site_1 = ratio_gene_gl
     acc_site_2 = 1 - acc_site_1
     if simulate:
         acc_site = np.stack(([acc_site_1], [acc_site_2]), axis=1)
-        acc_site_diff = np.stack(([acc_site_diff], [1 - acc_site_diff]), axis=1)
+        proportion_gene = np.stack(([prop_gene], [1 - prop_gene]), axis=1)
     else:
         acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
-        acc_site_diff = np.stack((acc_site_diff, 1 - acc_site_diff), axis=1)
+        proportion_gene = np.stack((prop_gene, 1 - prop_gene), axis=1)
     gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
 
     # calculate per-site mutation rate
     core_site_mu = calc_man_vec(size_core, size_core, core_site, batch_size)
-    acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size, acc_site_diff)
+    acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size, proportion_gene)
 
     # generate starting genomes, rows are batches, columns are positions
     core_ref = np.zeros((batch_size, size_core))
@@ -176,10 +172,9 @@ if __name__ == "__main__":
     # N_samples = 10
     # qnt = 0.01
     # seed = 254
-    # summary = "quantile"
     # distfile = "distances/GPSv4_distances_sample1.txt"
     # num_steps = 10
-    # threads = 1
+    # threads = 4
     # mode = "BOLFI"
     # outpref = "test"
     # initial_evidence = 20
@@ -206,7 +201,6 @@ if __name__ == "__main__":
     N_samples = options.samples
     seed = options.seed
     outpref = options.outpref
-    summary = options.summary
     mode = options.mode
     initial_evidence = options.init_evidence
     update_interval = options.update_int
@@ -262,8 +256,8 @@ if __name__ == "__main__":
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
     #get observed data, normalise
-    obs_core = get_percentile(df['Core'].to_numpy() / max_hamming_core)
-    obs_acc = get_percentile(df['Accessory'].to_numpy() / max_jaccard_acc)
+    obs_core = get_quantile(df['Core'].to_numpy() / max_hamming_core)
+    obs_acc = get_quantile(df['Accessory'].to_numpy() / max_jaccard_acc)
 
     # calculate euclidean distance to origin
     obs = np.concatenate([obs_core, obs_acc])
@@ -271,15 +265,15 @@ if __name__ == "__main__":
     # set priors
     # priors for gene gain and loss rates per site
     max_value = 10 ** 6
-    gene_gl = elfi.Prior('uniform', 0, max_value)
+    gene_gl_speed = elfi.Prior('uniform', 0, max_value)
 
     # prior for difference in probability of sample fast vs. slow two gene compartments
-    prop_gene = elfi.Prior('uniform', 0.5, 1 - 0.5)
+    ratio_gene_gl = elfi.Prior('uniform', 0.5, 1 - 0.5)
 
     # prior for difference size of compartments
-    acc_site_diff = elfi.Prior('uniform', 0, 1)
+    prop_gene = elfi.Prior('uniform', 0, 1)
 
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, prop_gene, gene_gl, acc_site_diff,
+    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                         core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, False, observed=obs)
 
@@ -310,21 +304,42 @@ if __name__ == "__main__":
         else:
             log_d = elfi.Operation(np.log, d)
             bounds = {
-                'gene_gl' : (0, max_value),
-                'prop_gene' : (0.5, 1),
-                'acc_site_diff' : (0, 1),
+                'gene_gl_speed' : (0, max_value),
+                'ratio_gene_gl' : (0.5, 1),
+                'prop_gene' : (0, 1),
             }
             mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                                acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
+
             post = mod.fit(n_evidence=n_evidence)
-            post.plot(logpdf=True)
-            plt.savefig("posterior.pdf")
+            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
+
+            # not implemented for more than 2 dimensions
+            # post.plot(logpdf=True)
+            # plt.savefig("posterior.svg")
+            # plt.close()
+
+            mod.plot_discrepancy()
+            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
             plt.close()
+
+            # plot MCMC traces
+            result.plot_traces();
+            plt.savefig(outpref + '_BOLFI_traces.svg')
+            plt.close()
+
+            # # plot results
+            # mod.plot_state()
+            # plt.savefig(outpref + "_" + mode + "_state.svg")
+            # plt.close()
+
+        with open(outpref + "_ELFI_summary.txt", "w") as f:
+            print(result, file=f)
 
         # save model
         save_path = outpref + '_pools'
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.OutputPool(['prop_gene', 'gene_gl', 'Y', 'd'], prefix=save_path)
+        arraypool = elfi.OutputPool(['ratio_gene_gl', 'gene_gl_speed', 'prop_gene', 'Y', 'd'], prefix=save_path)
         arraypool.set_context(mod)
         arraypool.save()
 
@@ -349,8 +364,9 @@ if __name__ == "__main__":
         else:
             log_d = elfi.Operation(np.log, d)
             bounds = {
-                'gene_gl' : (0, max_value),
-                'prop_gene' : (0.5, 1),
+                'gene_gl_speed' : (0, max_value),
+                'ratio_gene_gl' : (0.5, 1),
+                'prop_gene': (0, 1),
             }
             mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                              acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
@@ -358,47 +374,33 @@ if __name__ == "__main__":
             result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
 
             mod.plot_discrepancy()
-            plt.savefig(outpref + "_BOLFI_discrepancy.pdf")
+            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
             plt.close()
 
             # plot results
             mod.plot_state()
-            plt.savefig(outpref + "_" + mode + "_state.pdf")
+            plt.savefig(outpref + "_" + mode + "_state.svg")
             plt.close()
 
-        with open(outpref + "_ELFI_summary.txt", "w") as f:
-            print(result, file=f)
-
-        # plot graphs
-        # plot marginals
-        result.plot_marginals()
-        plt.savefig(outpref + "_" + mode + '_marginals.png')
-
-        plt.clf
-        plt.cla
-
-        # plot paired marginals
-        result.plot_pairs()
-        plt.savefig(outpref + "_" + mode + '_pairs.png')
-
-        plt.clf
-        plt.cla
-
-        # plot BOLFI specific graphs
-        if mode == "BOLFI":
             #plot MCMC traces
             result.plot_traces();
-            plt.savefig(outpref + '_BOLFI_traces.png')
+            plt.savefig(outpref + '_BOLFI_traces.svg')
+            plt.close()
 
-            plt.clf
-            plt.cla
+    with open(outpref + "_ELFI_summary.txt", "w") as f:
+        print(result, file=f)
 
-            # plot discrepancies
-            mod.plot_discrepancy()
+    # plot graphs
+    # plot marginals
+    result.plot_marginals()
+    plt.savefig(outpref + "_" + mode + '_marginals.svg')
 
-            plt.savefig(outpref + '_BOLFI_discepancy.png')
+    plt.clf
+    plt.cla
 
-            plt.clf
-            plt.cla
+    # plot paired marginals
+    result.plot_pairs()
+    plt.savefig(outpref + "_" + mode + '_pairs.svg')
+    plt.close()
 
     sys.exit(0)
