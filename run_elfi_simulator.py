@@ -8,6 +8,7 @@ from functools import partial
 from multiprocessing import Pool
 import tqdm
 import matplotlib.pyplot as plt
+rng = np.random.default_rng()
 
 def get_options():
     description = 'Run simulator of gene gain model'

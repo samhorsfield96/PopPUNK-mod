@@ -111,48 +111,55 @@ def calc_man_vec(array_size, vec_size, bin_probs, batch_size, acc_site_diff=None
 
     return site_mu
 
+def sim_divergence_core(query, mu, site_mu, core_tuple, batch):
+    choices_1, choices_2, choices_3, choices_4, prob_1, prob_2, prob_3, prob_4 = core_tuple
+
+    # core won't be saturated, vectorised sampling
+    index_array = np.arange(query.shape[1])
+    num_sites = np.random.poisson(query.shape[1] * mu, 1)[0]
+
+    #sites = rng.choice(index_array, (query.shape[0], num_sites), replace=True, p=site_mu[0])
+    sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(num_sites * query.shape[0]), side="right")]
+    sites = sites.reshape((query.shape[0], num_sites))
+
+    cols = np.arange(query.shape[0]).reshape((query.shape[0], 1))
+    pos = query[cols, sites]
+    to_mutate = pos.copy()
+    to_mutate[pos == 1] = choices_1[np.searchsorted(np.cumsum(prob_1[batch]), np.random.rand(np.sum(pos == 1)), side="right")]
+    to_mutate[pos == 2] = choices_2[np.searchsorted(np.cumsum(prob_2[batch]), np.random.rand(np.sum(pos == 2)), side="right")]
+    to_mutate[pos == 3] = choices_3[np.searchsorted(np.cumsum(prob_3[batch]), np.random.rand(np.sum(pos == 3)), side="right")]
+    to_mutate[pos == 4] = choices_4[np.searchsorted(np.cumsum(prob_4[batch]), np.random.rand(np.sum(pos == 4)), side="right")]
+
+    query[np.arange(query.shape[0])[:,None], sites] = to_mutate
+
+    return query
+
 @jit(nopython=True)
-def sim_divergence_vec(query, mu, core, freq, site_mu, pop_size):
-    if core:
-        choices = np.array([1, 2, 3, 4])
-    else:
-        choices = np.array([0, 1])
-
-    index_array = np.arange(query.shape[2])
-
-    # query is 3d array, depth is popsize (0), rows are batches (1), columns are each base (2)
-
+def sim_divergence_acc(query, mu, site_mu, pop_size):
     # iterate until all required sites mutated for given mutation rate
+    index_array = np.arange(query.shape[1])
+    num_sites_all = np.random.poisson(query[0].size * mu, pop_size)
+
     for i in range(pop_size):
-        for j in range(mu.shape[0]):
-            #print(query[i][j])
-            num_sites = np.random.poisson(query[i][j].size * mu[j], 1)[0]
-            if num_sites > 0:
-                total_sites = 0
-                while total_sites < num_sites:
-                    to_sample = num_sites - total_sites
+            to_sample = num_sites_all[i]
+            if to_sample > 0:
+                # pick all sites to be mutated (first is vectorised)
+                sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(to_sample), side="right")]
 
-                    # pick all sites to be mutated (first is vectorised)
-                    sites = index_array[np.searchsorted(np.cumsum(site_mu[j]), np.random.rand(to_sample), side="right")]
+                bins = np.bincount(sites)
+                unique = np.flatnonzero(bins)
+                counts = bins[unique]
 
-                    unique = np.array(list(set(sites)))
-                    counts = np.array([np.count_nonzero(sites == val) for val in unique])
+                max_count = np.max(counts)
 
-                    max_count = np.max(counts)
+                for count in range(1, max_count + 1):
+                    # determine number of times each site can be mutated
+                    sample_sites = unique[counts >= count]
 
-                    for count in range(1, max_count + 1):
-                        # determine number of times each site can be mutated
-                        sample_sites = unique[counts >= count]
-
-                        # determine sites with and without change (first is vectorised)
-                        changes = choices[np.searchsorted(np.cumsum(freq[j]), np.random.rand(sample_sites.size), side="right")]
-
-                        non_mutated = query[i][j][sample_sites] == changes
-
-                        query[i][j][sample_sites] = changes
-
-                        # determine number of actual changes
-                        total_sites += changes.size - np.count_nonzero(non_mutated)
+                    # determine sites with and without change (first is vectorised)
+                    pos = query[i][sample_sites]
+                    to_mutate = np.where(pos > 0, 0, 1)
+                    query[i][sample_sites] = to_mutate
 
     return query
 
@@ -196,9 +203,8 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
 
     return core_mat, acc_mat
 
-@jit(nopython=True)
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
-                 max_hamming_core, max_jaccard_acc, simulate):
+                 max_hamming_core, max_jaccard_acc, simulate, core_tuple):
     if simulate:
         avg_core = np.zeros(n_gen, dtype=np.float64)
         avg_acc = np.zeros(n_gen, dtype=np.float64)
@@ -211,9 +217,10 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
             pop_core = pop_core[sample, :, :]
             pop_acc = pop_acc[sample, :, :]
 
-        # mutate genomes
-        pop_core = sim_divergence_vec(pop_core, core_mu_arr, True, base_mu, core_site_mu, pop_size)
-        pop_acc = sim_divergence_vec(pop_acc, acc_mu_arr, False, gene_mu, acc_site_mu, pop_size)
+        # mutate genomes per batch
+        for batch in range(core_mu_arr.shape[0]):
+            pop_core[:, batch, :] = sim_divergence_core(pop_core[:, batch, :], core_mu_arr[batch], core_site_mu[batch], core_tuple, batch)
+            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
 
         if simulate:
             core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, pop_size, max_hamming_core, max_jaccard_acc, True)

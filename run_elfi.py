@@ -145,9 +145,29 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
     pop_core = np.repeat([core_ref.copy()], pop_size, axis=0)
     pop_acc = np.repeat([acc_ref.copy()], pop_size, axis=0)
 
+    # generate core tuple
+    choices_1 = np.array([2, 3, 4])
+    choices_2 = np.array([1, 3, 4])
+    choices_3 = np.array([1, 2, 4])
+    choices_4 = np.array([1, 2, 3])
+    prob_1 = base_mu.copy()
+    prob_2 = base_mu.copy()
+    prob_3 = base_mu.copy()
+    prob_4 = base_mu.copy()
+    prob_1 = np.delete(prob_1, 0, 1)
+    prob_1 = prob_1 / np.sum(prob_1)
+    prob_2 = np.delete(prob_2, 1, 1)
+    prob_2 = prob_2 / np.sum(prob_2)
+    prob_3 = np.delete(prob_3, 2, 1)
+    prob_3 = prob_3 / np.sum(prob_3)
+    prob_4 = np.delete(prob_4, 3, 1)
+    prob_4 = prob_4 / np.sum(prob_4)
+
+    core_tuple = (choices_1, choices_2, choices_3, choices_4, prob_1, prob_2, prob_3, prob_4)
+
     # run numba-backed WF model
     pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
-                                                        core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate)
+                                                        core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate, core_tuple)
 
     # run numba-backed distance calculator
     core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate)
