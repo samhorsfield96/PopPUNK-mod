@@ -202,7 +202,7 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
         # mutate genomes per batch
         for batch in range(core_mu_arr.shape[0]):
             pop_core[:, batch, :] = sim_divergence_core(pop_core[:, batch, :], core_mu_arr[batch], core_site_mu[batch], core_tuple, batch)
-            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch])
+            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
 
         if simulate:
             core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_hamming_core, max_jaccard_acc, True)
