@@ -159,7 +159,6 @@ def sim_divergence_acc(query, mu, site_mu, pop_size):
 
     return query
 
-@jit(nopython=True)
 def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
