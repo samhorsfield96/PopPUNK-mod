@@ -134,32 +134,27 @@ def sim_divergence_core(query, mu, site_mu, core_tuple, batch):
 
     return query
 
-@jit(nopython=True)
 def sim_divergence_acc(query, mu, site_mu, pop_size):
     # iterate until all required sites mutated for given mutation rate
-    index_array = np.arange(query.shape[1])
+    index_array = range(query.shape[1])
+    site_mu_list = site_mu.tolist()
     num_sites_all = np.random.poisson(query[0].size * mu, pop_size)
 
     for i in range(pop_size):
             to_sample = num_sites_all[i]
             if to_sample > 0:
                 # pick all sites to be mutated (first is vectorised)
-                sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(to_sample), side="right")]
+                sites = np.array(random.choices(index_array, weights=site_mu_list, k=to_sample))
 
                 bins = np.bincount(sites)
                 unique = np.flatnonzero(bins)
                 counts = bins[unique]
 
-                max_count = np.max(counts)
-
-                for count in range(1, max_count + 1):
-                    # determine number of times each site can be mutated
-                    sample_sites = unique[counts >= count]
-
-                    # determine sites with and without change (first is vectorised)
-                    pos = query[i][sample_sites]
-                    to_mutate = np.where(pos > 0, 0, 1)
-                    query[i][sample_sites] = to_mutate
+                # only change sites where gene mutated from current
+                sample_sites = unique[counts % 2 != 0]
+                pos = query[i][sample_sites]
+                to_mutate = np.where(pos > 0, 0, 1)
+                query[i][sample_sites] = to_mutate
 
     return query
 
