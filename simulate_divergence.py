@@ -13,6 +13,7 @@ import random
 from math import e
 from scipy.stats import gamma
 from numba import jit
+from scipy.spatial.distance import pdist
 
 def get_quantile(res_list):
     return np.array([np.percentile(res_list, q) for q in range(0, 101, 10)])
@@ -159,36 +160,23 @@ def sim_divergence_acc(query, mu, site_mu, pop_size):
     return query
 
 @jit(nopython=True)
-def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate):
+def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
 
-        # calulate quantiles for core and accessory distance
-        hamming_core = []
-        jaccard_acc = []
+        # calculate hamming distance
+        hamming_core = pdist(pop_core_slice, metric='hamming') / max_hamming_core
 
-        # iterate over all genomes in population, calculating hamming distance
-        for k in range(0, pop_size):
-            for l in range(0, pop_size):
-                if l < k:
-                    # calculate hamming
-                    hamming_core.append((np.count_nonzero(pop_core_slice[k] != pop_core_slice[l]) / pop_core_slice[k].size) / max_hamming_core)
-
-                    # calculate jaccard
-                    intersection = np.count_nonzero((pop_acc_slice[k] == 1) & (pop_acc_slice[l] == 1))
-                    union = np.count_nonzero((pop_acc_slice[k] != pop_acc_slice[l])) + intersection
-                    if union == 0:
-                        jaccard_acc.append(1.0 / max_jaccard_acc)
-                    else:
-                        jaccard_acc.append((1 - (float(intersection) / union)) / max_jaccard_acc)
+        # calculate jaccard distance
+        jaccard_acc = pdist(pop_acc_slice, metric='jaccard') / max_jaccard_acc
 
         if simulate:
-            core_mat = np.array([hamming_core])
-            acc_mat = np.array([jaccard_acc])
+            core_mat = hamming_core
+            acc_mat = jaccard_acc
         else:
-            core_quant = np.array([[np.percentile(np.array(hamming_core), q) for q in range(0, 101, 10)]])
-            acc_quant = np.array([[np.percentile(np.array(jaccard_acc), q) for q in range(0, 101, 10)]])
+            core_quant = np.array([[np.percentile(hamming_core, q) for q in range(0, 101, 10)]])
+            acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 10)]])
 
             if j == 0:
                 core_mat = np.zeros((batch_size, core_quant.size))
@@ -197,7 +185,6 @@ def calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_ja
             acc_mat[j] = acc_quant
 
     return core_mat, acc_mat
-
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
                  max_hamming_core, max_jaccard_acc, simulate, core_tuple):
     if simulate:
@@ -215,10 +202,10 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
         # mutate genomes per batch
         for batch in range(core_mu_arr.shape[0]):
             pop_core[:, batch, :] = sim_divergence_core(pop_core[:, batch, :], core_mu_arr[batch], core_site_mu[batch], core_tuple, batch)
-            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
+            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch])
 
         if simulate:
-            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, pop_size, max_hamming_core, max_jaccard_acc, True)
+            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_hamming_core, max_jaccard_acc, True)
             avg_core[gen] = np.mean(core_mat) * max_hamming_core
             avg_acc[gen] = np.mean(acc_mat) * max_jaccard_acc
 
