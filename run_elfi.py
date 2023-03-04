@@ -170,10 +170,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
                                                         core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate, core_tuple)
 
     # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, pop_size, max_hamming_core, max_jaccard_acc, simulate)
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc, simulate)
 
     if simulate:
-        dist_mat = np.zeros((core_mat.shape[1], 2))
+        dist_mat = np.zeros((core_mat.shape[0], 2))
         dist_mat[:, 0] = core_mat
         dist_mat[:, 1] = acc_mat
         return dist_mat, avg_core, avg_acc
