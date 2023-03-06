@@ -178,9 +178,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
         dist_mat[:, 1] = acc_mat
         return dist_mat, avg_core, avg_acc
     else:
-        dist_mat = np.zeros((batch_size, (core_mat.shape[1] * 2)))
+        dist_mat = np.zeros((batch_size, (acc_mat.shape[1])))
         for j in range(0, batch_size):
-            dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
+            #dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
+            dist_mat[j] = acc_mat
         return dist_mat
 
 if __name__ == "__main__":
@@ -276,11 +277,12 @@ if __name__ == "__main__":
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
     #get observed data, normalise
-    obs_core = get_quantile(df['Core'].to_numpy() / max_hamming_core)
+    #obs_core = get_quantile(df['Core'].to_numpy() / max_hamming_core)
     obs_acc = get_quantile(df['Accessory'].to_numpy() / max_jaccard_acc)
 
     # calculate euclidean distance to origin
-    obs = np.concatenate([obs_core, obs_acc])
+    #obs = np.concatenate([obs_core, obs_acc])
+    obs = obs_acc
 
     # set priors
     # priors for gene gain and loss rates per site
