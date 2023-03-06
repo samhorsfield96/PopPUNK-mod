@@ -16,7 +16,7 @@ from numba import jit
 from scipy.spatial.distance import pdist
 
 def get_quantile(res_list):
-    return np.array([np.percentile(res_list, q) for q in range(0, 101, 1)])
+    return np.array([np.percentile(res_list, q) for q in range(0, 101, 5)])
 
 def jaccard(list1, list2):
     intersection = len(list(set(list1).intersection(list2)))
@@ -174,8 +174,8 @@ def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc,
             core_mat = hamming_core
             acc_mat = jaccard_acc
         else:
-            #core_quant = np.array([[np.percentile(hamming_core, q) for q in range(0, 101, 100)]])
-            acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 1)]])
+            #core_quant = np.array([[np.percentile(hamming_core, q) for q in range(0, 101, 5)]])
+            acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 5)]])
 
             if j == 0:
                 core_mat = np.zeros((batch_size, acc_quant.size))
