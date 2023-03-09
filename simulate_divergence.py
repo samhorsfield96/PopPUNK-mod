@@ -165,17 +165,18 @@ def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc,
         pop_acc_slice = pop_acc[:, j, :]
 
         # calculate hamming distance
-        hamming_core = pdist(pop_core_slice, metric='hamming') / max_hamming_core
+        hamming_core = pdist(pop_core_slice, metric='hamming')# / max_hamming_core
 
         # calculate jaccard distance
-        jaccard_acc = pdist(pop_acc_slice, metric='jaccard') / max_jaccard_acc
+        jaccard_acc = pdist(pop_acc_slice, metric='jaccard')# / max_jaccard_acc
 
         if simulate:
             core_mat = hamming_core
             acc_mat = jaccard_acc
         else:
             #core_quant = np.array([[np.percentile(hamming_core, q) for q in range(0, 101, 5)]])
-            acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 5)]])
+            #acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 5)]])
+            acc_quant = np.histogram(jaccard_acc, bins=50, range=(0, 1), density=True)[0]
 
             if j == 0:
                 core_mat = np.zeros((batch_size, acc_quant.size))
@@ -207,8 +208,8 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, ba
 
         if simulate:
             core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_hamming_core, max_jaccard_acc, True)
-            avg_core[gen] = np.mean(core_mat) * max_hamming_core
-            avg_acc[gen] = np.mean(acc_mat) * max_jaccard_acc
+            avg_core[gen] = np.mean(core_mat)# * max_hamming_core
+            avg_acc[gen] = np.mean(acc_mat)# * max_jaccard_acc
 
     if simulate:
         return pop_core, pop_acc, avg_core, avg_acc

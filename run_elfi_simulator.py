@@ -68,8 +68,8 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
                                                      base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
                                                      core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, True)
 
-    dist_mat[:, 0] = dist_mat[:, 0] * max_hamming_core
-    dist_mat[:, 1] = dist_mat[:, 1] * max_jaccard_acc
+    #dist_mat[:, 0] = dist_mat[:, 0] * max_hamming_core
+    #dist_mat[:, 1] = dist_mat[:, 1] * max_jaccard_acc
 
     return index, dist_mat, avg_core, avg_acc
 

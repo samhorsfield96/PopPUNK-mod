@@ -277,8 +277,9 @@ if __name__ == "__main__":
     #core_site_mu5 = elfi.Prior('uniform', 0, 1)
 
     #get observed data, normalise
-    #obs_core = get_quantile(df['Core'].to_numpy() / max_hamming_core)
-    obs_acc = get_quantile(df['Accessory'].to_numpy() / max_jaccard_acc)
+    #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
+    #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
+    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=50, range=(0, 1), density=True)[0]
 
     # calculate euclidean distance to origin
     #obs = np.concatenate([obs_core, obs_acc])
