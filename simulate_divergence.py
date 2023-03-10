@@ -160,7 +160,7 @@ def sim_divergence_acc(query, mu, site_mu, pop_size):
 
     return query
 
-def calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate):
+def calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
@@ -177,7 +177,8 @@ def calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate):
         else:
             #core_quant = np.array([[np.percentile(hamming_core, q) for q in range(0, 101, 5)]])
             #acc_quant = np.array([[np.percentile(jaccard_acc, q) for q in range(0, 101, 5)]])
-            acc_quant = np.histogram(jaccard_acc, bins=50, range=(0, 1), density=True)[0]
+            #core_quant = np.histogram(hamming_core, bins=100, range=(0, max_hamming_core), density=True)[0]
+            acc_quant = np.histogram(jaccard_acc, bins=100, range=(0, 1), density=True)[0]
 
             if j == 0:
                 core_mat = np.zeros((batch_size, acc_quant.size))
@@ -189,7 +190,7 @@ def calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate):
 
 
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, core_site_mu, acc_site_mu,
-                 max_real_core, simulate, core_tuple):
+                 max_real_core, max_hamming_core, simulate, core_tuple):
     if simulate:
         avg_core = np.zeros(n_gen, dtype=np.float64)
         avg_acc = np.zeros(n_gen, dtype=np.float64)
@@ -210,7 +211,7 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, co
                 pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
 
         if simulate:
-            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_real_core, True)
+            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_real_core, max_hamming_core, True)
             avg_core[gen] = np.mean(core_mat)# * max_hamming_core
             avg_acc[gen] = np.mean(acc_mat)# * max_jaccard_acc
 

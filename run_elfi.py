@@ -113,7 +113,7 @@ def get_options():
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, max_real_core, simulate, batch_size=1, random_state=None):
+                       pop_size, n_gen, max_real_core, max_hamming_core, simulate, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rate.
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl_speed
@@ -174,10 +174,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
 
     # run numba-backed WF model
     pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr,
-                                                        core_site_mu, acc_site_mu, max_real_core, simulate, core_tuple)
+                                                        core_site_mu, acc_site_mu, max_real_core, max_hamming_core, simulate, core_tuple)
 
     # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate)
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, simulate)
 
     if simulate:
         dist_mat = np.zeros((core_mat.shape[0], 2))
@@ -188,7 +188,7 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
         dist_mat = np.zeros((batch_size, (acc_mat.shape[1])))
         for j in range(0, batch_size):
             #dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
-            dist_mat[j] = acc_mat
+            dist_mat[j] = acc_mat[j]
         return dist_mat
 
 if __name__ == "__main__":
@@ -286,7 +286,7 @@ if __name__ == "__main__":
     #get observed data, normalise
     #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
     #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
-    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=50, range=(0, 1), density=True)[0]
+    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=100, range=(0, 1), density=True)[0]
 
     # calculate euclidean distance to origin
     #obs = np.concatenate([obs_core, obs_acc])
@@ -305,9 +305,9 @@ if __name__ == "__main__":
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                        core_site_mu4, pop_size, n_gen, max_real_core, False, observed=obs)
+                        core_site_mu4, pop_size, n_gen, max_real_core, max_hamming_core, False, observed=obs)
 
-    d = elfi.Distance('euclidean', Y)
+    d = elfi.Distance('jensenshannon', Y)
 
     #set multiprocessing client
     if cluster == True:
