@@ -32,7 +32,7 @@ def get_options():
 
     return parser.parse_args()
 
-def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc):
+def run_sim(index, params_list, max_real_core):
     param_set = params_list[index]
     size_pan = int(param_set[0])
     size_core = int(param_set[1])
@@ -46,8 +46,8 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
 
     base_mu = [float(i) for i in base_mu.split(",")]
 
-    # set evenly spaced core hamming values across generations. Divide by two as pairwise divergence
-    core_mu = (max_real_core / n_gen) / 2
+    # set evenly spaced core hamming values across generations. Divide by two as pairwise divergence, final generation has no mutations
+    core_mu = (max_real_core / (n_gen - 1)) / 2
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -66,7 +66,7 @@ def run_sim(index, params_list, max_real_core, max_hamming_core, max_jaccard_acc
 
     dist_mat, avg_core, avg_acc = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                                                      base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                                                     core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, True)
+                                                     core_site_mu4, pop_size, n_gen, max_real_core, True)
 
     #dist_mat[:, 0] = dist_mat[:, 0] * max_hamming_core
     #dist_mat[:, 1] = dist_mat[:, 1] * max_jaccard_acc
@@ -102,7 +102,7 @@ if __name__ == "__main__":
     print("Running Simulations...")
     with Pool(processes=threads) as pool:
         for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
-                partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core, max_jaccard_acc=max_jaccard_acc),
+                partial(run_sim, params_list=params_list, max_real_core=max_real_core),
                 range(0, len(params_list))), total=len(params_list)):
             # save to file
             np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")

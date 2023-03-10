@@ -120,8 +120,9 @@ def sim_divergence_core(query, mu, site_mu, core_tuple, batch):
     num_sites = np.random.poisson(query.shape[1] * mu, 1)[0]
 
     #sites = rng.choice(index_array, (query.shape[0], num_sites), replace=True, p=site_mu[0])
-    sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(num_sites * query.shape[0]), side="right")]
-    sites = sites.reshape((query.shape[0], num_sites))
+    #sites = index_array[np.searchsorted(np.cumsum(site_mu), np.random.rand(num_sites * query.shape[0]), side="right")]
+    sites = np.stack([np.random.choice(index_array, p=site_mu, replace=False, size=num_sites) for _ in range(query.shape[0])])
+    #sites = sites.reshape((query.shape[0], num_sites))
 
     cols = np.arange(query.shape[0]).reshape((query.shape[0], 1))
     pos = query[cols, sites]
@@ -159,7 +160,7 @@ def sim_divergence_acc(query, mu, site_mu, pop_size):
 
     return query
 
-def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc, simulate):
+def calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
@@ -187,27 +188,29 @@ def calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc,
     return core_mat, acc_mat
 
 
-def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu, core_site_mu, acc_site_mu,
-                 max_hamming_core, max_jaccard_acc, simulate, core_tuple):
+def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, core_site_mu, acc_site_mu,
+                 max_real_core, simulate, core_tuple):
     if simulate:
         avg_core = np.zeros(n_gen, dtype=np.float64)
         avg_acc = np.zeros(n_gen, dtype=np.float64)
 
-    # simulate population forward using fisher-wright
+    # simulate population forward using fisher-wright, final generation is just sample
     for gen in range(1, n_gen):
         # sample from previous generation in each batch with replacement
         if gen > 1:
-            sample = np.random.choice(pop_size, pop_size, replace=True)
-            pop_core = pop_core[sample, :, :]
-            pop_acc = pop_acc[sample, :, :]
+            for batch in range(core_mu_arr.shape[0]):
+                sample = np.random.choice(pop_size, pop_size, replace=True)
+                pop_core[:, batch, :] = pop_core[sample, batch, :]
+                pop_acc[:, batch, :] = pop_acc[sample, batch, :]
 
-        # mutate genomes per batch
-        for batch in range(core_mu_arr.shape[0]):
-            pop_core[:, batch, :] = sim_divergence_core(pop_core[:, batch, :], core_mu_arr[batch], core_site_mu[batch], core_tuple, batch)
-            pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
+        # mutate genomes per batch, if at last generation do not mutate
+        if gen < (n_gen - 1):
+            for batch in range(core_mu_arr.shape[0]):
+                pop_core[:, batch, :] = sim_divergence_core(pop_core[:, batch, :], core_mu_arr[batch], core_site_mu[batch], core_tuple, batch)
+                pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
 
         if simulate:
-            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_hamming_core, max_jaccard_acc, True)
+            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_real_core, True)
             avg_core[gen] = np.mean(core_mat)# * max_hamming_core
             avg_acc[gen] = np.mean(acc_mat)# * max_jaccard_acc
 

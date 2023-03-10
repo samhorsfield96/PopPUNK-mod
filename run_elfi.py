@@ -113,10 +113,17 @@ def get_options():
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, max_hamming_core, max_jaccard_acc, simulate, batch_size=1, random_state=None):
-    # determine vectors of core and accessory per-site mutation rate
+                       pop_size, n_gen, max_real_core, simulate, batch_size=1, random_state=None):
+    # determine vectors of core and accessory per-site mutation rate.
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl_speed
+
+    # core mu array increased by factor max_real_core as only looking at subset
+    #core_mu_arr = core_mu_arr / max_real_core
+
+    # calculate actual number of sites mutating
+    #size_core_mut = round(max_real_core * size_core)
+    size_core_mut = size_core
 
     # generate vectors for mutation rates
     base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
@@ -132,14 +139,14 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
     gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
 
     # calculate per-site mutation rate
-    core_site_mu = calc_man_vec(size_core, size_core, core_site, batch_size)
+    core_site_mu = calc_man_vec(size_core_mut, size_core_mut, core_site, batch_size)
     acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size, proportion_gene)
 
     # generate starting genomes, rows are batches, columns are positions
-    core_ref = np.zeros((batch_size, size_core))
+    core_ref = np.zeros((batch_size, size_core_mut))
     acc_ref = np.zeros((batch_size, size_pan))
     for i in range(batch_size):
-        core_ref[i] = np.random.choice([1, 2, 3, 4], size_core, p=base_mu[i])
+        core_ref[i] = np.random.choice([1, 2, 3, 4], size_core_mut, p=base_mu[i])
         acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
 
     pop_core = np.repeat([core_ref.copy()], pop_size, axis=0)
@@ -166,11 +173,11 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
     core_tuple = (choices_1, choices_2, choices_3, choices_4, prob_1, prob_2, prob_3, prob_4)
 
     # run numba-backed WF model
-    pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, base_mu, gene_mu,
-                                                        core_site_mu, acc_site_mu, max_hamming_core, max_jaccard_acc, simulate, core_tuple)
+    pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr,
+                                                        core_site_mu, acc_site_mu, max_real_core, simulate, core_tuple)
 
     # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_hamming_core, max_jaccard_acc, simulate)
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate)
 
     if simulate:
         dist_mat = np.zeros((core_mat.shape[0], 2))
@@ -249,7 +256,7 @@ if __name__ == "__main__":
 
     # set constants
     # set evenly spaced core hamming values across generations
-    core_mu = (max_real_core / n_gen) / 2
+    core_mu = (max_real_core / (n_gen - 1)) / 2
 
     # round to 6 dp
     base_mu = [round(i, 6) for i in base_mu]
@@ -298,7 +305,7 @@ if __name__ == "__main__":
 
     Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                         base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                        core_site_mu4, pop_size, n_gen, max_hamming_core, max_jaccard_acc, False, observed=obs)
+                        core_site_mu4, pop_size, n_gen, max_real_core, False, observed=obs)
 
     d = elfi.Distance('euclidean', Y)
 
