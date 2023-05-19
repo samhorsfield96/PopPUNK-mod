@@ -32,6 +32,7 @@ def get_options():
 
     return parser.parse_args()
 
+@profile
 def run_sim(index, params_list, max_real_core, max_hamming_core):
     param_set = params_list[index]
     size_pan = int(param_set[0])
@@ -74,16 +75,16 @@ def run_sim(index, params_list, max_real_core, max_hamming_core):
     return index, dist_mat, avg_core, avg_acc
 
 if __name__ == "__main__":
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # threads = 4
-    # paramsfile = "parameter_example_test.txt"
-    # outpref = "test"
+    distfile = "distances/distance_test/GPSv4_distances_n100000.txt"
+    threads = 4
+    paramsfile = "parameter_example_test.txt"
+    outpref = "test"
 
-    options = get_options()
-    threads = options.threads
-    distfile = options.distfile
-    paramsfile = options.params
-    outpref = options.outpref
+    # options = get_options()
+    # threads = options.threads
+    # distfile = options.distfile
+    # paramsfile = options.params
+    # outpref = options.outpref
 
     # read in real files
     df = read_distfile(distfile)
@@ -100,64 +101,122 @@ if __name__ == "__main__":
             params_list.append(line.rstrip().split("\t"))
 
     print("Running Simulations...")
-    with Pool(processes=threads) as pool:
-        for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
-                partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core),
-                range(0, len(params_list))), total=len(params_list)):
-            # save to file
-            np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")
-            avg_mat = np.zeros((avg_core.shape[0], 2))
-            avg_mat[:, 0] = avg_core
-            avg_mat[:, 1] = avg_acc
-            np.savetxt(outpref + "_averages_sim_" + str(index + 1) + ".csv", avg_mat, delimiter=",")
+    for run_index in range(0, len(params_list)):
+        index, dist_mat, avg_core, avg_acc = run_sim(run_index, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core)
+        # save to file
+        np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")
+        avg_mat = np.zeros((avg_core.shape[0], 2))
+        avg_mat[:, 0] = avg_core
+        avg_mat[:, 1] = avg_acc
+        np.savetxt(outpref + "_averages_sim_" + str(index + 1) + ".csv", avg_mat, delimiter=",")
 
-            fig, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
-            x = df["Core"]
-            y = df["Accessory"]
+        x = df["Core"]
+        y = df["Accessory"]
 
-            ax.scatter(x, y, label="Real")
+        ax.scatter(x, y, label="Real")
 
-            x = np.array(dist_mat[:, 0])
-            y = np.array(dist_mat[:, 1])
+        x = np.array(dist_mat[:, 0])
+        y = np.array(dist_mat[:, 1])
 
-            ax.scatter(x, y, label="Sim " + str(index + 1))
+        ax.scatter(x, y, label="Sim " + str(index + 1))
 
-            ax.set_xlabel("Core Hamming")
-            ax.set_ylabel("Accessory Jaccard")
+        ax.set_xlabel("Core Hamming")
+        ax.set_ylabel("Accessory Jaccard")
 
-            fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
+        fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
 
-            ax.clear()
-            plt.clf
-            plt.cla
+        ax.clear()
+        plt.clf
+        plt.cla
 
-            # plot average distances over time
-            y = avg_core
+        # plot average distances over time
+        y = avg_core
 
-            ax.plot(y)
+        ax.plot(y)
 
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("Average Core Hamming")
+        ax.set_xlabel("Generation")
+        ax.set_ylabel("Average Core Hamming")
 
-            fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
+        fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
 
-            ax.clear()
-            plt.clf
-            plt.cla
+        ax.clear()
+        plt.clf
+        plt.cla
 
-            # plot average distances over time
-            y = avg_acc
+        # plot average distances over time
+        y = avg_acc
 
-            ax.plot(y)
+        ax.plot(y)
 
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("Average Acc Jaccard")
+        ax.set_xlabel("Generation")
+        ax.set_ylabel("Average Acc Jaccard")
 
-            fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
+        fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
 
-            ax.clear()
-            plt.clf
-            plt.cla
+        ax.clear()
+        plt.clf
+        plt.cla
+
+    # with Pool(processes=threads) as pool:
+    #     for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
+    #             partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core),
+    #             range(0, len(params_list))), total=len(params_list)):
+    #         # save to file
+    #         np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")
+    #         avg_mat = np.zeros((avg_core.shape[0], 2))
+    #         avg_mat[:, 0] = avg_core
+    #         avg_mat[:, 1] = avg_acc
+    #         np.savetxt(outpref + "_averages_sim_" + str(index + 1) + ".csv", avg_mat, delimiter=",")
+    #
+    #         fig, ax = plt.subplots()
+    #
+    #         x = df["Core"]
+    #         y = df["Accessory"]
+    #
+    #         ax.scatter(x, y, label="Real")
+    #
+    #         x = np.array(dist_mat[:, 0])
+    #         y = np.array(dist_mat[:, 1])
+    #
+    #         ax.scatter(x, y, label="Sim " + str(index + 1))
+    #
+    #         ax.set_xlabel("Core Hamming")
+    #         ax.set_ylabel("Accessory Jaccard")
+    #
+    #         fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
+    #
+    #         ax.clear()
+    #         plt.clf
+    #         plt.cla
+    #
+    #         # plot average distances over time
+    #         y = avg_core
+    #
+    #         ax.plot(y)
+    #
+    #         ax.set_xlabel("Generation")
+    #         ax.set_ylabel("Average Core Hamming")
+    #
+    #         fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
+    #
+    #         ax.clear()
+    #         plt.clf
+    #         plt.cla
+    #
+    #         # plot average distances over time
+    #         y = avg_acc
+    #
+    #         ax.plot(y)
+    #
+    #         ax.set_xlabel("Generation")
+    #         ax.set_ylabel("Average Acc Jaccard")
+    #
+    #         fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
+    #
+    #         ax.clear()
+    #         plt.clf
+    #         plt.cla
 
 

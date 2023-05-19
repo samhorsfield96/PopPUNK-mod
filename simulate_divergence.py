@@ -54,6 +54,7 @@ def recurse_prob(x, weight):
     else:
         return (1 - recurse_prob(x - 1, weight)) * weight
 
+@profile
 def calc_man_vec(array_size, vec_size, bin_probs, batch_size, acc_site_diff=None):
     vec_size = np.repeat(vec_size, batch_size)
     no_split = np.shape(bin_probs)[1]
@@ -160,13 +161,15 @@ def sim_divergence_acc(query, mu, site_mu, pop_size):
 
     return query
 
-def calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, simulate):
+@profile
+def calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate):
     for j in range(0, batch_size):
         pop_core_slice = pop_core[:, j, :]
         pop_acc_slice = pop_acc[:, j, :]
 
         # calculate hamming distance
-        hamming_core = pdist(pop_core_slice, metric='hamming')# / max_hamming_core
+        #hamming_core = pdist(pop_core_slice, metric='hamming')# / max_hamming_core
+        hamming_core = pdist(pop_core_slice, metric='hamming') * max_real_core
 
         # calculate jaccard distance
         jaccard_acc = pdist(pop_acc_slice, metric='jaccard')# / max_jaccard_acc
@@ -188,7 +191,7 @@ def calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, s
 
     return core_mat, acc_mat
 
-
+@profile
 def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, core_site_mu, acc_site_mu,
                  max_real_core, max_hamming_core, simulate, core_tuple):
     if simulate:
@@ -211,7 +214,7 @@ def run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr, co
                 pop_acc[:, batch, :] = sim_divergence_acc(pop_acc[:, batch, :], acc_mu_arr[batch], acc_site_mu[batch], pop_size)
 
         if simulate:
-            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_real_core, max_hamming_core, True)
+            core_mat, acc_mat = calc_dists(pop_core, pop_acc, 1, max_real_core, True)
             avg_core[gen] = np.mean(core_mat)# * max_hamming_core
             avg_acc[gen] = np.mean(acc_mat)# * max_jaccard_acc
 

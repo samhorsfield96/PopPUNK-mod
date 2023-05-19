@@ -109,7 +109,7 @@ def get_options():
 
     return parser.parse_args()
 
-
+@profile
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
@@ -121,9 +121,10 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
     # core mu array increased by factor max_real_core as only looking at subset
     #core_mu_arr = core_mu_arr / max_real_core
 
-    # calculate actual number of sites mutating
-    #size_core_mut = round(max_real_core * size_core)
-    size_core_mut = size_core
+    # calculate actual number of sites mutating, adjust core_mu_array accordingly
+    core_mu_arr = core_mu_arr / max_real_core
+    size_core_mut = round(max_real_core * size_core)
+    core_non_mut = size_core - size_core_mut
 
     # generate vectors for mutation rates
     base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
@@ -174,10 +175,11 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
 
     # run numba-backed WF model
     pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr,
-                                                        core_site_mu, acc_site_mu, max_real_core, max_hamming_core, simulate, core_tuple)
+                                                        core_site_mu, acc_site_mu, max_real_core, max_hamming_core,
+                                                        simulate, core_tuple)
 
     # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, simulate)
+    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, simulate)
 
     if simulate:
         dist_mat = np.zeros((core_mat.shape[0], 2))
