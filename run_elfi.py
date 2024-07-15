@@ -109,11 +109,45 @@ def get_options():
 
     return parser.parse_args()
 
+# Function to prepare the inputs for the simulator. We will create filenames and write an input file.
+def prepare_inputs(*inputs, **kwinputs):
+    core_mu, pan_mu, proportion_fast, speed_fast, seed, pop_size, core_size, pan_size, n_gen, max_distances = inputs
+    meta = kwinputs['meta']
+
+    # Organize the parameters to an array. The broadcasting works nicely with constant arguments here.
+    param_array = np.row_stack(np.broadcast(core_mu, pan_mu, proportion_fast, speed_fast, seed, pop_size, core_size, pan_size, n_gen, max_distances))
+
+    # Prepare a unique filename for parallel settings
+    filename = '{model_name}_{batch_index}_{submission_index}.txt'.format(**meta)
+    np.savetxt(filename, param_array, fmt='%.4f %.4f %.4f %d')
+
+    # Add the filenames to kwinputs
+    kwinputs['filename'] = filename
+    kwinputs['output_filename'] = filename[:-4] + '_out.txt'
+
+    # Return new inputs that the command will receive
+    return inputs, kwinputs
+
+# Function to process the result of the simulation
+def process_result(completed_process, *inputs, **kwinputs):
+    output_filename = kwinputs['output_filename']
+
+    # Read the simulations from the file.
+    simulations = np.loadtxt(output_filename, delimiter='\t', usecols=1, dtype='float64')
+    obs_pan = np.histogram(simulations, bins=100, range=(0, 1), density=True)[0]
+
+    # Clean up the files after reading the data in
+    os.remove(kwinputs['filename'])
+    os.remove(output_filename)
+
+    # This will be passed to ELFI as the result of the command
+    return obs_pan
+
 
 def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
                        base_mu1, base_mu2, base_mu3, base_mu4,
                        core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, max_real_core, max_hamming_core, simulate, batch_size=1, random_state=None):
+                       pop_size, n_gen, max_real_core, max_hamming_core, simulate, pansim_exe, batch_size=1, random_state=None):
     # determine vectors of core and accessory per-site mutation rate.
     core_mu_arr = np.array([core_mu] * batch_size)
     acc_mu_arr = core_mu_arr * gene_gl_speed
@@ -193,55 +227,57 @@ def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_g
 
 if __name__ == "__main__":
     #testing
-    # size_core = 4
-    # size_pan = 2
-    # avg_gene_freq = 0.5
-    # batch_size = 10
-    # N_samples = 10
-    # qnt = 0.01
-    # seed = 254
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # num_steps = 10
-    # threads = 4
-    # mode = "BOLFI"
-    # outpref = "test"
-    # initial_evidence = 20
-    # update_interval = 10
-    # acq_noise_var = 0.1
-    # n_evidence = 200
-    # info_freq = 1000
-    # base_mu = [0.25, 0.25, 0.25, 0.25]
-    # cluster = False
-    # complexity = "simple"
-    # schedule = "0.7,0.2,0.05"
-    # pop_size = 5
-    # n_gen = 100
-    # load = "test_pools/outputpool_254"
-    # run_mode = "sim"
+    core_size = 100
+    pan_size = 100
+    #avg_gene_freq = 0.5
+    batch_size = 10
+    N_samples = 10
+    qnt = 0.01
+    seed = 254
+    distfile = "distances/GPSv4_distances_sample1.txt"
+    num_steps = 10
+    threads = 4
+    mode = "BOLFI"
+    outpref = "test"
+    initial_evidence = 20
+    update_interval = 10
+    acq_noise_var = 0.1
+    n_evidence = 200
+    info_freq = 1000
+    cluster = False
+    complexity = "simple"
+    schedule = "0.7,0.2,0.05"
+    pop_size = 5
+    n_gen = 100
+    load = "test_pools/outputpool_254"
+    run_mode = "sim"
+    pansim_exe = "/Users/shorsfield/Documents/Software/Pansim/pansim/target/release/pansim"
+    max_distances = 10000
 
-    options = get_options()
-    threads = options.threads
-    distfile = options.distfile
-    size_core = options.core_size
-    size_pan = options.pan_size
-    batch_size = options.batch_size
-    qnt = options.qnt
-    N_samples = options.samples
-    seed = options.seed
-    outpref = options.outpref
-    mode = options.mode
-    initial_evidence = options.init_evidence
-    update_interval = options.update_int
-    acq_noise_var = options.acq_noise_var
-    n_evidence = options.n_evidence
-    avg_gene_freq = options.avg_gene_freq
-    base_mu = [float(i) for i in options.base_mu.split(",")]
-    cluster = options.cluster
-    schedule = options.schedule
-    n_gen = options.ngen
-    pop_size = options.pop_size
-    load = options.load
-    run_mode = options.run_mode
+    # options = get_options()
+    # threads = options.threads
+    # distfile = options.distfile
+    # core_size = options.core_size
+    # pan_size = options.pan_size
+    # batch_size = options.batch_size
+    # qnt = options.qnt
+    # N_samples = options.samples
+    # seed = options.seed
+    # outpref = options.outpref
+    # mode = options.mode
+    # initial_evidence = options.init_evidence
+    # update_interval = options.update_int
+    # acq_noise_var = options.acq_noise_var
+    # n_evidence = options.n_evidence
+    # avg_gene_freq = options.avg_gene_freq
+    # base_mu = [float(i) for i in options.base_mu.split(",")]
+    # cluster = options.cluster
+    # schedule = options.schedule
+    # n_gen = options.ngen
+    # pop_size = options.pop_size
+    # load = options.load
+    # run_mode = options.run_mode
+    # max_distances = options.max_distances
 
     # parse schedule
     schedule = [float(x) for x in schedule.split(",")]
@@ -254,35 +290,6 @@ if __name__ == "__main__":
     max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
 
-    # set constants
-    # set evenly spaced core hamming values across generations
-    core_mu = (max_real_core / (n_gen - 1)) / 2
-
-    # round to 6 dp
-    base_mu = [round(i, 6) for i in base_mu]
-
-    # ensure probabilities sum to 1
-    if sum(base_mu) != 1:
-        base_mu[-1] = 1 - sum(base_mu[0:3])
-    base_mu1 = base_mu[0]
-    base_mu2 = base_mu[1]
-    base_mu3 = base_mu[2]
-    base_mu4 = base_mu[3]
-    # base_mu1 = elfi.Prior('uniform', 0, 1)
-    # base_mu2 = elfi.Prior('uniform', 0, 1)
-    # base_mu3 = elfi.Prior('uniform', 0, 1)
-    # base_mu4 = elfi.Prior('uniform', 0, 1)
-
-    core_site_mu1 = 0.25
-    core_site_mu2 = 0.25
-    core_site_mu3 = 0.25
-    core_site_mu4 = 0.25
-    # core_site_mu1 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu2 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu3 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu4 = elfi.Prior('uniform', 0, 1)
-    #core_site_mu5 = elfi.Prior('uniform', 0, 1)
-
     #get observed data, normalise
     #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
     #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
@@ -292,22 +299,27 @@ if __name__ == "__main__":
     #obs = np.concatenate([obs_core, obs_acc])
     obs = obs_acc
 
+    # set up model
+    m = elfi.ElfiModel(name='pansim')
+
     # set priors
-    # priors for gene gain and loss rates per site
     max_value = 10 ** 6
-    gene_gl_speed = elfi.Prior('uniform', 0, max_value)
+    #elfi.Prior('uniform', 0, max_real_core, model=m, name='core_mu')
+    elfi.Prior('uniform', 0, 1, model=m, name='pan_mu')
+    elfi.Prior('uniform', 1, max_value, model=m, name='speed_fast')
+    elfi.Prior('uniform', 0, 1, model=m, name='proportion_fast')
 
-    # prior for difference in probability of sample fast vs. slow two gene compartments
-    ratio_gene_gl = elfi.Prior('uniform', 0.5, 1 - 0.5)
+    command = pansim_exe + '--pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --core_mu {core_mu} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --seed {seed} --output {output_filename}'
 
-    # prior for difference size of compartments
-    prop_gene = elfi.Prior('uniform', 0, 1)
-
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
-                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                        core_site_mu4, pop_size, n_gen, max_real_core, max_hamming_core, False, observed=obs)
+    WF_sim = elfi.tools.external_operation(command,
+                                    prepare_inputs=prepare_inputs,
+                                    process_result=process_result,
+                                    stdout=False)
+    
+    Y = elfi.Simulator(WF_sim, max_real_core, m['pan_mu'], m['proportion_fast'], m['speed_fast'], seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
 
     d = elfi.Distance('jensenshannon', Y)
+    log_d = elfi.Operation(np.log, d)
 
     #set multiprocessing client
     if cluster == True:
@@ -324,44 +336,35 @@ if __name__ == "__main__":
 
     if run_mode == "sim":
         print("Simulating data...")
-        if mode == "rejection":
-            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed)
-            result = mod.sample(N_samples, quantile=qnt)
+        bounds = {
+            'pan_mu' : (0, 1),
+            'proportion_fast' : (0, 1),
+            'speed_fast' : (0, max_value),
+        }
+        mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
 
-        elif mode == "SMC":
-            mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
-            result = mod.sample(N_samples, schedule)
-        else:
-            log_d = elfi.Operation(np.log, d)
-            bounds = {
-                'gene_gl_speed' : (0, max_value),
-                'ratio_gene_gl' : (0.5, 1),
-                'prop_gene' : (0, 1),
-            }
-            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                               acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
+        post = mod.fit(n_evidence=n_evidence)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
 
-            post = mod.fit(n_evidence=n_evidence)
-            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
+        # not implemented for more than 2 dimensions
+        # post.plot(logpdf=True)
+        # plt.savefig("posterior.svg")
+        # plt.close()
 
-            # not implemented for more than 2 dimensions
-            # post.plot(logpdf=True)
-            # plt.savefig("posterior.svg")
-            # plt.close()
+        mod.plot_discrepancy()
+        plt.savefig(outpref + "_BOLFI_discrepancy.svg")
+        plt.close()
 
-            mod.plot_discrepancy()
-            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
-            plt.close()
+        # plot MCMC traces
+        result.plot_traces();
+        plt.savefig(outpref + '_BOLFI_traces.svg')
+        plt.close()
 
-            # plot MCMC traces
-            result.plot_traces();
-            plt.savefig(outpref + '_BOLFI_traces.svg')
-            plt.close()
-
-            # # plot results
-            # mod.plot_state()
-            # plt.savefig(outpref + "_" + mode + "_state.svg")
-            # plt.close()
+        # # plot results
+        # mod.plot_state()
+        # plt.savefig(outpref + "_" + mode + "_state.svg")
+        # plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
@@ -385,37 +388,30 @@ if __name__ == "__main__":
 
         arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
 
-        if mode == "rejection":
-            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed, pool=arraypool)
-            result = mod.sample(N_samples, quantile=qnt)
-        elif mode == "SMC":
-            mod = elfi.SMC(d, batch_size=batch_size, seed=seed, pool=arraypool)
-            result = mod.sample(N_samples, schedule)
-        else:
-            log_d = elfi.Operation(np.log, d)
-            bounds = {
-                'gene_gl_speed' : (0, max_value),
-                'ratio_gene_gl' : (0.5, 1),
-                'prop_gene': (0, 1),
-            }
-            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+        log_d = elfi.Operation(np.log, d)
+        bounds = {
+            'pan_mu' : (0, 1),
+            'proportion_fast' : (0, 1),
+            'speed_fast' : (0, max_value),
+        }
+        mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
-            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
 
-            mod.plot_discrepancy()
-            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
-            plt.close()
+        mod.plot_discrepancy()
+        plt.savefig(outpref + "_BOLFI_discrepancy.svg")
+        plt.close()
 
-            # plot results
-            mod.plot_state()
-            plt.savefig(outpref + "_" + mode + "_state.svg")
-            plt.close()
+        # plot results
+        mod.plot_state()
+        plt.savefig(outpref + "_" + mode + "_state.svg")
+        plt.close()
 
-            #plot MCMC traces
-            result.plot_traces();
-            plt.savefig(outpref + '_BOLFI_traces.svg')
-            plt.close()
+        #plot MCMC traces
+        result.plot_traces();
+        plt.savefig(outpref + '_BOLFI_traces.svg')
+        plt.close()
 
     with open(outpref + "_ELFI_summary.txt", "w") as f:
         print(result, file=f)
