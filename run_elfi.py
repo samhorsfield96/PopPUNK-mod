@@ -123,9 +123,10 @@ def read_distfile(filename):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances = inputs
     
     # add to kwinputs
+    kwinputs['avg_gene_freq'] = avg_gene_freq
     kwinputs['core_mu'] = core_mu
     kwinputs['pan_mu'] = pan_mu
     kwinputs['proportion_fast'] = proportion_fast
@@ -251,7 +252,7 @@ if __name__ == "__main__":
     elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
-    command = pansim_exe + ' --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
+    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
 
     WF_sim = elfi.tools.external_operation(command,
                                     prepare_inputs=prepare_inputs,
@@ -260,7 +261,7 @@ if __name__ == "__main__":
     
     WF_sim_vec = elfi.tools.vectorize(WF_sim)
     
-    Y = elfi.Simulator(WF_sim_vec, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
+    Y = elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
     Y.uses_meta = True
 
     #data = Y.generate(3)
@@ -296,9 +297,9 @@ if __name__ == "__main__":
         plt.close()
 
         # # plot results
-        # mod.plot_state()
-        # plt.savefig(outpref + "_" + mode + "_state.svg")
-        # plt.close()
+        mod.plot_state()
+        plt.savefig(outpref + "_state.svg")
+        plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
