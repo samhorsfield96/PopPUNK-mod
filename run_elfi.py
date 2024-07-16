@@ -16,17 +16,17 @@ def get_options():
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--run_mode',
-                    required=True,
+                    default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
     IO.add_argument('--core_size',
                     type=int,
-                    default=10000,
-                    help='Number of positions in core genome. Default = 10000 ')
+                    default=1200000,
+                    help='Number of positions in core genome. Default = 1200000 ')
     IO.add_argument('--pan_size',
                     type=int,
-                    default=10000,
-                    help='Number of positions in pangenome. Default = 10000 ')
+                    default=6000,
+                    help='Number of positions in pangenome. Default = 6000 ')
     IO.add_argument('--pop_size',
                     type=int,
                     default=1000,
@@ -55,6 +55,16 @@ def get_options():
                     default=5000,
                     help='Evidence points requested (including init-evidence). '
                          'Default = 5000 ')
+    IO.add_argument('--update-int',
+                type=int,
+                default=10,
+                help='Defines how often the GP hyperparameters are optimized. '
+                        'Default = 10 ')
+    IO.add_argument('--acq-noise-var',
+                type=float,
+                default=0.1,
+                help='Defines the diagonal covariance of noise added to the acquired points. '
+                        'Default = 0.1 ')
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
@@ -183,7 +193,6 @@ if __name__ == "__main__":
     distfile = options.distfile
     core_size = options.core_size
     pan_size = options.pan_size
-    batch_size = options.batch_size
     N_samples = options.samples
     seed = options.seed
     outpref = options.outpref
@@ -193,7 +202,7 @@ if __name__ == "__main__":
     n_evidence = options.n_evidence
     avg_gene_freq = options.avg_gene_freq
     cluster = options.cluster
-    n_gen = options.ngen
+    n_gen = options.n_gen
     pop_size = options.pop_size
     load = options.load
     run_mode = options.run_mode
