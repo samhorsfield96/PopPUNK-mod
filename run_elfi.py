@@ -80,7 +80,7 @@ def get_options():
                     help='Number of distances to sample with Pansim. Default = 100000')
     IO.add_argument('--load',
                     default=None,
-                    help='Directory of previous ELFI model. Required if running "sample" mode ')
+                    help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
     IO.add_argument('--seed',
                     type=int,
                     default=254,
@@ -292,13 +292,8 @@ if __name__ == "__main__":
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
-        post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples, n_chains=chains)
-
-        # not implemented for more than 2 dimensions
-        # post.plot(logpdf=True)
-        # plt.savefig("posterior.svg")
-        # plt.close()
+        #post = mod.fit(n_evidence=n_evidence)
+        result = mod.sample(N_samples, n_evidence=n_evidence, n_chains=chains)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.svg")
@@ -308,11 +303,6 @@ if __name__ == "__main__":
         result.plot_traces();
         plt.savefig(outpref + '_BOLFI_traces.svg')
         plt.close()
-
-        # plot results
-        # mod.plot_state()
-        # plt.savefig(outpref + "_state.svg")
-        # plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
