@@ -65,6 +65,11 @@ def get_options():
                 default=0.1,
                 help='Defines the diagonal covariance of noise added to the acquired points. '
                         'Default = 0.1 ')
+    IO.add_argument('--chains',
+                type=int,
+                default=4,
+                help='Number of chains for NUTS sampler. '
+                        'Default = 4 ')
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
@@ -209,6 +214,7 @@ if __name__ == "__main__":
     run_mode = options.run_mode
     max_distances = options.max_distances
     pansim_exe = options.pansim_exe
+    chains = options.chains
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -280,7 +286,7 @@ if __name__ == "__main__":
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
 
         post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples, algorithm="metropolis", info_freq=int(N_samples * 0.25))
+        result = mod.sample(N_samples, n_chains=chains)
 
         # not implemented for more than 2 dimensions
         # post.plot(logpdf=True)
@@ -296,10 +302,10 @@ if __name__ == "__main__":
         plt.savefig(outpref + '_BOLFI_traces.svg')
         plt.close()
 
-        # # plot results
-        mod.plot_state()
-        plt.savefig(outpref + "_state.svg")
-        plt.close()
+        # plot results
+        # mod.plot_state()
+        # plt.savefig(outpref + "_state.svg")
+        # plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
@@ -332,16 +338,16 @@ if __name__ == "__main__":
         mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, info_freq=int(N_samples * 0.25))
+        result = mod.sample(N_samples, n_evidence=n_evidence)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.svg")
         plt.close()
 
-        # plot results
-        mod.plot_state()
-        plt.savefig(outpref + "_state.svg")
-        plt.close()
+        # # plot results
+        # mod.plot_state()
+        # plt.savefig(outpref + "_state.svg")
+        # plt.close()
 
         #plot MCMC traces
         result.plot_traces();
