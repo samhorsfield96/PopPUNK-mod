@@ -250,7 +250,7 @@ if __name__ == "__main__":
     obs = obs_acc
 
     # set up model
-    m = elfi.ElfiModel(name='pansim')
+    m = elfi.ElfiModel(name='pansim_model')
 
     # set priors
     max_value = 10 ** 6
@@ -278,18 +278,18 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        Y = elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
-        Y.uses_meta = True
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim', model=m)
+        m['sim'].uses_meta = True
 
-        d = elfi.Distance('jensenshannon', Y)
-        log_d = elfi.Operation(np.log, d)
+        elfi.Distance('jensenshannon', m['sim'], model=m, name='d')
+        elfi.Operation(np.log, m['d'], model=m, name='log_d')
 
         # save model
-        save_path = outpref + '_pools'
+        save_path = outpref
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.ArrayPool(['pan_mu', 'proportion_fast', 'speed_fast', 'Y', 'd'], name="BOLFI_sim", prefix=save_path)
+        arraypool = elfi.ArrayPool(['pan_mu', 'proportion_fast', 'speed_fast', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
         
-        mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         post = mod.fit(n_evidence=n_evidence)
@@ -320,33 +320,32 @@ if __name__ == "__main__":
         arraypool.save()
         print('Files in', arraypool.path, 'are', os.listdir(arraypool.path))
 
+        m.save(prefix=save_path + "/BOLFI_model")
+        print('Model saved to ', save_path + "/BOLFI_model")
+
     else:
         print("Loading models in {}".format(load))
         if load == None:
-            print('Previously saved ELFI pool required for "sample" mode. Please specify "--load."')
+            print('Previously saved ELFI output required for "sample" mode. Please specify "--load."')
             sys.exit(1)
 
         # parse filename
         load_pref = load.rsplit('/', 1)[0]
         load_name = load.rsplit('/', 1)[-1]
 
-        arraypool = elfi.ArrayPool.open(name=load_name, prefix=load_pref)
+        arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
         print(arraypool[0])
         print('This pool has', len(arraypool), 'batches')
 
-        with open(arraypool.path + '/d.pkl', 'rb') as f:
-            d = pickle.load(f)
+        m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
-        #d = np.load(arraypool.path + '/d.npy')
-        print(d)
-
-        log_d = elfi.Operation(np.log, d)
         bounds = {
             'pan_mu' : (0, 1),
             'proportion_fast' : (0, 1),
             'speed_fast' : (0, max_value),
         }
-        mod = elfi.BOLFI(log_d, batch_size=1, bounds=bounds, pool=arraypool)
+        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         result = mod.sample(N_samples, n_evidence=n_evidence)
 
