@@ -8,6 +8,7 @@ import elfi
 import os
 import sys
 import matplotlib.pyplot as plt
+import pickle
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -258,22 +259,7 @@ if __name__ == "__main__":
     elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
-    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
-
-    WF_sim = elfi.tools.external_operation(command,
-                                    prepare_inputs=prepare_inputs,
-                                    process_result=process_result,
-                                    stdout=False)
-    
-    WF_sim_vec = elfi.tools.vectorize(WF_sim)
-    
-    Y = elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
-    Y.uses_meta = True
-
     #data = Y.generate(3)
-
-    d = elfi.Distance('jensenshannon', Y)
-    log_d = elfi.Operation(np.log, d)
 
     if run_mode == "sim":
         print("Simulating data...")
@@ -282,8 +268,29 @@ if __name__ == "__main__":
             'proportion_fast' : (0, 1),
             'speed_fast' : (0, max_value),
         }
+
+        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
+
+        WF_sim = elfi.tools.external_operation(command,
+                                        prepare_inputs=prepare_inputs,
+                                        process_result=process_result,
+                                        stdout=False)
+
+        WF_sim_vec = elfi.tools.vectorize(WF_sim)
+
+        Y = elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim')
+        Y.uses_meta = True
+
+        d = elfi.Distance('jensenshannon', Y)
+        log_d = elfi.Operation(np.log, d)
+
+        # save model
+        save_path = outpref + '_pools'
+        os.makedirs(save_path, exist_ok=True)
+        arraypool = elfi.ArrayPool(['pan_mu', 'proportion_fast', 'speed_fast', 'Y', 'd'], name="BOLFI_sim", prefix=save_path)
+        
         mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         post = mod.fit(n_evidence=n_evidence)
         result = mod.sample(N_samples, n_chains=chains)
@@ -309,13 +316,9 @@ if __name__ == "__main__":
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
-
-        # save model
-        save_path = outpref + '_pools'
-        os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.OutputPool(['pan_mu', 'proportion_fast', 'speed_fast', 'Y', 'd'], prefix=save_path)
-        arraypool.set_context(mod)
+        
         arraypool.save()
+        print('Files in', arraypool.path, 'are', os.listdir(arraypool.path))
 
     else:
         print("Loading models in {}".format(load))
@@ -327,7 +330,15 @@ if __name__ == "__main__":
         load_pref = load.rsplit('/', 1)[0]
         load_name = load.rsplit('/', 1)[-1]
 
-        arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
+        arraypool = elfi.ArrayPool.open(name=load_name, prefix=load_pref)
+        print(arraypool[0])
+        print('This pool has', len(arraypool), 'batches')
+
+        with open(arraypool.path + '/d.pkl', 'rb') as f:
+            d = pickle.load(f)
+
+        #d = np.load(arraypool.path + '/d.npy')
+        print(d)
 
         log_d = elfi.Operation(np.log, d)
         bounds = {
@@ -335,8 +346,7 @@ if __name__ == "__main__":
             'proportion_fast' : (0, 1),
             'speed_fast' : (0, max_value),
         }
-        mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+        mod = elfi.BOLFI(log_d, batch_size=1, bounds=bounds, pool=arraypool)
 
         result = mod.sample(N_samples, n_evidence=n_evidence)
 
