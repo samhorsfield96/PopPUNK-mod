@@ -39,8 +39,7 @@ def get_options():
     IO.add_argument('--avg_gene_freq',
                     type=float,
                     default=0.5,
-                    help='Average gene frequency in accessory genome. '
-                         'Determines gene gain/loss rate e.g. 0.1 = gene gain/loss rate 1:9 '
+                    help='Average gene frequency in accessory genome.'
                          'Default = "0.5" ')
     IO.add_argument('--samples',
                     type=int,
