@@ -64,6 +64,9 @@ def get_options():
                     type=int,
                     default=1,
                     help='Number of threads. Default = 1')
+    IO.add_argument('--pansim_exe',
+                    required=True,
+                    help='Path to pansim executable.')
 
     return parser.parse_args()
 

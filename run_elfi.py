@@ -238,6 +238,7 @@ if __name__ == "__main__":
     max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
     core_mu = max_real_core
+    print("core_mu set to: {}".format(core_mu))
 
     #get observed data, normalise
     #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
