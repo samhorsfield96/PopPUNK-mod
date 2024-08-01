@@ -293,7 +293,7 @@ if __name__ == "__main__":
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         #post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples, n_evidence=n_evidence, n_chains=chains)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.svg")
@@ -337,7 +337,7 @@ if __name__ == "__main__":
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
-        result = mod.sample(N_samples, n_evidence=n_evidence)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.svg")
