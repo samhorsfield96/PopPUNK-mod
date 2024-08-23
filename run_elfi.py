@@ -9,6 +9,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import pickle
+from scipy.spatial import distance
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -126,9 +127,22 @@ def read_distfile(filename):
 
     return df
 
+# process the summary statistic, 0 for core, 1 for accessory
+def js_distance(sim, col, obs):
+    y_sim = sim[col]
+    y_obs = obs[col]
+
+    #print("sim: {}".format(y_sim))
+    #print("obs: {}".format(y_obs))
+
+    js = distance.jensenshannon(y_obs, y_sim)
+    #print("js: {}".format(js))
+    
+    return js
+
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, obs = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -142,6 +156,7 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['pan_size'] = pan_size
     kwinputs['n_gen'] = n_gen
     kwinputs['max_distances'] = max_distances
+    kwinputs['obs'] = obs
 
     meta = kwinputs['meta']
 
@@ -159,14 +174,24 @@ def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['output_filename']
 
     # Read the simulations from the file.
-    simulations = np.loadtxt(output_filename, delimiter='\t', usecols=1, dtype='float64')
-    obs_pan = np.histogram(simulations, bins=1000, range=(0, 1))[0]
+    simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
+    
+    sim_core = np.histogram(simulations[:,0], bins=1000, range=(0, 1))[0]
+    sim_pan = np.histogram(simulations[:,1], bins=1000, range=(0, 1))[0]
+    sim = (sim_core, sim_pan)
 
     # Clean up the files after reading the data in
     os.remove(output_filename)
 
+    obs = kwinputs['obs']
+
+    js_core = js_distance(sim, 0, obs)
+    js_pan = js_distance(sim, 1, obs)
+
+    average_dist = (js_core + js_pan) / 2
+
     # This will be passed to ELFI as the result of the command
-    return obs_pan
+    return average_dist
 
 if __name__ == "__main__":
     # #testing
@@ -248,11 +273,12 @@ if __name__ == "__main__":
     #get observed data, normalise
     #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
     #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
-    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=1000, range=(0, 1))[0]
+    obs_core = np.histogram(df['Core'].to_numpy(), bins=1000, range=(0, 1))[0]
+    obs_pan = np.histogram(df['Accessory'].to_numpy(), bins=1000, range=(0, 1))[0]
 
     # calculate euclidean distance to origin
     #obs = np.concatenate([obs_core, obs_acc])
-    obs = obs_acc
+    obs = (obs_core, obs_pan)
 
     # set up model
     m = elfi.ElfiModel(name='pansim_model')
@@ -285,10 +311,15 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim', model=m)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, obs, name='sim', model=m, observed=0)
         m['sim'].uses_meta = True
 
-        elfi.Distance('jensenshannon', m['sim'], model=m, name='d')
+        #elfi.Summary(js_distance_core, m['sim'], obs, model=m, name='core_dist')
+        #elfi.Summary(js_distance_pan, m['sim'], obs, model=m, name='pan_dist')
+        #elfi.Summary(js_distance, m['sim'], model=m, name='summary', observed=obs)
+
+        # use cityblock as only single entry to calculate distance
+        elfi.Distance('cityblock', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
 
         # save model
