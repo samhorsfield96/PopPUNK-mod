@@ -160,7 +160,7 @@ def process_result(completed_process, *inputs, **kwinputs):
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', usecols=1, dtype='float64')
-    obs_pan = np.histogram(simulations, bins=2000, range=(0, 1), density=True)[0]
+    obs_pan = np.histogram(simulations, bins=1000, range=(0, 1))[0]
 
     # Clean up the files after reading the data in
     os.remove(output_filename)
@@ -235,15 +235,20 @@ if __name__ == "__main__":
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
-    max_jaccard_acc = float(df["Accessory"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
 
+    # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor
+    max_jaccard_acc = float(df["Accessory"].max())
+    max_real_acc = (-1/2) * np.log(1 - (2 * max_jaccard_acc))
+    pan_mu = max_real_acc
+    print("pan_mu set to: {}".format(pan_mu))
+
     #get observed data, normalise
     #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
     #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
-    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=2000, range=(0, 1), density=True)[0]
+    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=1000, range=(0, 1))[0]
 
     # calculate euclidean distance to origin
     #obs = np.concatenate([obs_core, obs_acc])
@@ -254,9 +259,11 @@ if __name__ == "__main__":
 
     # set priors
     max_value = 10 ** 6
+    speed_fast = max_value
+
     #elfi.Prior('uniform', 0, max_real_core, model=m, name='core_mu')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
-    elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
+    #elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
+    #elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
@@ -264,9 +271,9 @@ if __name__ == "__main__":
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
-            'pan_mu' : (0, 1),
+            #'pan_mu' : (0, 1),
             'proportion_fast' : (0, 1),
-            'speed_fast' : (0, max_value),
+            #'speed_fast' : (0, max_value),
         }
 
         command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
@@ -278,7 +285,7 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], m['speed_fast'], core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim', model=m)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_size, n_gen, max_distances, observed=obs, name='sim', model=m)
         m['sim'].uses_meta = True
 
         elfi.Distance('jensenshannon', m['sim'], model=m, name='d')
@@ -287,7 +294,7 @@ if __name__ == "__main__":
         # save model
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.ArrayPool(['pan_mu', 'proportion_fast', 'speed_fast', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
+        arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
         
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
@@ -296,12 +303,12 @@ if __name__ == "__main__":
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
 
         mod.plot_discrepancy()
-        plt.savefig(outpref + "_BOLFI_discrepancy.svg")
+        plt.savefig(outpref + "_BOLFI_discrepancy.png")
         plt.close()
 
         # plot MCMC traces
         result.plot_traces();
-        plt.savefig(outpref + '_BOLFI_traces.svg')
+        plt.savefig(outpref + '_BOLFI_traces.png')
         plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
@@ -330,9 +337,9 @@ if __name__ == "__main__":
         m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
         bounds = {
-            'pan_mu' : (0, 1),
+            #'pan_mu' : (0, 1),
             'proportion_fast' : (0, 1),
-            'speed_fast' : (0, max_value),
+            #'speed_fast' : (0, max_value),
         }
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
@@ -340,17 +347,17 @@ if __name__ == "__main__":
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
 
         mod.plot_discrepancy()
-        plt.savefig(outpref + "_BOLFI_discrepancy.svg")
+        plt.savefig(outpref + "_BOLFI_discrepancy.png")
         plt.close()
 
         # # plot results
         # mod.plot_state()
-        # plt.savefig(outpref + "_state.svg")
+        # plt.savefig(outpref + "_state.png")
         # plt.close()
 
         #plot MCMC traces
         result.plot_traces();
-        plt.savefig(outpref + '_BOLFI_traces.svg')
+        plt.savefig(outpref + '_BOLFI_traces.png')
         plt.close()
 
     with open(outpref + "_ELFI_summary.txt", "w") as f:
@@ -359,14 +366,14 @@ if __name__ == "__main__":
     # plot graphs
     # plot marginals
     result.plot_marginals()
-    plt.savefig(outpref + '_marginals.svg')
+    plt.savefig(outpref + '_marginals.png')
 
     plt.clf
     plt.cla
 
     # plot paired marginals
     result.plot_pairs()
-    plt.savefig(outpref + '_pairs.svg')
+    plt.savefig(outpref + '_pairs.png')
     plt.close()
 
     sys.exit(0)
