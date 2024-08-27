@@ -188,7 +188,9 @@ def process_result(completed_process, *inputs, **kwinputs):
     js_core = js_distance(sim, 0, obs)
     js_pan = js_distance(sim, 1, obs)
 
-    average_dist = (js_core + js_pan) / 2
+    #average_dist = (js_core + js_pan) / 2
+    # just use accessory distance
+    average_dist = js_pan
 
     # This will be passed to ELFI as the result of the command
     return average_dist
@@ -266,7 +268,17 @@ if __name__ == "__main__":
 
     # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor
     max_jaccard_acc = float(df["Accessory"].max())
-    max_real_acc = (-1/2) * np.log(1 - (2 * max_jaccard_acc))
+
+    # convert to hamming distance
+    # calculate the probability that two 0s are compared in the accessory genome
+    prob_0to0 = (1 - avg_gene_freq) ** 2
+    num_non_0 = round(pan_size - (pan_size * prob_0to0))
+    
+    # calculate number of differences in pangenome, use to calculate hamming distance
+    num_diff = round(num_non_0 * max_jaccard_acc)
+    max_hamming_acc = num_diff / pan_size
+
+    max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
     pan_mu = max_real_acc
     print("pan_mu set to: {}".format(pan_mu))
 
