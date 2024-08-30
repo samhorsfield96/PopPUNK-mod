@@ -16,10 +16,14 @@ def get_options():
                     type=int,
                     default=1200000,
                     help='Number of positions in core genome. Default = 1200000 ')
-    IO.add_argument('--pan_size',
+    IO.add_argument('--pan_genes',
                     type=int,
                     default=6000,
-                    help='Number of positions in pangenome. Default = 6000 ')
+                    help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
+    IO.add_argument('--core_genes',
+                    type=int,
+                    default=2000,
+                    help='Number of core genes in pangenome only. Default = 2000')
     IO.add_argument('--core_mu',
                     type=float,
                     default=0.05,
@@ -76,7 +80,7 @@ if __name__ == "__main__":
     # proportion_fast = 0.5
     # speed_fast = 2.0
     # core_size = 1200000
-    # pan_size = 6000
+    # pan_genes = 6000
     # avg_gene_freq = 0.5
     # n_gen = 10
     # pop_size = 1000
@@ -92,7 +96,8 @@ if __name__ == "__main__":
     proportion_fast = options.proportion_fast
     speed_fast = options.speed_fast
     core_size = options.core_size
-    pan_size = options.pan_size
+    pan_genes = options.pan_genes
+    core_genes = options.core_genes
     avg_gene_freq = options.avg_gene_freq
     n_gen = options.n_gen
     pop_size = options.pop_size
@@ -102,7 +107,7 @@ if __name__ == "__main__":
     pansim_exe = options.pansim_exe
     seed = options.seed
 
-    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_size {pan_size} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename} --threads {threads}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, pan_size=pan_size, n_gen=n_gen, max_distances=max_distances, output_filename=outpref + ".txt", threads=threads)
+    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename} --threads {threads}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, output_filename=outpref + ".txt", threads=threads)
 
     print("Simulating...")
     try:
