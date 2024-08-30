@@ -33,6 +33,14 @@ def get_options():
                     type=int,
                     default=1000,
                     help='Population size for Wright-Fisher model. Default = 1000 ')
+    IO.add_argument('--pan_mu',
+                    type=float,
+                    default=None,
+                    help='Diversification rate of accessory genome. Default = None ')
+    IO.add_argument('--speed_fast',
+                    type=int,
+                    default=None,
+                    help='Speed ratio at which a fast gene mutates over a slow gene. Default = None ')
     IO.add_argument('--n_gen',
                     type=int,
                     default=100,
@@ -242,6 +250,8 @@ if __name__ == "__main__":
     max_distances = options.max_distances
     pansim_exe = options.pansim_exe
     chains = options.chains
+    pan_mu = options.pan_mu
+    speed_fast = options.speed_fast
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -266,20 +276,25 @@ if __name__ == "__main__":
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
 
-    # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor
-    max_jaccard_acc = float(df["Accessory"].max())
+    if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
+        # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor, need to 
+        max_jaccard_acc = float(df["Accessory"].max())
 
-    # convert to hamming distance
-    # calculate the probability that two 0s are compared in the accessory genome
-    prob_0to0 = (1 - avg_gene_freq) ** 2
-    num_non_0 = round(pan_size - (pan_size * prob_0to0))
+        # convert to hamming distance
+        # calculate the probability that two 0s are compared in the accessory genome
+        prob_0to0 = (1 - avg_gene_freq) ** 2
+        num_non_0 = round(pan_size - (pan_size * prob_0to0))
+        print("num_non_0 set to: {}".format(num_non_0))
+        
+        # calculate number of differences in pangenome, use to calculate hamming distance
+        num_diff = round(num_non_0 * max_jaccard_acc)
+        print("num_diff set to: {}".format(num_diff))
+        max_hamming_acc = num_diff / pan_size
+        print("max_hamming_acc set to: {}".format(max_hamming_acc))
+
+        max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
+        pan_mu = max_real_acc
     
-    # calculate number of differences in pangenome, use to calculate hamming distance
-    num_diff = round(num_non_0 * max_jaccard_acc)
-    max_hamming_acc = num_diff / pan_size
-
-    max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
-    pan_mu = max_real_acc
     print("pan_mu set to: {}".format(pan_mu))
 
     #get observed data, normalise
@@ -295,9 +310,12 @@ if __name__ == "__main__":
     # set up model
     m = elfi.ElfiModel(name='pansim_model')
 
-    # set priors
-    max_value = 10 ** 6
-    speed_fast = max_value
+    # set speed_fast
+    if speed_fast == None or speed_fast < 1:
+        max_value = 10 ** 6
+        speed_fast = max_value
+    
+    print("speed_fast set to: {}".format(speed_fast))
 
     #elfi.Prior('uniform', 0, max_real_core, model=m, name='core_mu')
     #elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
