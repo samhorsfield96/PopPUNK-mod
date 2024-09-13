@@ -288,16 +288,15 @@ if __name__ == "__main__":
 
         # convert to hamming distance
         # calculate the probability that two 0s are compared in the accessory genome
-        # TODO avg_gene_freq is only correct at start, not at end of simulation, need way of determining this
         prob_0to0 = (1 - avg_gene_freq) ** 2
         num_non_0 = round(pan_genes - (pan_genes * prob_0to0))
-        print("num_non_0 set to: {}".format(num_non_0))
+        #print("num_non_0 set to: {}".format(num_non_0))
         
         # calculate number of differences in pangenome, use to calculate hamming distance
         num_diff = round(num_non_0 * max_jaccard_acc)
-        print("num_diff set to: {}".format(num_diff))
+        #print("num_diff set to: {}".format(num_diff))
         max_hamming_acc = num_diff / pan_genes
-        print("max_hamming_acc set to: {}".format(max_hamming_acc))
+        #print("max_hamming_acc set to: {}".format(max_hamming_acc))
 
         max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
         pan_mu = max_real_acc
@@ -327,7 +326,7 @@ if __name__ == "__main__":
     #elfi.Prior('uniform', 0, max_real_core, model=m, name='core_mu')
     #elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
     #elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
+    elfi.Prior('uniform', 0.0, 0.99, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
 
@@ -335,7 +334,7 @@ if __name__ == "__main__":
         print("Simulating data...")
         bounds = {
             #'pan_mu' : (0, 1),
-            'proportion_fast' : (0, 1),
+            'proportion_fast' : (0, 0.99),
             #'speed_fast' : (0, max_value),
         }
 
