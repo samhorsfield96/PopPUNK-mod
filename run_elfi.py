@@ -111,6 +111,10 @@ def get_options():
                     action='store_true',
                     default=False,
                     help='Parallelise using ipyparallel if using cluster. Default = False')
+    IO.add_argument('--workdir',
+                default=None,
+                help='Specify workdir to save intermediate files. If unset, will write to working directory.')
+    
 
     return parser.parse_args()
 
@@ -154,7 +158,7 @@ def js_distance(sim, col, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, obs = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -174,7 +178,10 @@ def prepare_inputs(*inputs, **kwinputs):
     meta = kwinputs['meta']
 
     # Prepare a unique filename for parallel settings
-    filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
+    if workdir != None:
+        filename = workdir + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
+    else:
+        filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
 
     # Add the filenames to kwinputs
     kwinputs['output_filename'] = filename + '_out.txt'
@@ -258,6 +265,7 @@ if __name__ == "__main__":
     chains = options.chains
     pan_mu = options.pan_mu
     speed_fast = options.speed_fast
+    workdir = options.workdir
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -347,7 +355,7 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, obs, name='sim', model=m, observed=0)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs, name='sim', model=m, observed=0)
         m['sim'].uses_meta = True
 
         #elfi.Summary(js_distance_core, m['sim'], obs, model=m, name='core_dist')
