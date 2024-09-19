@@ -219,8 +219,8 @@ def process_result(completed_process, *inputs, **kwinputs):
     obs_acc = np.histogram(obs[1].to_numpy(), bins=1000, range=(0, max_acc))[0]
     obs_dist = (obs_core, obs_acc)
 
-    js_core = js_distance(sim, 0, obs_dist)
-    js_pan = js_distance(sim, 1, obs_dist)
+    js_core = js_distance(sim_dist, 0, obs_dist)
+    js_pan = js_distance(sim_dist, 1, obs_dist)
 
     #average_dist = (js_core + js_pan) / 2
     # just use accessory distance
