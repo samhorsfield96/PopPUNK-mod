@@ -5,6 +5,8 @@ rng = np.random.default_rng()
 import subprocess
 from run_elfi import read_distfile
 import sys
+from run_elfi import asymptotic_curve
+from scipy.optimize import curve_fit
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -126,6 +128,26 @@ if __name__ == "__main__":
     y = df["Accessory"]
 
     ax.scatter(x, y, s=10, alpha=0.3)
+
+    popt, pcov = curve_fit(asymptotic_curve, x, y, p0=[1.0, 1.0, 0])
+
+    x_fit = np.linspace(0, x.max(), 100)
+    y_fit = asymptotic_curve(x_fit, *popt)
+    ax.plot(x_fit, y_fit, label=f"Fitted curve", color='red')
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.6 * xlim[1]  # 60% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+    # Calculate the initial rate at x=0
+    a, b, c = popt
+    initial_rate = a * b
+    print(f"Initial rate at x=0: {initial_rate}")
+
+    ax.annotate(f'Initial rate: {initial_rate:.2f}', xy=(0, 0), xytext=(x_annotate, y_annotate),
+             arrowprops=dict(facecolor='black', arrowstyle="->"),
+             fontsize=10, color="green")
 
     ax.set_xlabel("Core distance")
     ax.set_ylabel("Accessory distance")

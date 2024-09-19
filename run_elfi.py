@@ -10,6 +10,11 @@ import sys
 import matplotlib.pyplot as plt
 import pickle
 from scipy.spatial import distance
+from scipy.optimize import curve_fit
+
+# fit asymptotic curve using exponential decay
+def asymptotic_curve(x, a, b, c):
+    return a * (1 - np.exp(-b * x)) + c
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -289,6 +294,14 @@ if __name__ == "__main__":
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
+
+    # fit asymptotic curve
+    popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0])
+
+    # Calculate the initial rate at x=0
+    a, b, c = popt
+    initial_rate = a * b
+    print(f"Initial rate at x=0: {initial_rate}")
 
     if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
         # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor 
