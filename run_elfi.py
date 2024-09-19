@@ -350,8 +350,9 @@ if __name__ == "__main__":
         speed_fast = max_value
     
     print("speed_fast set to: {}".format(speed_fast))
+    print("max pan_mu: {}".format(df["Accessory"].max()))
 
-    elfi.Prior('uniform', df["Accessory"].max(), 1.0, model=m, name='pan_mu')
+    elfi.Prior('uniform', df["Accessory"].max(), 1.0 - df["Accessory"].max(), model=m, name='pan_mu')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
@@ -383,7 +384,7 @@ if __name__ == "__main__":
         # save model
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
+        arraypool = elfi.ArrayPool(['proportion_fast', 'pan_mu', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
         
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
@@ -426,7 +427,7 @@ if __name__ == "__main__":
         m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
         bounds = {
-            #'pan_mu' : (0, 1),
+            'pan_mu' : (df["Accessory"].max(), 1),
             'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
