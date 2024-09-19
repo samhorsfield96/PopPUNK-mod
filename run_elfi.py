@@ -200,18 +200,27 @@ def process_result(completed_process, *inputs, **kwinputs):
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
-    
-    sim_core = np.histogram(simulations[:,0], bins=1000, range=(0, 1))[0]
-    sim_pan = np.histogram(simulations[:,1], bins=1000, range=(0, 1))[0]
-    sim = (sim_core, sim_pan)
-
     # Clean up the files after reading the data in
     os.remove(output_filename)
-
+    
+    # get observations
     obs = kwinputs['obs']
 
-    js_core = js_distance(sim, 0, obs)
-    js_pan = js_distance(sim, 1, obs)
+    # get maximum core and accessory for distibution
+    max_core = max(obs[0].max(), np.max(simulations[:,0]))
+    max_acc = max(obs[1].max(), np.max(simulations[:,1]))
+    
+    # process distributions
+    sim_core = np.histogram(simulations[:,0], bins=1000, range=(0, max_core))[0]
+    sim_pan = np.histogram(simulations[:,1], bins=1000, range=(0, max_acc))[0]
+    sim_dist = (sim_core, sim_pan)
+
+    obs_core = np.histogram(obs[0].to_numpy(), bins=1000, range=(0, max_core))[0]
+    obs_acc = np.histogram(obs[1].to_numpy(), bins=1000, range=(0, max_acc))[0]
+    obs_dist = (obs_core, obs_acc)
+
+    js_core = js_distance(sim, 0, obs_dist)
+    js_pan = js_distance(sim, 1, obs_dist)
 
     #average_dist = (js_core + js_pan) / 2
     # just use accessory distance
@@ -295,40 +304,38 @@ if __name__ == "__main__":
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
 
-    # fit asymptotic curve
-    popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0])
+    # # fit asymptotic curve
+    # popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0])
 
-    # Calculate the initial rate at x=0
-    a, b, c = popt
-    initial_rate = a * b
-    print(f"Initial rate at x=0: {initial_rate}")
+    # # Calculate the initial rate at x=0
+    # a, b, c = popt
+    # initial_rate = a * b
+    # print(f"Initial rate at x=0: {initial_rate}")
 
-    if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
-        # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor 
-        max_jaccard_acc = float(df["Accessory"].max())
+    # if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
+    #     # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor 
+    #     max_jaccard_acc = float(df["Accessory"].max())
 
-        # convert to hamming distance
-        # calculate the probability that two 0s are compared in the accessory genome
-        prob_0to0 = (1 - avg_gene_freq) ** 2
-        num_non_0 = round(pan_genes - (pan_genes * prob_0to0))
-        #print("num_non_0 set to: {}".format(num_non_0))
+    #     # convert to hamming distance
+    #     # calculate the probability that two 0s are compared in the accessory genome
+    #     prob_0to0 = (1 - avg_gene_freq) ** 2
+    #     num_non_0 = round(pan_genes - (pan_genes * prob_0to0))
+    #     #print("num_non_0 set to: {}".format(num_non_0))
         
-        # calculate number of differences in pangenome, use to calculate hamming distance
-        num_diff = round(num_non_0 * max_jaccard_acc)
-        #print("num_diff set to: {}".format(num_diff))
-        max_hamming_acc = num_diff / pan_genes
-        #print("max_hamming_acc set to: {}".format(max_hamming_acc))
+    #     # calculate number of differences in pangenome, use to calculate hamming distance
+    #     num_diff = round(num_non_0 * max_jaccard_acc)
+    #     #print("num_diff set to: {}".format(num_diff))
+    #     max_hamming_acc = num_diff / pan_genes
+    #     #print("max_hamming_acc set to: {}".format(max_hamming_acc))
 
-        max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
-        pan_mu = max_real_acc
+    #     max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
+    #     pan_mu = max_real_acc
     
-    print("pan_mu set to: {}".format(pan_mu))
+    #print("pan_mu set to: {}".format(pan_mu))
 
-    #get observed data, normalise
-    #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
-    #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
-    obs_core = np.histogram(df['Core'].to_numpy(), bins=1000, range=(0, 1))[0]
-    obs_pan = np.histogram(df['Accessory'].to_numpy(), bins=1000, range=(0, 1))[0]
+    #get observed data
+    obs_core = df['Core']
+    obs_pan = df['Accessory']
 
     # calculate euclidean distance to origin
     #obs = np.concatenate([obs_core, obs_acc])
@@ -344,18 +351,16 @@ if __name__ == "__main__":
     
     print("speed_fast set to: {}".format(speed_fast))
 
-    #elfi.Prior('uniform', 0, max_real_core, model=m, name='core_mu')
-    #elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
-    #elfi.Prior('uniform', 1.0, max_value, model=m, name='speed_fast')
-    elfi.Prior('uniform', 0.0, 0.99, model=m, name='proportion_fast')
+    elfi.Prior('uniform', df["Accessory"].max(), 1.0, model=m, name='pan_mu')
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
 
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
-            #'pan_mu' : (0, 1),
-            'proportion_fast' : (0, 0.99),
+            'pan_mu' : (df["Accessory"].max(), 1),
+            'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
 
@@ -368,12 +373,8 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, pan_mu, m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs, name='sim', model=m, observed=0)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs, name='sim', model=m, observed=0)
         m['sim'].uses_meta = True
-
-        #elfi.Summary(js_distance_core, m['sim'], obs, model=m, name='core_dist')
-        #elfi.Summary(js_distance_pan, m['sim'], obs, model=m, name='pan_dist')
-        #elfi.Summary(js_distance, m['sim'], model=m, name='summary', observed=obs)
 
         # use cityblock as only single entry to calculate distance
         elfi.Distance('cityblock', m['sim'], model=m, name='d')
