@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pickle
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
+from scipy.stats import wasserstein_distance_nd
 
 # fit asymptotic curve using exponential decay
 def asymptotic_curve(x, a, b, c):
@@ -161,6 +162,12 @@ def js_distance(sim, col, obs):
     
     return js
 
+def wasserstein_distance(sim, obs):
+    sim_array = np.column_stack(sim)
+    obs_array = np.column_stack(obs)
+
+    return wasserstein_distance_nd(obs_array, sim_array)
+
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
     avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs = inputs
@@ -219,12 +226,12 @@ def process_result(completed_process, *inputs, **kwinputs):
     obs_acc = np.histogram(obs[1].to_numpy(), bins=1000, range=(0, max_acc))[0]
     obs_dist = (obs_core, obs_acc)
 
-    js_core = js_distance(sim_dist, 0, obs_dist)
-    js_pan = js_distance(sim_dist, 1, obs_dist)
+    #js_core = js_distance(sim_dist, 0, obs_dist)
+    #js_pan = js_distance(sim_dist, 1, obs_dist)
+    was_dist = wasserstein_distance(sim_dist, obs_dist)
 
     #average_dist = (js_core + js_pan) / 2
-    # just use accessory distance
-    average_dist = js_pan
+    average_dist = was_dist
 
     # This will be passed to ELFI as the result of the command
     return average_dist
@@ -352,7 +359,7 @@ if __name__ == "__main__":
     print("speed_fast set to: {}".format(speed_fast))
     print("max pan_mu: {}".format(df["Accessory"].max()))
 
-    elfi.Prior('uniform', df["Accessory"].max(), 1.0 - df["Accessory"].max(), model=m, name='pan_mu')
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
@@ -360,7 +367,7 @@ if __name__ == "__main__":
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
-            'pan_mu' : (df["Accessory"].max(), 1),
+            'pan_mu' : (0, 1),
             'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
@@ -427,7 +434,7 @@ if __name__ == "__main__":
         m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
         bounds = {
-            'pan_mu' : (df["Accessory"].max(), 1),
+            'pan_mu' : (0, 1),
             'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
