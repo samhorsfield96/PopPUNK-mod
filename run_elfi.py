@@ -216,25 +216,26 @@ def process_result(completed_process, *inputs, **kwinputs):
     # get maximum core and accessory for distibution
     max_core = max(obs[0].max(), np.max(simulations[:,0]))
     max_acc = max(obs[1].max(), np.max(simulations[:,1]))
+    #max_val = ma(max_core, max_acc)
     
     # process distributions
-    sim_core = np.histogram(simulations[:,0], bins=1000, range=(0, max_core))[0]
-    sim_pan = np.histogram(simulations[:,1], bins=1000, range=(0, max_acc))[0]
-    sim_dist = (sim_core, sim_pan)
+    sim_core = np.histogram(simulations[:,0], bins=200, range=(0, max_core))[0]
+    sim_acc = np.histogram(simulations[:,1], bins=200, range=(0, max_acc))[0]
+    sim_dist = (sim_core, sim_acc)
 
-    obs_core = np.histogram(obs[0].to_numpy(), bins=1000, range=(0, max_core))[0]
-    obs_acc = np.histogram(obs[1].to_numpy(), bins=1000, range=(0, max_acc))[0]
+    obs_core = np.histogram(obs[0].to_numpy(), bins=200, range=(0, max_core))[0]
+    obs_acc = np.histogram(obs[1].to_numpy(), bins=200, range=(0, max_acc))[0]
     obs_dist = (obs_core, obs_acc)
 
     #js_core = js_distance(sim_dist, 0, obs_dist)
     #js_pan = js_distance(sim_dist, 1, obs_dist)
     was_dist = wasserstein_distance(sim_dist, obs_dist)
 
-    #average_dist = (js_core + js_pan) / 2
-    average_dist = was_dist
+    #dist = (js_core + js_pan) / 2
+    #dist = was_dist
 
     # This will be passed to ELFI as the result of the command
-    return average_dist
+    return dist
 
 if __name__ == "__main__":
     # #testing
