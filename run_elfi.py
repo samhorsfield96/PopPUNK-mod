@@ -232,7 +232,7 @@ def process_result(completed_process, *inputs, **kwinputs):
     was_dist = wasserstein_distance(sim_dist, obs_dist)
 
     #dist = (js_core + js_pan) / 2
-    #dist = was_dist
+    dist = was_dist
 
     # This will be passed to ELFI as the result of the command
     return dist
