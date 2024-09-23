@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 import seaborn as sns
 import pandas as pd
+from run_elfi import wasserstein_distance, js_distance
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -41,19 +42,32 @@ def main():
     df1 = read_distfile(file1)
     df2 = read_distfile(file2)
 
-    max_acc = max(float(df1["Accessory"].max()), float(df2["Accessory"].max()))
-    min_acc = max(float(df1["Accessory"].min()), float(df2["Accessory"].min()))
-
-    num_bins = 1000
+    num_bins = 200
     #hist_range = (min_acc, max_acc)
-    hist_range = (0, 1)
+    #hist_range = (0, 1)
 
-    # first distribution is x, second is y
-    x = np.histogram(df1['Accessory'].to_numpy(), bins=num_bins, range=hist_range)
-    y = np.histogram(df2['Accessory'].to_numpy(), bins=num_bins, range=hist_range)
+    max_core = max(df1['Core'].max(), df2['Core'].max())
+    max_acc = max(df1['Accessory'].max(), df2['Accessory'].max())
 
-    js_dist = distance.jensenshannon(x[0], y[0])
-    print("JS distance: {}".format(str(js_dist)))
+    # process distributions
+    core_1 = np.histogram(df1['Core'].to_numpy(), bins=num_bins, range=(0, max_core))[0]
+    acc_1 = np.histogram(df1['Accessory'].to_numpy(), bins=num_bins, range=(0, max_acc))[0]
+    dist_1 = (core_1, acc_1)
+
+    core_2 = np.histogram(df2['Core'].to_numpy(), bins=num_bins, range=(0, max_core))[0]
+    acc_2 = np.histogram(df2['Accessory'].to_numpy(), bins=num_bins, range=(0, max_acc))[0]
+    dist_2 = (core_2, acc_2)
+
+    print("Calculating distances...")
+    wass_dist = wasserstein_distance(dist_1, dist_2)
+    print("Wasserstein distance: {}".format(str(wass_dist)))
+
+    js_core = js_distance(dist_1, 0, dist_2)
+    js_acc = js_distance(dist_1, 1, dist_2)
+    js_avg = (js_core + js_acc) / 2
+    print("JS distance core: {}".format(str(js_core)))
+    print("JS distance acc: {}".format(str(js_acc)))
+    print("JS distance avg: {}".format(str(js_avg)))
 
     plt.hist(df1["Accessory"], num_bins, alpha=0.5, label='original')
     plt.hist(df2["Accessory"], num_bins, alpha=0.5, label='new')
@@ -77,7 +91,6 @@ def main():
         print(f"Plot saved as {outpref}_jointplot.png")
     except Exception as e:
         print("Error saving the plot:", e)
-
 
 
 if __name__ == "__main__":
