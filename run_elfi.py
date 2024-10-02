@@ -17,6 +17,10 @@ from scipy.stats import wasserstein_distance_nd
 def asymptotic_curve(x, a, b, c):
     return a * (1 - np.exp(-b * x)) + c
 
+# RMSE
+def rmse(y_true, y_pred):
+    return np.sqrt(np.mean((y_true - y_pred)**2))
+
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
     parser = argparse.ArgumentParser(description=description,
@@ -170,7 +174,7 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, a, b, c = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -185,7 +189,9 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['core_genes'] = core_genes
     kwinputs['n_gen'] = n_gen
     kwinputs['max_distances'] = max_distances
-    kwinputs['obs'] = obs
+    kwinputs['a'] = a
+    kwinputs['b'] = b
+    kwinputs['c'] = c
 
     meta = kwinputs['meta']
 
@@ -209,30 +215,50 @@ def process_result(completed_process, *inputs, **kwinputs):
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
     # Clean up the files after reading the data in
     os.remove(output_filename)
+
+    # get model to fit
+    a, b, c = kwinputs['a'], kwinputs['c'], kwinputs['c']
+    acc_fit = asymptotic_curve(simulations[:,0], a, b, c)
+    new_RMSE = rmse(simulations[:,1], acc_fit)
+
+    dist = new_RMSE
+
+    # # fit asymptotic curve, catch if curve fit fails
+    # try:
+    #     popt, pcov = curve_fit(asymptotic_curve, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0])
+    
+    #     # pull out values for distribution
+    #     a, b, c = popt
+    # except RuntimeError:
+    #     a, b, c = 1.0, 1.0, 1.0
+    
+    # # use scaling factor for fit
+    # dist = a
     
     # get observations
-    obs = kwinputs['obs']
+    #obs = kwinputs['obs']
 
-    # get maximum core and accessory for distibution
-    max_core = max(obs[0].max(), np.max(simulations[:,0]))
-    max_acc = max(obs[1].max(), np.max(simulations[:,1]))
-    #max_val = ma(max_core, max_acc)
+    # # get maximum core and accessory for distibution
+    # max_core = max(obs[0].max(), np.max(simulations[:,0]))
+    # max_acc = max(obs[1].max(), np.max(simulations[:,1]))
+    # #max_val = ma(max_core, max_acc)
     
-    # process distributions
-    sim_core = np.histogram(simulations[:,0], bins=200, range=(0, max_core))[0]
-    sim_acc = np.histogram(simulations[:,1], bins=200, range=(0, max_acc))[0]
-    sim_dist = (sim_core, sim_acc)
+    # # process distributions
+    # sim_core = np.histogram(simulations[:,0], bins=500, range=(0, max_core))[0]
+    # sim_acc = np.histogram(simulations[:,1], bins=500, range=(0, max_acc))[0]
+    # sim_dist = (sim_core, sim_acc)
 
-    obs_core = np.histogram(obs[0].to_numpy(), bins=200, range=(0, max_core))[0]
-    obs_acc = np.histogram(obs[1].to_numpy(), bins=200, range=(0, max_acc))[0]
-    obs_dist = (obs_core, obs_acc)
+    # obs_core = np.histogram(obs[0].to_numpy(), bins=500, range=(0, max_core))[0]
+    # obs_acc = np.histogram(obs[1].to_numpy(), bins=500, range=(0, max_acc))[0]
+    # obs_dist = (obs_core, obs_acc)
 
-    #js_core = js_distance(sim_dist, 0, obs_dist)
-    #js_pan = js_distance(sim_dist, 1, obs_dist)
-    was_dist = wasserstein_distance(sim_dist, obs_dist)
+    # js_core = js_distance(sim_dist, 0, obs_dist)
+    # js_pan = js_distance(sim_dist, 1, obs_dist)
+    # #was_dist = wasserstein_distance(sim_dist, obs_dist)
 
-    #dist = (js_core + js_pan) / 2
-    dist = was_dist
+    # dist = (js_core + js_pan) / 2
+    # #dist = was_dist
+    # #dist = js_pan
 
     # This will be passed to ELFI as the result of the command
     return dist
@@ -312,13 +338,21 @@ if __name__ == "__main__":
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
 
-    # # fit asymptotic curve
-    # popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0])
+    # fit asymptotic curve
+    popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0.0])
+    
+    # pull out values for distribution
+    a, b, c = popt
+    initial_rate = a * b
+    print(f"Scaling factor a: {a}")
+    print(f"Rate parameter b: {b}")
+    print(f"Intercept constant c: {c}")
+    print(f"Initial rate at x=0: {initial_rate}")
 
-    # # Calculate the initial rate at x=0
-    # a, b, c = popt
-    # initial_rate = a * b
-    # print(f"Initial rate at x=0: {initial_rate}")
+    acc_fit = asymptotic_curve(df["Core"].to_numpy(), a, b, c)
+    # print(acc_fit)
+    ori_RMSE = rmse(df["Accessory"].to_numpy(), acc_fit)
+    print(f"RMSE: {ori_RMSE}")
 
     # if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
     #     # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor 
@@ -360,7 +394,10 @@ if __name__ == "__main__":
     print("speed_fast set to: {}".format(speed_fast))
     print("max pan_mu: {}".format(df["Accessory"].max()))
 
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='pan_mu')
+    # determine maximum divergence possible for pangenome
+    pan_mu_upper = (pan_genes - core_genes) / pan_genes
+
+    elfi.Prior('uniform', 0.0, (0.0 + pan_mu_upper), model=m, name='pan_mu')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     #data = Y.generate(3)
@@ -368,7 +405,7 @@ if __name__ == "__main__":
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
-            'pan_mu' : (0, 1),
+            'pan_mu' : (0, pan_mu_upper),
             'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
@@ -382,19 +419,19 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs, name='sim', model=m, observed=0)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, a, b, c, name='sim', model=m, observed=ori_RMSE)
         m['sim'].uses_meta = True
 
         # use cityblock as only single entry to calculate distance
         elfi.Distance('cityblock', m['sim'], model=m, name='d')
-        elfi.Operation(np.log, m['d'], model=m, name='log_d')
+        #elfi.Operation(np.log, m['d'], model=m, name='log_d')
 
         # save model
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.ArrayPool(['proportion_fast', 'pan_mu', 'Y', 'd', 'log_d'], name="BOLFI_pool", prefix=save_path)
+        arraypool = elfi.ArrayPool(['proportion_fast', 'pan_mu', 'Y', 'd'], name="BOLFI_pool", prefix=save_path)
         
-        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+        mod = elfi.BOLFI(m['d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         #post = mod.fit(n_evidence=n_evidence)
@@ -435,11 +472,11 @@ if __name__ == "__main__":
         m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
         bounds = {
-            'pan_mu' : (0, 1),
+            'pan_mu' : (0, pan_mu_upper),
             'proportion_fast' : (0, 1),
             #'speed_fast' : (0, max_value),
         }
-        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+        mod = elfi.BOLFI(m['d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)

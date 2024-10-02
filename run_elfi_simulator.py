@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     ax.scatter(x, y, s=10, alpha=0.3)
 
-    popt, pcov = curve_fit(asymptotic_curve, x, y, p0=[1.0, 1.0, 0])
+    popt, pcov = curve_fit(asymptotic_curve, x, y, p0=[1.0, 1.0, 0.0])
 
     x_fit = np.linspace(0, x.max(), 100)
     y_fit = asymptotic_curve(x_fit, *popt)
@@ -143,7 +143,11 @@ if __name__ == "__main__":
     # Calculate the initial rate at x=0
     a, b, c = popt
     initial_rate = a * b
+    print(f"Scaling factor a: {a}")
+    print(f"Rate parameter b: {b}")
+    print(f"Intercept constant c: {c}")
     print(f"Initial rate at x=0: {initial_rate}")
+    
 
     ax.annotate(f'Initial rate: {initial_rate:.2f}', xy=(0, 0), xytext=(x_annotate, y_annotate),
              arrowprops=dict(facecolor='black', arrowstyle="->"),
