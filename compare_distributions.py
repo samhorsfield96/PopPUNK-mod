@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial import distance
 import seaborn as sns
 import pandas as pd
-from run_elfi import wasserstein_distance, js_distance
+from run_elfi import wasserstein_distance, js_distance, rmse, asymptotic_curve
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -41,6 +41,23 @@ def main():
 
     df1 = read_distfile(file1)
     df2 = read_distfile(file2)
+
+    # calculate RMSE between distribution fits
+    # fit asymptotic curve
+    popt, pcov = curve_fit(asymptotic_curve, df1["Core"], df1["Accessory"], p0=[1.0, 1.0, 0.0])
+    
+    # pull out values for distribution
+    a, b, c = popt
+
+    acc_fit1 = asymptotic_curve(df1['Core'], a, b, c)
+    RMSE1 = rmse(df1['Accessory'], acc_fit1)
+
+    acc_fit2 = asymptotic_curve(df2['Core'], a, b, c)
+    RMSE2 = rmse(df2['Accessory'], acc_fit2)
+
+    print("RMSE original: {}".format(str(RMSE1)))
+    print("RMSE new: {}".format(str(RMSE2)))
+    print("RMSE diff: {}".format(str(RMSE2 - RMSE1)))
 
     num_bins = 200
     #hist_range = (min_acc, max_acc)
