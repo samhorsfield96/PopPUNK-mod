@@ -271,7 +271,7 @@ if __name__ == "__main__":
     # #avg_gene_freq = 0.5
     # N_samples = 10
     # seed = 254
-    # distfile = "GPSv4_distances_sample1.txt"
+    # obs_file = "GPSv4_distances_sample1.txt"
     # threads = 4
     # mode = "BOLFI"
     # outpref = "test"
@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
     options = get_options()
     threads = options.threads
-    distfile = options.distfile
+    obs_file = options.distfile
     core_size = options.core_size
     pan_genes = options.pan_genes
     core_genes = options.core_genes
@@ -331,7 +331,7 @@ if __name__ == "__main__":
             elfi.set_client('native')
 
     # read in real files
-    df = read_distfile(distfile)
+    df = read_distfile(obs_file)
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
     max_hamming_core = float(df["Core"].max())
