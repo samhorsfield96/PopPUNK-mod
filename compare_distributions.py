@@ -3,6 +3,8 @@ from run_elfi import read_distfile
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
+from scipy.optimize import curve_fit
+
 import seaborn as sns
 import pandas as pd
 from run_elfi import wasserstein_distance, js_distance, rmse, asymptotic_curve
@@ -24,7 +26,11 @@ def get_options():
     IO.add_argument('--outpref',
             type=str,
             default="joint",
-            help='Output prefix. Default = "joint')
+            help='Output prefix. Default = "joint"')
+    IO.add_argument('--plot',
+            action="store_true",
+            default=False,
+            help='Generate plots')
 
     return parser.parse_args()
 
@@ -38,6 +44,7 @@ def main():
     file1 = options.file1
     file2 = options.file2
     outpref = options.outpref
+    plot = options.plot
 
     df1 = read_distfile(file1)
     df2 = read_distfile(file2)
@@ -59,12 +66,14 @@ def main():
     print("RMSE new: {}".format(str(RMSE2)))
     print("RMSE diff: {}".format(str(RMSE2 - RMSE1)))
 
-    num_bins = 200
+    num_bins = 500
     #hist_range = (min_acc, max_acc)
     #hist_range = (0, 1)
 
-    max_core = max(df1['Core'].max(), df2['Core'].max())
-    max_acc = max(df1['Accessory'].max(), df2['Accessory'].max())
+    #max_core = max(df1['Core'].max(), df2['Core'].max())
+    #max_acc = max(df1['Accessory'].max(), df2['Accessory'].max())
+    max_core = df1['Core'].max()
+    max_acc = df1['Accessory'].max()
 
     # process distributions
     core_1 = np.histogram(df1['Core'].to_numpy(), bins=num_bins, range=(0, max_core))[0]
@@ -91,23 +100,24 @@ def main():
     plt.legend(loc='upper right')
 
     # Save the plot
-    try:
-        plt.savefig(outpref + '_hist.png', dpi=300, bbox_inches='tight')
-        print(f"Plot saved as {outpref}_hist_.png")
-    except Exception as e:
-        print("Error saving the plot:", e)
+    if plot:
+        try:
+            plt.savefig(outpref + '_hist.png', dpi=300, bbox_inches='tight')
+            print(f"Plot saved as {outpref}_hist_.png")
+        except Exception as e:
+            print("Error saving the plot:", e)
 
-    plt.close()
-    
-    joint_df = pd.DataFrame({'x': df1["Accessory"], 'y': df2["Accessory"]})
-    #joint_df = pd.DataFrame({'x': x, 'y': y})
-    sns.jointplot(data=joint_df, x="x", y="y", alpha = 0.3)
+        plt.close()
+        
+        joint_df = pd.DataFrame({'x': df1["Accessory"], 'y': df2["Accessory"]})
+        #joint_df = pd.DataFrame({'x': x, 'y': y})
+        sns.jointplot(data=joint_df, x="x", y="y", alpha = 0.3)
 
-    try:
-        plt.savefig(outpref + '_jointplot.png', dpi=300, bbox_inches='tight')
-        print(f"Plot saved as {outpref}_jointplot.png")
-    except Exception as e:
-        print("Error saving the plot:", e)
+        try:
+            plt.savefig(outpref + '_jointplot.png', dpi=300, bbox_inches='tight')
+            print(f"Plot saved as {outpref}_jointplot.png")
+        except Exception as e:
+            print("Error saving the plot:", e)
 
 
 if __name__ == "__main__":
