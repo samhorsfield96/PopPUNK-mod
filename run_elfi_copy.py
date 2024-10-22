@@ -17,9 +17,6 @@ from scipy.stats import wasserstein_distance_nd
 def asymptotic_curve(x, a, b, c):
     return a * (1 - np.exp(-b * x)) + c
 
-def negative_exponential(x, b0, b1, b2, b3): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf
-    return b0 * (1 - np.exp(-b1 * (x - b2))) + b3
-
 # RMSE
 def rmse(y_true, y_pred):
     return np.sqrt(np.mean((y_true - y_pred)**2))
@@ -136,25 +133,25 @@ def read_distfile(filename):
     with open(filename, "r") as f:
         first_line = f.readline()
         if "," in first_line:
-            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
+            df = pd.read_csv(filename, index_col=None, header=None, sep=",")
         else:
-            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+            df = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
-    if len(obs.columns) == 2:
-        obs.rename(columns={obs.columns[0]: "Core",
-                           obs.columns[1]: "Accessory"}, inplace=True)
-    elif len(obs.columns) == 4:
+    if len(df.columns) == 2:
+        df.rename(columns={df.columns[0]: "Core",
+                           df.columns[1]: "Accessory"}, inplace=True)
+    elif len(df.columns) == 4:
         # rename columns
-        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
-                           obs.columns[3]: "Accessory"}, inplace=True)
+        df.rename(columns={df.columns[0]: "Sample1", df.columns[1] : "Sample2", df.columns[2]: "Core",
+                           df.columns[3]: "Accessory"}, inplace=True)
     else:
         print("Incorrect number of columns in distfile. Should be 2 or 4.")
         sys.exit(1)
 
-    obs['Core'] = pd.to_numeric(obs['Core'])
-    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
+    df['Core'] = pd.to_numeric(df['Core'])
+    df['Accessory'] = pd.to_numeric(df['Accessory'])
 
-    return obs
+    return df
 
 # process the summary statistic, 0 for core, 1 for accessory
 def js_distance(sim, col, obs):
@@ -177,7 +174,7 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -192,8 +189,7 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['core_genes'] = core_genes
     kwinputs['n_gen'] = n_gen
     kwinputs['max_distances'] = max_distances
-    kwinputs['max_hamming_core'] = max_hamming_core
-    kwinputs['max_jacc_pan'] = max_jacc_pan
+    kwinputs['obs_file'] = obs_file
 
     meta = kwinputs['meta']
 
@@ -204,59 +200,69 @@ def prepare_inputs(*inputs, **kwinputs):
         filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
 
     # Add the filenames to kwinputs
-    kwinputs['outpref'] = filename
+    kwinputs['output_filename'] = filename + '_out.txt'
 
     # Return new inputs that the command will receive
     return inputs, kwinputs
 
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
-    output_filename = kwinputs['outpref'] + ".tsv"
-    max_hamming_core = kwinputs['max_hamming_core']
-    max_jacc_pan = kwinputs['max_jacc_pan']
+    output_filename = kwinputs['output_filename']
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
     # Clean up the files after reading the data in
     os.remove(output_filename)
 
-    #obs_file = kwinputs['obs_file']
-    #obs = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+    obs_file = kwinputs['obs_file']
+    obs = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+
+    # get model to fit
+    # a, b, c = kwinputs['a'], kwinputs['c'], kwinputs['c']
+    # acc_fit = asymptotic_curve(simulations[:,0], a, b, c)
+    # new_RMSE = rmse(simulations[:,1], acc_fit)
+
+    # dist = new_RMSE
+
+    # # fit asymptotic curve, catch if curve fit fails
+    # try:
+    #     popt, pcov = curve_fit(asymptotic_curve, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0])
+    
+    #     # pull out values for distribution
+    #     a, b, c = popt
+    # except RuntimeError:
+    #     a, b, c = 1.0, 1.0, 1.0
+    
+    # # use scaling factor for fit
+    # dist = a
+    
+    # get observations
+    #obs = kwinputs['obs']
 
     # get maximum core and accessory for distibution
-    #max_core = max(np.max(obs[:,0]), np.max(simulations[:,0]))
-    #max_acc = max(np.max(obs[:,1]), np.max(simulations[:,1]))
+    max_core = max(np.max(obs[:,0]), np.max(simulations[:,0]))
+    max_acc = max(np.max(obs[:,1]), np.max(simulations[:,1]))
     #max_val = ma(max_core, max_acc)
     
     # process distributions
-    #sim_core = np.histogram(simulations[:,0], bins=500, range=(0, max_hamming_core))[0]
-    #sim_acc = np.histogram(simulations[:,1], bins=500, range=(0, max_jacc_pan))[0]
-    #sim = np.concatenate((sim_core, sim_acc), axis=0)
+    sim_core = np.histogram(simulations[:,0], bins=200, range=(0, max_core))[0]
+    sim_acc = np.histogram(simulations[:,1], bins=200, range=(0, max_acc))[0]
+    sim_dist = (sim_core, sim_acc)
 
-    try:
-        popt, pcov = curve_fit(negative_exponential, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0, 0.0])
-        b0, b1, b2, b3 = popt
-    except:
-        b0, b1, b2, b3 = 0.0, 0.0, 0.0, 0.0
-    
-    sim = np.array([b0, b1, b2, b3])
-    #sim = sim_acc
-    #sim_dist = (sim_core, sim_acc)
-
-    #obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
-    #obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
-    #obs_dist = (obs_core, obs_acc)
+    obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
+    obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
+    obs_dist = (obs_core, obs_acc)
 
     #js_core = js_distance(sim_dist, 0, obs_dist)
     #js_pan = js_distance(sim_dist, 1, obs_dist)
-    #was_dist = wasserstein_distance(sim_dist, obs_dist)
+    was_dist = wasserstein_distance(sim_dist, obs_dist)
 
     #dist = (js_core + js_pan) / 2
-    #dist = was_dist
+    dist = was_dist / 10000
     #dist = js_pan
 
     # This will be passed to ELFI as the result of the command
-    return sim
+    return dist
 
 if __name__ == "__main__":
     # #testing
@@ -325,14 +331,58 @@ if __name__ == "__main__":
             elfi.set_client('native')
 
     # read in real files
-    #obs = read_distfile(obs_file)
-    obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+    df = read_distfile(obs_file)
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    max_hamming_core = float(np.max(obs_df[:,0]))
+    max_hamming_core = float(df["Core"].max())
     max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
     core_mu = max_real_core
     print("core_mu set to: {}".format(core_mu))
+
+    # fit asymptotic curve
+    # popt, pcov = curve_fit(asymptotic_curve, df["Core"], df["Accessory"], p0=[1.0, 1.0, 0.0])
+    
+    # # pull out values for distribution
+    # a, b, c = popt
+    # initial_rate = a * b
+    # print(f"Scaling factor a: {a}")
+    # print(f"Rate parameter b: {b}")
+    # print(f"Intercept constant c: {c}")
+    # print(f"Initial rate at x=0: {initial_rate}")
+
+    # acc_fit = asymptotic_curve(df["Core"].to_numpy(), a, b, c)
+    # # print(acc_fit)
+    # ori_RMSE = rmse(df["Accessory"].to_numpy(), acc_fit)
+    # print(f"RMSE: {ori_RMSE}")
+
+    # if pan_mu == None or pan_mu < 0.0 or pan_mu > 1.0:
+    #     # detemine highest acc jaccard distance, convert to real space using Jukes-Cantor 
+    #     max_jaccard_acc = float(df["Accessory"].max())
+
+    #     # convert to hamming distance
+    #     # calculate the probability that two 0s are compared in the accessory genome
+    #     prob_0to0 = (1 - avg_gene_freq) ** 2
+    #     num_non_0 = round(pan_genes - (pan_genes * prob_0to0))
+    #     #print("num_non_0 set to: {}".format(num_non_0))
+        
+    #     # calculate number of differences in pangenome, use to calculate hamming distance
+    #     num_diff = round(num_non_0 * max_jaccard_acc)
+    #     #print("num_diff set to: {}".format(num_diff))
+    #     max_hamming_acc = num_diff / pan_genes
+    #     #print("max_hamming_acc set to: {}".format(max_hamming_acc))
+
+    #     max_real_acc = (-1/2) * np.log(1 - (2 * max_hamming_acc))
+    #     pan_mu = max_real_acc
+    
+    #print("pan_mu set to: {}".format(pan_mu))
+
+    #get observed data
+    #obs_core = df['Core']
+    #obs_pan = df['Accessory']
+
+    # calculate euclidean distance to origin
+    #obs = np.concatenate([obs_core, obs_acc])
+    #obs = (obs_core, obs_pan)
 
     # set up model
     m = elfi.ElfiModel(name='pansim_model')
@@ -343,8 +393,7 @@ if __name__ == "__main__":
         speed_fast = max_value
     
     print("speed_fast set to: {}".format(speed_fast))
-    max_jacc_pan = float(np.max(obs_df[:,1]))
-    print("max pan_mu: {}".format(max_jacc_pan))
+    print("max pan_mu: {}".format(df["Accessory"].max()))
 
     # determine maximum divergence possible for pangenome
     pan_mu_upper = (pan_genes - core_genes) / pan_genes
@@ -352,16 +401,7 @@ if __name__ == "__main__":
     elfi.Prior('uniform', 0.0, (0.0 + pan_mu_upper), model=m, name='pan_mu')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
-    # fit negative_exponential curve
-    popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0, 0.0])
-    b0, b1, b2, b3 = popt
-    obs = np.array([b0, b1, b2, b3])
-
-    # generate obs data and concantenate to form single input
-    #obs_core = np.histogram(obs_df[:,0], bins=500, range=(0, max_hamming_core))[0]
-    #obs_acc = np.histogram(obs_df[:,1], bins=500, range=(0, max_jacc_pan))[0]
-    #obs = np.concatenate((obs_core, obs_acc), axis=0)
-    #obs = obs_acc
+    #data = Y.generate(3)
 
     if run_mode == "sim":
         print("Simulating data...")
@@ -371,7 +411,7 @@ if __name__ == "__main__":
             #'speed_fast' : (0, max_value),
         }
 
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref}'
+        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename}'
 
         WF_sim = elfi.tools.external_operation(command,
                                         prepare_inputs=prepare_inputs,
@@ -380,11 +420,11 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, name='sim', model=m, observed=obs)
+        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, name='sim', model=m, observed=0)
         m['sim'].uses_meta = True
 
-        # use euclidean between
-        elfi.Distance('euclidean', m['sim'], model=m, name='d')
+        # use cityblock as only single entry to calculate distance
+        elfi.Distance('cityblock', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
 
         # save model
@@ -403,7 +443,7 @@ if __name__ == "__main__":
         plt.close()
 
         # plot MCMC traces
-        result.plot_traces(); 
+        result.plot_traces();
         plt.savefig(outpref + '_BOLFI_traces.png')
         plt.close()
 

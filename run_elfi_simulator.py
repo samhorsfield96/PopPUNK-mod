@@ -5,7 +5,7 @@ rng = np.random.default_rng()
 import subprocess
 from run_elfi import read_distfile
 import sys
-from run_elfi import asymptotic_curve
+from run_elfi import asymptotic_curve, negative_exponential
 from scipy.optimize import curve_fit
 
 def get_options():
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     pansim_exe = options.pansim_exe
     seed = options.seed
 
-    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --output {output_filename} --threads {threads}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, output_filename=outpref + ".txt", threads=threads)
+    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, outpref=outpref, threads=threads)
 
     print("Simulating...")
     try:
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("Generating figures...")
-    df = read_distfile(outpref + ".txt")
+    df = read_distfile(outpref + ".tsv")
 
     fig, ax = plt.subplots()
 
@@ -129,28 +129,27 @@ if __name__ == "__main__":
 
     ax.scatter(x, y, s=10, alpha=0.3)
 
-    popt, pcov = curve_fit(asymptotic_curve, x, y, p0=[1.0, 1.0, 0.0])
+    popt, pcov = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0, 0.0])
 
     x_fit = np.linspace(0, x.max(), 100)
-    y_fit = asymptotic_curve(x_fit, *popt)
+    y_fit = negative_exponential(x_fit, *popt)
     ax.plot(x_fit, y_fit, label=f"Fitted curve", color='red')
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
-    x_annotate = 0.6 * xlim[1]  # 60% of the x-axis range
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
     y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
 
     # Calculate the initial rate at x=0
-    a, b, c = popt
-    initial_rate = a * b
-    print(f"Scaling factor a: {a}")
-    print(f"Rate parameter b: {b}")
-    print(f"Intercept constant c: {c}")
-    print(f"Initial rate at x=0: {initial_rate}")
+    b0, b1, b2, b3 = popt
+    # print(f"Scaling factor a: {a}")
+    # print(f"Rate parameter b: {b}")
+    # print(f"Intercept constant c: {c}")
+    # print(f"Initial rate at x=0: {initial_rate}")
+    print("b0: {}, b1: {}, b2: {}, b3: {}".format(b0, b1, b2, b3))
     
 
-    ax.annotate(f'Initial rate: {initial_rate:.2f}', xy=(0, 0), xytext=(x_annotate, y_annotate),
-             arrowprops=dict(facecolor='black', arrowstyle="->"),
+    ax.annotate("b0: {}, b1: {},\nb2: {}, b3: {}".format(round(b0, 3), round(b1, 3), round(b2, 3), round(b3, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
              fontsize=10, color="green")
 
     ax.set_xlabel("Core distance")
