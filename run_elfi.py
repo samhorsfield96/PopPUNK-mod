@@ -17,8 +17,14 @@ from scipy.stats import wasserstein_distance_nd
 def asymptotic_curve(x, a, b, c):
     return a * (1 - np.exp(-b * x)) + c
 
-def negative_exponential(x, b0, b1, b2, b3): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf
-    return b0 * (1 - np.exp(-b1 * (x - b2))) + b3
+def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
+    return b0 * (1 - np.exp(-b1 * x)) + b2
+
+def negative_exponential2(x, b0, b1):
+    return b0 * (1 - np.exp(-b1 * x))
+
+def asymptotic_curve2(x, a, b, c):
+    return a - (a - b) * np.exp(-c * x)
 
 # RMSE
 def rmse(y_true, y_pred):
@@ -234,12 +240,12 @@ def process_result(completed_process, *inputs, **kwinputs):
     #sim = np.concatenate((sim_core, sim_acc), axis=0)
 
     try:
-        popt, pcov = curve_fit(negative_exponential, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0, 0.0])
-        b0, b1, b2, b3 = popt
+        popt, pcov = curve_fit(negative_exponential, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+        b0, b1, b2 = popt
     except:
-        b0, b1, b2, b3 = 0.0, 0.0, 0.0, 0.0
+        b0, b1, b2= 0.0, 0.0, 0.0
     
-    sim = np.array([b0, b1, b2, b3])
+    sim = np.array([b0, b1, b2])
     #sim = sim_acc
     #sim_dist = (sim_core, sim_acc)
 
@@ -353,9 +359,9 @@ if __name__ == "__main__":
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='proportion_fast')
 
     # fit negative_exponential curve
-    popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0, 0.0])
-    b0, b1, b2, b3 = popt
-    obs = np.array([b0, b1, b2, b3])
+    popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+    b0, b1, b2 = popt
+    obs = np.array([b0, b1, b2])
 
     # generate obs data and concantenate to form single input
     #obs_core = np.histogram(obs_df[:,0], bins=500, range=(0, max_hamming_core))[0]
@@ -384,7 +390,7 @@ if __name__ == "__main__":
         m['sim'].uses_meta = True
 
         # use euclidean between
-        elfi.Distance('euclidean', m['sim'], model=m, name='d')
+        elfi.Distance('canberra', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
 
         # save model

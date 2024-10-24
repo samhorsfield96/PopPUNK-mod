@@ -5,7 +5,7 @@ rng = np.random.default_rng()
 import subprocess
 from run_elfi import read_distfile
 import sys
-from run_elfi import asymptotic_curve, negative_exponential
+from run_elfi import asymptotic_curve2, negative_exponential, negative_exponential2
 from scipy.optimize import curve_fit
 
 def get_options():
@@ -129,11 +129,21 @@ if __name__ == "__main__":
 
     ax.scatter(x, y, s=10, alpha=0.3)
 
-    popt, pcov = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0, 0.0])
+    popt1, pco1v = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+
+    #popt2, pcov2 = curve_fit(negative_exponential2, x, y, p0=[1.0, 0.0])
+
+    #popt3, pcov3 = curve_fit(asymptotic_curve2, x, y, p0=[1.0, 1.0, 0.0])
 
     x_fit = np.linspace(0, x.max(), 100)
-    y_fit = negative_exponential(x_fit, *popt)
-    ax.plot(x_fit, y_fit, label=f"Fitted curve", color='red')
+    y_fit = negative_exponential(x_fit, *popt1)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    # y_fit = negative_exponential2(x_fit, *popt2)
+    # ax.plot(x_fit, y_fit, label=f"Negative exponential 2 param", color='blue')
+
+    # y_fit = asymptotic_curve2(x_fit, *popt3)
+    # ax.plot(x_fit, y_fit, label=f"Asmptotic 3 param", color='green')
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
@@ -141,16 +151,20 @@ if __name__ == "__main__":
     y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
 
     # Calculate the initial rate at x=0
-    b0, b1, b2, b3 = popt
+    b0, b1, b2 = popt1
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
     # print(f"Scaling factor a: {a}")
     # print(f"Rate parameter b: {b}")
     # print(f"Intercept constant c: {c}")
     # print(f"Initial rate at x=0: {initial_rate}")
-    print("b0: {}, b1: {}, b2: {}, b3: {}".format(b0, b1, b2, b3))
-    
+    # b0, b1 = popt2
+    # print("Negative exponential 2 param, b0: {}, b1: {}".format(b0, b1))
 
-    ax.annotate("b0: {}, b1: {},\nb2: {}, b3: {}".format(round(b0, 3), round(b1, 3), round(b2, 3), round(b3, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
-             fontsize=10, color="green")
+    # a, b, c = popt3
+    # print("Asymptotic 3 param, a: {}, b: {}, c: {}".format(a, b, c))
 
     ax.set_xlabel("Core distance")
     ax.set_ylabel("Accessory distance")
