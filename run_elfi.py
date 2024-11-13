@@ -75,16 +75,21 @@ def get_options():
                          'Default = "0.5" ')
     IO.add_argument('--samples',
                     type=int,
-                    default=1000,
-                    help='No. samples for posterior estimation. Default = 1000 ')
+                    default=100000,
+                    help='No. samples for posterior estimation. Default = 100000 ')
     IO.add_argument('--init_evidence',
                     type=int,
-                    default=5000,
+                    default=1000,
                     help='Number of initialization points sampled straight from the priors before starting to '
-                         'optimize the acquisition of points. Default = 5000 ')
+                         'optimize the acquisition of points. Default = 1000 ')
+    IO.add_argument('--threshold',
+                    type=float,
+                    default=None,
+                    help='The threshold (bandwidth) for posterior  '
+                         'Default = None ')
     IO.add_argument('--n_evidence',
                     type=int,
-                    default=5000,
+                    default=1500,
                     help='Evidence points requested (including init-evidence). '
                          'Default = 5000 ')
     IO.add_argument('--update-int',
@@ -315,6 +320,7 @@ if __name__ == "__main__":
     pan_mu = options.pan_mu
     speed_fast = options.speed_fast
     workdir = options.workdir
+    threshold = options.threshold
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -402,7 +408,7 @@ if __name__ == "__main__":
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         #post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
@@ -446,7 +452,7 @@ if __name__ == "__main__":
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold)
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
