@@ -12,7 +12,7 @@ import pickle
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from scipy.stats import wasserstein_distance_nd
-from scipy.special import logit
+#from scipy.special import logit
 
 # fit asymptotic curve using exponential decay
 def asymptotic_curve(x, a, b, c):
@@ -194,9 +194,8 @@ def prepare_inputs(*inputs, **kwinputs):
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
     kwinputs['core_mu'] = core_mu
-    # get actual values of pan_mu and proportion_fast
-    kwinputs['pan_mu'] = 1 / (1 + np.exp(-pan_mu))
-    kwinputs['proportion_fast'] = 1 / (1 + np.exp(-proportion_fast))
+    kwinputs['pan_mu'] = pan_mu
+    kwinputs['proportion_fast'] = proportion_fast
     kwinputs['speed_fast'] = speed_fast
     kwinputs['seed'] = seed
     kwinputs['pop_size'] = pop_size
@@ -364,9 +363,9 @@ if __name__ == "__main__":
     pan_mu_upper = (pan_genes - core_genes) / pan_genes
 
     # add small constant to deal with 0.0 and 1.0 being undefined
-    epsilon = 1e-6
-    elfi.Prior('uniform', logit(0.0 + epsilon), logit((0.0 + pan_mu_upper) - epsilon), model=m, name='pan_mu')
-    elfi.Prior('uniform', logit(0.0 + epsilon), logit(1.0 - epsilon), model=m, name='proportion_fast')
+    epsilon = 0.01
+    elfi.Prior('uniform', 0.0, 0.0 + pan_mu_upper, model=m, name='pan_mu')
+    elfi.Prior('uniform', epsilon, 1.0 - epsilon, model=m, name='proportion_fast')
 
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
@@ -382,8 +381,8 @@ if __name__ == "__main__":
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
-            'pan_mu' : (logit(0 + epsilon), logit(pan_mu_upper - epsilon)),
-            'proportion_fast' : (logit(0 + epsilon), logit(1.0 - epsilon)),
+            'pan_mu' : (0.0, pan_mu_upper),
+            'proportion_fast' : (epsilon, 1.0),
             #'speed_fast' : (0, max_value),
         }
 
