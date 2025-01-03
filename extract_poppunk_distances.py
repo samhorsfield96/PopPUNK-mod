@@ -103,9 +103,6 @@ if __name__ == "__main__":
 
     # open output file
     with open(args.outpref + "_distances.tsv", 'w') as oFile:
-        # Write header of output file
-        oFile.write("\t".join(['Core', 'Accessory']))
-        oFile.write("\n")
         # Write distances
         for i in range(X_sample.shape[0]):
             oFile.write("\t".join([str(X_sample[i,0]), str(X_sample[i,1])]))
