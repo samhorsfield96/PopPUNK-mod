@@ -67,8 +67,8 @@ def get_options():
                     help='Speed ratio at which a fast gene mutates over a slow gene. Default = None ')
     IO.add_argument('--n_gen',
                     type=int,
-                    default=100,
-                    help='Number of generations for Wright-Fisher model. Default = 100 ')
+                    default=200,
+                    help='Number of generations for Wright-Fisher model. Default = 200 ')
     IO.add_argument('--avg_gene_freq',
                     type=float,
                     default=0.5,
@@ -90,9 +90,9 @@ def get_options():
                          'Default = None ')
     IO.add_argument('--n_evidence',
                     type=int,
-                    default=1500,
+                    default=1000,
                     help='Evidence points requested (including init-evidence). '
-                         'Default = 5000 ')
+                         'Default = 1000 ')
     IO.add_argument('--update-int',
                 type=int,
                 default=10,
@@ -100,13 +100,13 @@ def get_options():
                         'Default = 10 ')
     IO.add_argument('--acq-noise-var',
                 type=float,
-                default=0.1,
+                default=0.01,
                 help='Defines the diagonal covariance of noise added to the acquired points. '
-                        'Default = 0.1 ')
+                        'Default = 0.01 ')
     IO.add_argument('--chains',
                 type=int,
                 default=4,
-                help='Number of chains for NUTS sampler. '
+                help='Number of chains for sampler. '
                         'Default = 4 ')
     IO.add_argument('--distfile',
                     required=True,
@@ -318,7 +318,7 @@ if __name__ == "__main__":
     max_distances = options.max_distances
     pansim_exe = options.pansim_exe
     chains = options.chains
-    pan_mu = options.pan_mu
+    #pan_mu = options.pan_mu
     speed_fast = options.speed_fast
     workdir = options.workdir
     threshold = options.threshold
