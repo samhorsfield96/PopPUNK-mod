@@ -13,6 +13,9 @@ def get_options():
     parser.add_argument('--core', help='Core gene frequency threshold (default = 0.95)',
                                     type=float,
                                     default=0.95)
+    parser.add_argument('--min-freq', help='Minimum gene frequency to be counted. Can be integer (absolute count) or decimal (frequency). (default = 0.0)',
+                                    type=float,
+                                    default=0.0)
     parser.add_argument('--output', help='Name of output file',
                                     required = True)
 
@@ -44,32 +47,53 @@ def main():
             token_set = set(abs(int(x)) for x in token_list if x != "_")
             #print(token_set)
 
-            # get number of genes found in genome
-            genome_size_counts.append(len(token_set))
-
             # count genes in genome
             for token in token_set:
                 gene_counts[token] += 1
     
-    # get pangenome statistics
-    pangenome_size = len(gene_counts)
-    #print(pangenome_size)
+    pangenome_size = 0
+    num_genes_dropped = 0
+    genes_dropped = set()
 
     # count core genes
+    if args.min_freq >= 1.0:
+        min_threshold = int(args.min_freq)
+    else:
+        min_threshold = num_genomes * args.min_freq
     core_threshold = num_genomes * args.core
     num_core = 0
     for key, entry in gene_counts.items():
+        if entry >= min_threshold:
+            pangenome_size += 1
+        else:
+            # if below min-freq, skip
+            genes_dropped.add(key)
+            continue
+
         if entry >= core_threshold:
             num_core += 1
-    #print(num_core)
+        
+    # get average genome size in terms of genes, excluding dropped genes
+    with open(args.infile, "r") as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            # get genome tokens
+            token_list = line.strip().split("\t")[-1].split(" ")
 
-    # get average genome size in terms of genes
+            # get absolute tokens, ignore paralogs and genes removed
+            token_set = set(abs(int(x)) for x in token_list if x != "_") - genes_dropped
+
+            # get number of genes found in genome
+            genome_size_counts.append(len(token_set))
+
     avg_genome_size = statistics.mean([(x / pangenome_size) for x in genome_size_counts])
     #print(avg_genome_size)
 
     # print summary file
     with open(args.output, "w") as o:
-        o.write(f"pan_genes\t{pangenome_size}\ncore_genes\t{num_core}\navg_gene_freq\t{avg_genome_size}")
+        o.write(f"pan_genes\t{pangenome_size}\ncore_genes\t{num_core}\navg_gene_freq\t{avg_genome_size}\ngenes_below_min_freq\t{len(genes_dropped)}")
 
 if __name__ == "__main__":
     main()
