@@ -370,14 +370,35 @@ if __name__ == "__main__":
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
     b0, b1, b2 = popt
+
+    # plot fit
+    fig, ax = plt.subplots()
+    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
+    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
+    y_fit = negative_exponential(x_fit, *popt)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+    # Calculate the initial rate at x=0
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
+
+    ax.set_xlabel("Core distance")
+    ax.set_ylabel("Accessory distance")
+
+    fig.savefig(outpref + "_curve_fit.png")
+    plt.close()
+
+    # save observed parameters
     obs = np.array([b0, b1, b2])
 
-    # generate obs data and concantenate to form single input
-    #obs_core = np.histogram(obs_df[:,0], bins=500, range=(0, max_hamming_core))[0]
-    #obs_acc = np.histogram(obs_df[:,1], bins=500, range=(0, max_jacc_pan))[0]
-    #obs = np.concatenate((obs_core, obs_acc), axis=0)
-    #obs = obs_acc
-
+    # simulate and fit
     if run_mode == "sim":
         print("Simulating data...")
         bounds = {
