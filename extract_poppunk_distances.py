@@ -6,6 +6,8 @@ import pickle
 import sys, os
 import numpy as np
 import argparse
+import matplotlib.pyplot as plt
+from run_elfi import negative_exponential
 
 # command line parsing
 def get_options():
@@ -107,3 +109,31 @@ if __name__ == "__main__":
         for i in range(X_sample.shape[0]):
             oFile.write("\t".join([str(X_sample[i,0]), str(X_sample[i,1])]))
             oFile.write("\n")
+
+    # plot fit
+    fig, ax = plt.subplots()
+    ax.scatter(X_sample[:,0], X_sample[:,1], s=10, alpha=0.2)
+    # try negative exponential fit
+    try:
+        x_fit = np.linspace(0, X_sample[:,0].max(), 100)
+        y_fit = negative_exponential(x_fit, *popt)
+        ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+        y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+        # Calculate the initial rate at x=0
+        print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+        ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+                fontsize=10, color="green")
+    except:
+        pass
+
+    ax.set_xlabel("Core distance")
+    ax.set_ylabel("Accessory distance")
+
+    fig.savefig(args.outpref + "_curve_fit.png")
+    plt.close()
