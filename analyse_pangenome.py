@@ -16,8 +16,10 @@ def get_options():
     parser.add_argument('--min-freq', help='Minimum gene frequency to be counted. Can be integer (absolute count) or decimal (frequency). (default = 0.0)',
                                     type=float,
                                     default=0.0)
-    parser.add_argument('--output', help='Name of output file',
+    parser.add_argument('--outpref', help='Output prefix',
                                     required = True)
+    parser.add_argument('--annotation', help='Annotation file from pangenome_LLM/annotate_tokens.py',
+                                    default=None)
 
     return parser.parse_args()
 
@@ -51,6 +53,8 @@ def main():
             for token in token_set:
                 gene_counts[token] += 1
     
+    #print(gene_counts)
+
     pangenome_size = 0
     num_genes_dropped = 0
     genes_dropped = set()
@@ -62,17 +66,46 @@ def main():
         min_threshold = num_genomes * args.min_freq
     core_threshold = num_genomes * args.core
     num_core = 0
-    for key, entry in gene_counts.items():
-        if entry >= min_threshold:
+
+    for token, count in gene_counts.items():
+        if count >= min_threshold:
             pangenome_size += 1
         else:
             # if below min-freq, skip
-            genes_dropped.add(key)
+            genes_dropped.add(token)
             continue
 
-        if entry >= core_threshold:
+        if count >= core_threshold:
             num_core += 1
-        
+    
+    # annotate clusters
+    annotations = {}
+    annotations_title = ""
+    if args.annotation is not None:
+        with open(args.annotation, "r") as f:
+            annotations_title = f.readline()
+            annotations_title = annotations_title.rstrip().split("\t")
+            annotations_title = "\t".join(annotations_title[2:])
+            for line in f:
+                split_line = line.rstrip().split("\t")
+                token = abs(int(split_line[1]))
+                #print(token)
+
+                if token in gene_counts:
+                    #print(token)
+                    count = gene_counts[token]
+                    pan_type = "accessory"
+                    if count < min_threshold:
+                        pan_type = "rare"
+
+                    if count >= core_threshold:
+                        pan_type = "core"
+
+                    prevalance = round(float(count) / float(num_genomes), 5)
+                    annotations[token] = split_line[2:]
+                    annotations[token].append(str(prevalance))
+                    annotations[token].append(pan_type)
+
     # get average genome size in terms of genes, excluding dropped genes
     with open(args.infile, "r") as f:
         while True:
@@ -91,8 +124,16 @@ def main():
     avg_genome_size = statistics.mean([(x / pangenome_size) for x in genome_size_counts])
     #print(avg_genome_size)
 
+    # print per gene annotation
+    if args.annotation is not None:
+        with open(args.outpref + "_annotations.tsv", "w") as o:
+            o.write("Token\t" + annotations_title + "\tFrequency\tType\n")
+            for token, entry in annotations.items():
+                o.write(str(token) + "\t" + "\t".join(entry) + "\n")
+    
+    
     # print summary file
-    with open(args.output, "w") as o:
+    with open(args.outpref + "_summary.txt", "w") as o:
         o.write(f"pan_genes\t{pangenome_size}\ncore_genes\t{num_core}\navg_gene_freq\t{avg_genome_size}\ngenes_below_min_freq\t{len(genes_dropped)}")
 
 if __name__ == "__main__":
