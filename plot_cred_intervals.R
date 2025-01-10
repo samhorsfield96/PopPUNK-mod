@@ -243,6 +243,8 @@ prop_df$Name <- factor(prop_df$Name, levels = prop_df$Name)
   sub_df$prop_factor <- as.factor(sub_df$prop)
   sub_df$facet_group <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), sep = "\n")
   sub_df$mu_factor <- paste("Mu: ", sub_df$mu, sep = "")
+  sub_df$facet_group_mu <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), paste("Mu: ", sub_df$mu, sep = ""), sep = "\n")
+  sub_df$facet_group_prop <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), paste("Prop: ", sub_df$prop, sep = ""), sep = "\n")
   
   sub_df$range_size <- sub_df$Cred_97.5 - sub_df$Cred_2.5
   
@@ -376,6 +378,137 @@ prop_df$Name <- factor(prop_df$Name, levels = prop_df$Name)
   p
   
   ggsave("pan_mu_cred_interval_gridsearch.png", width = 10, height = 12)
+  
+  # get sensitivity
+  # overall
+  {
+    df1 <- prop_df %>% 
+      group_by(core, pan, freq, facet_group, Param) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"), 
+        range_size = mean(range_size)
+      )
+    df2 <- pan_mu_df %>% 
+      group_by(core, pan, freq, facet_group, Param) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"),
+        range_size = mean(range_size)
+      )
+    df3 <- rbind(df1, df2)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
+      geom_col() + facet_grid(Param~., scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("overall_sensitivity.png", width = 9, height = 6)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
+      geom_col() + facet_grid(Param~., scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("overall_cred_interval_size.png", width = 9, height = 6)
+  }
+  
+  # by mu
+  {
+    df1 <- prop_df %>% 
+      group_by(core, pan, freq, facet_group, Param, mu) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"), 
+        range_size = mean(range_size)
+      )
+    df2 <- pan_mu_df %>% 
+      group_by(core, pan, freq, facet_group, Param, mu) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"),
+        range_size = mean(range_size)
+      )
+    df3 <- rbind(df1, df2)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
+      geom_col() + facet_grid(Param~mu, scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("by_mu_sensitivity.png", width = 14, height = 6)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
+      geom_col() + facet_grid(Param~mu, scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("by_mu_cred_interval_size.png", width = 14, height = 6)
+  }
+  
+  # by prop
+  {
+    df1 <- prop_df %>% 
+      group_by(core, pan, freq, facet_group, Param, prop) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"),
+        range_size = mean(range_size)
+      )
+    df2 <- pan_mu_df %>% 
+      group_by(core, pan, freq, facet_group, Param, prop) %>%
+      summarize(
+        Perc_correct = mean(in_range == "Within range"),
+        range_size = mean(range_size)
+      )
+    
+    df3 <- rbind(df1, df2)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
+      geom_col() + facet_grid(prop~Param, scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("by_prop_sensitivity.png", width = 14, height = 6)
+    
+    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
+      geom_col() + facet_grid(prop~Param, scales = "free_x") + 
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+      theme_light() + 
+      theme(strip.text = element_text(color = "white", size = 12),
+            #strip.text.y.right = element_text(angle = 0),
+            axis.title=element_text(size=14,face="bold"),
+            axis.text=element_text(size=10),
+            legend.title=element_text(size=12, face="bold"), 
+            legend.text=element_text(size=12))
+    p
+    ggsave("by_prop_cred_interval_size.png", width = 14, height = 6)
+  }
 }
 
 
