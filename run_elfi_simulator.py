@@ -55,6 +55,20 @@ def get_options():
                     default=0.5,
                     help='Average gene frequency in accessory genome. '
                          'Default = "0.5" ')
+    IO.add_argument('--HR_rate',
+                    type=float,
+                    default=0.0,
+                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
+                         'Default=0.0 ')
+    IO.add_argument('--HGT_rate',
+                    type=float,
+                    default=0.0,
+                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
+                         'Default=0.0 ')
+    IO.add_argument('--competition',
+                    action='store_true',
+                    default=False,
+                    help='Run simulator with competition.')
     IO.add_argument('--max_distances',
                     type=int,
                     default=100000,
@@ -108,8 +122,15 @@ if __name__ == "__main__":
     outpref = options.outpref
     pansim_exe = options.pansim_exe
     seed = options.seed
+    HR_rate = options.HR_rate
+    HGT_rate = options.HGT_rate
+    competition = options.competition
 
-    command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, outpref=outpref, threads=threads)
+    if competition:
+        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
+    else:
+        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
+
 
     print("Simulating...")
     try:

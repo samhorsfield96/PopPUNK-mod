@@ -340,6 +340,7 @@ if __name__ == "__main__":
     threshold = options.threshold
     HR_rate = options.HR_rate
     HGT_rate = options.HGT_rate
+    competition = options.competition
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -554,25 +555,25 @@ if __name__ == "__main__":
                     'pan_mu' : (0.0, pan_mu_upper),
                     'proportion_fast' : (epsilon, 1.0),
                 }
-            elif HR_rate != None and HGT_rate == None:
-                bounds = {
-                    'pan_mu' : (0.0, pan_mu_upper),
-                    'proportion_fast' : (epsilon, 1.0),
-                    'HGT_rate' : (0.0, recomb_max),
-                }
-            elif HR_rate == None and HGT_rate != None:
-                bounds = {
-                    'pan_mu' : (0.0, pan_mu_upper),
-                    'proportion_fast' : (epsilon, 1.0),
-                    'HR_rate' : (0.0, recomb_max),
-                }
-            else:
-                bounds = {
-                    'pan_mu' : (0.0, pan_mu_upper),
-                    'proportion_fast' : (epsilon, 1.0),
-                    'HR_rate' : (0.0, recomb_max),
-                    'HGT_rate' : (0.0, recomb_max),
-                }
+        elif HR_rate != None and HGT_rate == None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HGT_rate' : (0.0, recomb_max),
+            }
+        elif HR_rate == None and HGT_rate != None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+            }
+        else:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+                'HGT_rate' : (0.0, recomb_max),
+            }
 
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
