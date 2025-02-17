@@ -74,6 +74,20 @@ def get_options():
                     default=0.5,
                     help='Average gene frequency in accessory genome.'
                          'Default = "0.5" ')
+    IO.add_argument('--HR_rate',
+                    type=float,
+                    default=None,
+                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
+                         'If unspecified, will fit parameter. ')
+    IO.add_argument('--HGT_rate',
+                    type=float,
+                    default=None,
+                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
+                         'If unspecified, will fit parameter. ')
+    IO.add_argument('--competition',
+                    action='store_true',
+                    default=False,
+                    help='Run simulator with competition.')
     IO.add_argument('--samples',
                     type=int,
                     default=100000,
@@ -189,7 +203,7 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan = inputs
+    avg_gene_freq, pan_mu, proportion_fast, speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, HGT_rate, = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -206,6 +220,8 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['max_distances'] = max_distances
     kwinputs['max_hamming_core'] = max_hamming_core
     kwinputs['max_jacc_pan'] = max_jacc_pan
+    kwinputs['HR_rate'] = HR_rate
+    kwinputs['HGT_rate'] = HGT_rate
 
     meta = kwinputs['meta']
 
@@ -322,6 +338,8 @@ if __name__ == "__main__":
     speed_fast = options.speed_fast
     workdir = options.workdir
     threshold = options.threshold
+    HR_rate = options.HR_rate
+    HGT_rate = options.HGT_rate
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -367,6 +385,13 @@ if __name__ == "__main__":
     elfi.Prior('uniform', 0.0, 0.0 + pan_mu_upper, model=m, name='pan_mu')
     elfi.Prior('uniform', epsilon, 1.0 - epsilon, model=m, name='proportion_fast')
 
+    # set as arbitarily high value, 100 events per core genome mutation
+    recomb_max = 100.0
+    if HGT_rate == None:
+        elfi.Prior('uniform', 0.0, recomb_max, model=m, name='HGT_rate')
+    if HR_rate == None:
+        elfi.Prior('uniform', 0.0, recomb_max, model=m, name='HR_rate')
+
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
     b0, b1, b2 = popt
@@ -401,13 +426,11 @@ if __name__ == "__main__":
     # simulate and fit
     if run_mode == "sim":
         print("Simulating data...")
-        bounds = {
-            'pan_mu' : (0.0, pan_mu_upper),
-            'proportion_fast' : (epsilon, 1.0),
-            #'speed_fast' : (0, max_value),
-        }
 
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref}'
+        if competition:
+            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate} --competition'
+        else:
+            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
 
         WF_sim = elfi.tools.external_operation(command,
                                         prepare_inputs=prepare_inputs,
@@ -416,7 +439,37 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
-        elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, name='sim', model=m, observed=obs)
+        if HR_rate != None and HGT_rate != None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+            }
+
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
+        elif HR_rate != None and HGT_rate == None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HGT_rate' : (0.0, recomb_max),
+            }
+
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
+        elif HR_rate == None and HGT_rate != None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+            }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
+        else:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+                'HGT_rate' : (0.0, recomb_max),
+            }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['pan_mu'], m['proportion_fast'], speed_fast, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
+
         m['sim'].uses_meta = True
 
         # use euclidean between
@@ -426,7 +479,35 @@ if __name__ == "__main__":
         # save model
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d', 'pan_mu'], name="BOLFI_pool", prefix=save_path)
+
+        if HR_rate != None and HGT_rate != None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+            }
+            arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d', 'pan_mu'], name="BOLFI_pool", prefix=save_path)
+        elif HR_rate != None and HGT_rate == None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HGT_rate' : (0.0, recomb_max),
+            }
+            arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d', 'pan_mu', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
+        elif HR_rate == None and HGT_rate != None:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+            }
+            arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d', 'pan_mu', 'HR_rate'], name="BOLFI_pool", prefix=save_path)
+        else:
+            bounds = {
+                'pan_mu' : (0.0, pan_mu_upper),
+                'proportion_fast' : (epsilon, 1.0),
+                'HR_rate' : (0.0, recomb_max),
+                'HGT_rate' : (0.0, recomb_max),
+            }
+            arraypool = elfi.ArrayPool(['proportion_fast', 'Y', 'd', 'log_d', 'pan_mu', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
         
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
@@ -468,11 +549,31 @@ if __name__ == "__main__":
 
         m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
 
-        bounds = {
-            'pan_mu' : (0, pan_mu_upper),
-            'proportion_fast' : (0, 1),
-            #'speed_fast' : (0, max_value),
-        }
+        if HR_rate != None and HGT_rate != None:
+                bounds = {
+                    'pan_mu' : (0.0, pan_mu_upper),
+                    'proportion_fast' : (epsilon, 1.0),
+                }
+            elif HR_rate != None and HGT_rate == None:
+                bounds = {
+                    'pan_mu' : (0.0, pan_mu_upper),
+                    'proportion_fast' : (epsilon, 1.0),
+                    'HGT_rate' : (0.0, recomb_max),
+                }
+            elif HR_rate == None and HGT_rate != None:
+                bounds = {
+                    'pan_mu' : (0.0, pan_mu_upper),
+                    'proportion_fast' : (epsilon, 1.0),
+                    'HR_rate' : (0.0, recomb_max),
+                }
+            else:
+                bounds = {
+                    'pan_mu' : (0.0, pan_mu_upper),
+                    'proportion_fast' : (epsilon, 1.0),
+                    'HR_rate' : (0.0, recomb_max),
+                    'HGT_rate' : (0.0, recomb_max),
+                }
+
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
@@ -488,7 +589,7 @@ if __name__ == "__main__":
         # plt.close()
 
         #plot MCMC traces
-        result.plot_traces();
+        result.plot_traces()
         plt.savefig(outpref + '_BOLFI_traces.png')
         plt.close()
 
