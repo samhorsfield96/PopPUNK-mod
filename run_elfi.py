@@ -354,8 +354,8 @@ if __name__ == "__main__":
 
     # add small constant to deal with 0.0 and 1.0 being undefined
     epsilon = 0.01
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes2')
+    elfi.Prior('loguniform', 1e-9, 1.0 - 1e-9, model=m, name='rate_genes1')
+    elfi.Prior('loguniform', 1e-9, 1.0 - 1e-9, model=m, name='rate_genes2')
     elfi.Prior('uniform', 0.0, 0.5, model=m, name='prop_genes2')
 
     # set as arbitarily high value, 100 events per core genome mutation
