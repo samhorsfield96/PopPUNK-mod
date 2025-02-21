@@ -5,7 +5,7 @@ rng = np.random.default_rng()
 import subprocess
 from run_elfi import read_distfile
 import sys
-from run_elfi import asymptotic_curve2, negative_exponential, negative_exponential2
+from run_elfi import negative_exponential
 from scipy.optimize import curve_fit
 
 def get_options():
@@ -151,19 +151,9 @@ if __name__ == "__main__":
 
     popt1, pco1v = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
 
-    #popt2, pcov2 = curve_fit(negative_exponential2, x, y, p0=[1.0, 0.0])
-
-    #popt3, pcov3 = curve_fit(asymptotic_curve2, x, y, p0=[1.0, 1.0, 0.0])
-
     x_fit = np.linspace(0, x.max(), 100)
     y_fit = negative_exponential(x_fit, *popt1)
     ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
-
-    # y_fit = negative_exponential2(x_fit, *popt2)
-    # ax.plot(x_fit, y_fit, label=f"Negative exponential 2 param", color='blue')
-
-    # y_fit = asymptotic_curve2(x_fit, *popt3)
-    # ax.plot(x_fit, y_fit, label=f"Asmptotic 3 param", color='green')
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
