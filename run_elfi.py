@@ -186,7 +186,7 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, HGT_rate, = inputs
+    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -201,8 +201,6 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['core_genes'] = core_genes
     kwinputs['n_gen'] = n_gen
     kwinputs['max_distances'] = max_distances
-    kwinputs['max_hamming_core'] = max_hamming_core
-    kwinputs['max_jacc_pan'] = max_jacc_pan
     kwinputs['HR_rate'] = HR_rate
     kwinputs['HGT_rate'] = HGT_rate
 
@@ -223,8 +221,6 @@ def prepare_inputs(*inputs, **kwinputs):
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['outpref'] + ".tsv"
-    max_hamming_core = kwinputs['max_hamming_core']
-    max_jacc_pan = kwinputs['max_jacc_pan']
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
@@ -420,7 +416,7 @@ if __name__ == "__main__":
                 'prop_genes2' : (0.0, 0.5),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
                 'rate_genes1' : (0.0, 1.0),
@@ -429,7 +425,7 @@ if __name__ == "__main__":
                 'HGT_rate' : (0.0, recomb_max),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
                 'rate_genes1' : (0.0, 1.0),
@@ -437,7 +433,7 @@ if __name__ == "__main__":
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
         else:
             bounds = {
                 'rate_genes1' : (0.0, 1.0),
@@ -446,7 +442,7 @@ if __name__ == "__main__":
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, max_hamming_core, max_jacc_pan, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
 
         m['sim'].uses_meta = True
 
