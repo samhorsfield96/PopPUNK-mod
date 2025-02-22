@@ -32,12 +32,12 @@ def get_options():
                     help='Maximum pairwise distance for core genome. Default = 0.05 ')
     IO.add_argument('--rate_genes1',
                     type=float,
-                    default=0.0000000001,
-                    help='Proportion of accessory pangenome that mutates per generation in gene compartment 1. Must be >= 0.0. Default = 0.0000000001 ')
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 1. Must be >= 0.0. Default = 10.0 ')
     IO.add_argument('--rate_genes2',
                     type=float,
-                    default=0.0001,
-                    help='Proportion of accessory pangenome that mutates per generation in gene compartment 2. Must be >= 0.0. Default = 0.0001')
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 2. Must be >= 0.0. Default = 10.0')
     IO.add_argument('--prop_genes2',
                     type=float,
                     default=2.0,

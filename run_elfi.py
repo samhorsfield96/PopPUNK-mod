@@ -351,11 +351,10 @@ if __name__ == "__main__":
     # set up model
     m = elfi.ElfiModel(name='pansim_model')
 
-
-    # add small constant to deal with 0.0 and 1.0 being undefined
-    epsilon = 0.01
-    elfi.Prior('loguniform', 1e-9, 1.0 - 1e-9, model=m, name='rate_genes1')
-    elfi.Prior('loguniform', 1e-9, 1.0 - 1e-9, model=m, name='rate_genes2')
+    # set max mutation rate to each gene being gained/lost once per generation
+    max_mu = pan_genes - core_genes
+    elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
+    elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes2')
     elfi.Prior('uniform', 0.0, 0.5, model=m, name='prop_genes2')
 
     # set as arbitarily high value, 100 events per core genome mutation
