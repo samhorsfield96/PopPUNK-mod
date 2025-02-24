@@ -247,7 +247,8 @@ def process_result(completed_process, *inputs, **kwinputs):
     except:
         b0, b1, b2, b0_err, b1_err, b2_err = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     
-    sim = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
+    #sim = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
+    sim = np.array([b0, b1, b2])
     #sim = sim_acc
     #sim_dist = (sim_core, sim_acc)
 
@@ -391,7 +392,8 @@ if __name__ == "__main__":
     plt.close()
 
     # save observed parameters
-    obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
+    #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
+    obs = np.array([b0, b1, b2])
 
     # simulate and fit
     if run_mode == "sim":
