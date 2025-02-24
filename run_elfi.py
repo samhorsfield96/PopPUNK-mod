@@ -347,8 +347,8 @@ if __name__ == "__main__":
     # set up model
     m = elfi.ElfiModel(name='pansim_model')
 
-    # set max mutation rate to each gene being gained/lost once per generation
-    max_mu = pan_genes - core_genes
+    # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
+    max_mu = (pan_genes - core_genes) / n_gen
     elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
     elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes2')
     elfi.Prior('uniform', 0.0, 0.5, model=m, name='prop_genes2')
@@ -411,16 +411,16 @@ if __name__ == "__main__":
 
         if HR_rate != None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
             }
 
             elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HGT_rate' : (0.0, recomb_max),
             }
@@ -428,16 +428,16 @@ if __name__ == "__main__":
             elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
             }
             elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], m['rate_genes2'], m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
         else:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
@@ -456,31 +456,31 @@ if __name__ == "__main__":
 
         if HR_rate != None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
             }
             arraypool = elfi.ArrayPool(['rate_genes2', 'Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HGT_rate' : (0.0, recomb_max),
             }
             arraypool = elfi.ArrayPool(['rate_genes2', 'Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
             }
             arraypool = elfi.ArrayPool(['rate_genes2', 'Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
         else:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
@@ -529,27 +529,27 @@ if __name__ == "__main__":
 
         if HR_rate != None and HGT_rate != None:
                 bounds = {
-                    'rate_genes1' : (0.0, 1.0),
-                    'rate_genes2' : (0.0, 1.0),
+                    'rate_genes1' : (0.0, max_mu),
+                    'rate_genes2' : (0.0, max_mu),
                 }
         elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HGT_rate' : (0.0, recomb_max),
             }
         elif HR_rate == None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
             }
         else:
             bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'rate_genes2' : (0.0, 1.0),
+                'rate_genes1' : (0.0, max_mu),
+                'rate_genes2' : (0.0, max_mu),
                 'prop_genes2' : (0.0, 0.5),
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
