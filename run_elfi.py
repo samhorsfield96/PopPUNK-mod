@@ -384,7 +384,7 @@ if __name__ == "__main__":
     m = elfi.ElfiModel(name='pansim_model')
 
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
-    max_mu = pan_genes - core_genes / n_gen
+    max_mu = (pan_genes - core_genes) / n_gen
     elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
     
@@ -393,7 +393,7 @@ if __name__ == "__main__":
 
     # constrained prior to ensure rate_genes2 is set to 0 if prop_genes2 == 0. Add epsilon to ensure rate_genes2 is always > 1
     #elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes2')
-    epsilon = 0.1
+    #epsilon = 0.1
     #custom_prior = ConditionalUniformPrior(lower=epsilon, upper=max_mu - epsilon, name="custom_prior")
     #elfi.Prior(custom_prior, m['prop_genes2'], model=m, name='rate_genes2')
 
