@@ -386,7 +386,7 @@ if __name__ == "__main__":
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
     max_mu = (pan_genes - core_genes) / n_gen
     elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
+    elfi.Prior('loguniform', 0.0, 1.0, model=m, name='prop_genes2')
     
     # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
     rate_genes2 = (pan_genes - core_genes) * 10
