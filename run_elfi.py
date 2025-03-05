@@ -99,6 +99,11 @@ def get_options():
                     default=None,
                     help='HGT rate, as number of accessory sites transferred per core genome mutation.'
                          'If unspecified, will fit parameter. ')
+    IO.add_argument('--recomb_max',
+                    type=float,
+                    default=10.0,
+                    help='Maximum HGT and HR rate for parameterisation, as number of transfer events transferred per core genome mutation.'
+                         'Default = 10.0. ')
     IO.add_argument('--competition',
                     action='store_true',
                     default=False,
@@ -242,10 +247,10 @@ def prepare_inputs(*inputs, **kwinputs):
     # Prepare a unique filename for parallel settings
     if workdir != None:
         filename = workdir + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
-        #filename = workdir + f'/{rate_genes1}_{rate_genes2}_{prop_genes2}'
+        #filename = workdir + f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
     else:
         filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
-        #filename = f'/{rate_genes1}_{rate_genes2}_{prop_genes2}'
+        #filename = f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
 
     # Add the filenames to kwinputs
     kwinputs['outpref'] = filename
@@ -385,8 +390,9 @@ if __name__ == "__main__":
 
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
     max_mu = (pan_genes - core_genes) / n_gen
+    epsilon = (10**-6)
     elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
-    elfi.Prior('loguniform', 0.0, 1.0, model=m, name='prop_genes2')
+    elfi.Prior('loguniform', 0.0 + epsilon, 1.0 - epsilon, model=m, name='prop_genes2')
     
     # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
     rate_genes2 = (pan_genes - core_genes) * 10
@@ -397,8 +403,8 @@ if __name__ == "__main__":
     #custom_prior = ConditionalUniformPrior(lower=epsilon, upper=max_mu - epsilon, name="custom_prior")
     #elfi.Prior(custom_prior, m['prop_genes2'], model=m, name='rate_genes2')
 
-    # set as arbitarily high value, 100 events per core genome mutation
-    recomb_max = 100.0
+    # set as arbitarily high value, 10 events per core genome mutation
+    recomb_max = options.recomb_max
     if HGT_rate == None:
         elfi.Prior('uniform', 0.0, recomb_max, model=m, name='HGT_rate')
     if HR_rate == None:
