@@ -1,12 +1,39 @@
 import numpy as np
+import pandas as pd
 import argparse
 import matplotlib.pyplot as plt
 rng = np.random.default_rng()
 import subprocess
-from run_elfi import read_distfile
 import sys
-from run_elfi import negative_exponential
 from scipy.optimize import curve_fit
+
+def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
+    return b0 * (1 - np.exp(-b1 * x)) + b2
+
+def read_distfile(filename):
+    # read first line, determine if csv
+    with open(filename, "r") as f:
+        first_line = f.readline()
+        if "," in first_line:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
+        else:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+
+    if len(obs.columns) == 2:
+        obs.rename(columns={obs.columns[0]: "Core",
+                           obs.columns[1]: "Accessory"}, inplace=True)
+    elif len(obs.columns) == 4:
+        # rename columns
+        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
+                           obs.columns[3]: "Accessory"}, inplace=True)
+    else:
+        print("Incorrect number of columns in distfile. Should be 2 or 4.")
+        sys.exit(1)
+
+    obs['Core'] = pd.to_numeric(obs['Core'])
+    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
+
+    return obs
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -42,6 +69,18 @@ def get_options():
                     type=float,
                     default=2.0,
                     help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0')
+    IO.add_argument('--prop_positive',
+                    type=float,
+                    default=-1.0,
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0Proportion of pangenome made up of positively selected genes. Must be 0.0 <= X <= 1.0. If negative, neutral selection is simulated.')
+    IO.add_argument('--pos_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of positively selected genes. Must be > 0.0')
+    IO.add_argument('--neg_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of negatively selected genes. Must be > 0.0')
     IO.add_argument('--pop_size',
                     type=int,
                     default=1000,
@@ -111,6 +150,9 @@ if __name__ == "__main__":
     rate_genes1 = options.rate_genes1
     rate_genes2 = options.rate_genes2
     prop_genes2 = options.prop_genes2
+    prop_positive = options.prop_positive
+    pos_lambda = options.pos_lambda
+    neg_lambda = options.neg_lambda
     core_size = options.core_size
     pan_genes = options.pan_genes
     core_genes = options.core_genes
@@ -127,9 +169,9 @@ if __name__ == "__main__":
     competition = options.competition
 
     if competition:
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, rate_genes1=rate_genes1, rate_genes2=rate_genes2, prop_genes2=prop_genes2, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
     else:
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, rate_genes1=rate_genes1, rate_genes2=rate_genes2, prop_genes2=prop_genes2, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
 
     print("Simulating...")
     try:
