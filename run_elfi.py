@@ -391,7 +391,7 @@ if __name__ == "__main__":
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
     max_mu = (pan_genes - core_genes) / n_gen
     epsilon = (10**-6)
-    elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes1')
+    elfi.Prior('loguniform', 0.0 + epsilon, max_mu - epsilon, model=m, name='rate_genes1')
     elfi.Prior('loguniform', 0.0 + epsilon, 1.0 - epsilon, model=m, name='prop_genes2')
     
     # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
@@ -406,9 +406,9 @@ if __name__ == "__main__":
     # set as arbitarily high value, 10 events per core genome mutation
     recomb_max = options.recomb_max
     if HGT_rate == None:
-        elfi.Prior('uniform', 0.0, recomb_max, model=m, name='HGT_rate')
+        elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HGT_rate')
     if HR_rate == None:
-        elfi.Prior('uniform', 0.0, recomb_max, model=m, name='HR_rate')
+        elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HR_rate')
 
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
