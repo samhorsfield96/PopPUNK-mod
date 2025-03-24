@@ -53,13 +53,11 @@ class EarlyStopping:
             self.best_loss = val_loss
             self.counter = 0
 
-def save_checkpoint(model, optimizer, epoch, loss, lr_scheduler, scaler, save_path):
+def save_checkpoint(model, epoch, loss, scaler, save_path):
     try:
         checkpoint = {
             "epoch": epoch,
             "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "lr_scheduler" : lr_scheduler,
             "loss": loss,
             "scaler_mean": scaler.mean_,
             "scaler_scale": scaler.scale_
@@ -68,33 +66,13 @@ def save_checkpoint(model, optimizer, epoch, loss, lr_scheduler, scaler, save_pa
     except IOError as e:
         print(f"Failed to save checkpoint to '{save_path}': {e}")
 
-def load_checkpoint(model, optimizer, lr_scheduler, checkpoint_path, restart, scaler):
-    if not os.path.exists(checkpoint_path):
-        print("No checkpoint found. Starting from scratch.")
-        return 0, False
-    try:
-        if restart:
-            print("Restarting training, overwriting existing checkpoint.")
-            return 0, False
-        if map_location != None:
-            checkpoint = torch.load(checkpoint_path, map_location=map_location)
-        else:
-            checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
-        lr_scheduler = checkpoint["lr_scheduler"]
-        start_epoch = checkpoint["epoch"] + 1
-        scaler.mean_ = checkpoint["scaler_mean"]
-        scaler.scale_ = checkpoint["scaler_scale"]
-        #print(f"Checkpoint loaded. Resuming training from epoch {start_epoch}")
-        return start_epoch, True
-    except Exception as e:
-        if "size mismatch" in str(e):
-            error_msg = "Error: Checkpoint and current model do not match in size."
-        else:
-            error_msg = f"Error loading checkpoint from '{checkpoint_path}': {str(e)}"
-        logging.error(error_msg)
-        return 0, False
+def load_checkpoint(model, checkpoint_path, scaler):
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    start_epoch = checkpoint["epoch"] + 1
+    scaler.mean_ = checkpoint["scaler_mean"]
+    scaler.scale_ = checkpoint["scaler_scale"]
+    return start_epoch
 
 def get_options():
     description = 'Tests importance of classifiers from Pansim gridsearch'
@@ -116,7 +94,7 @@ def get_options():
                     default = "checkpoint.chk",
                     help='Model output path. Default = "checkpoint.chk"')
     IO.add_argument('--params',
-                    default=None,
+                    default=True,
                     help='Comma separated list of predictors to estimate. Must match columns in infile')
     IO.add_argument('--hidden-size',
                     type=int,
@@ -359,7 +337,7 @@ def train_model(options):
         if loss < best_loss:
             best_loss = loss
             best_weights = copy.deepcopy(model.state_dict())
-            save_checkpoint(model, optimizer, epoch, best_loss, lr_scheduler, scaler, checkpoint)
+            save_checkpoint(model, epoch, best_loss, scaler, checkpoint)
         
         lr_scheduler.step(loss)
         early_stopping(loss)
@@ -395,24 +373,34 @@ def inference_model(options):
     kl_weight = options.kl_weight
     bayesian = options.bayesian
     num_samples = options.num_samples
-    restart = True
+
+    df = pd.read_csv(infile, header=0, sep="\t")*1
+    # set NAs to zero
+    df = df.fillna(0)
+
+    # for testing
+    df = df.drop(columns=params)*1
+
+    input_size = len(df.columns)
+    output_size = len(params)
 
     # initialise trained objects
     scaler = StandardScaler()
-    lr_scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=lr_scheduler_factor, patience=lr_patience)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    scaler.fit(df)
+
     # initialise model
     if bayesian:
         model = BayesianMultipleLinearRegression(input_size, output_size, hidden_size)
     else:
         model = MultipleLinearRegression(input_size, output_size, hidden_size)
 
-    epoch, restart = load_checkpoint(model, optimizer, lr_scheduler, checkpoint, restart, scaler)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=lr_scheduler_factor, patience=lr_patience)
 
-    df = pd.read_csv(infile, header=0, sep="\t")*1
-    # set NAs to zero
-    df = df.fillna(0)
+    epoch = load_checkpoint(model, checkpoint, scaler)
+
     X = torch.tensor(scaler.transform(df), dtype=torch.float32)
+    batch_start = torch.arange(0, len(X), batch_size)
 
     results_array = None
     model.eval()
@@ -430,21 +418,17 @@ def inference_model(options):
                 std_values = np.array([models_result[i].std() for i in range(len(models_result))])
                 print(mean_values.shape)
                 print(std_values.shape)
+                fail
             else:
                 mean_values = np.array(model(X_batch).data.numpy())
                 print(mean_values.shape)
             
-            if results_array == None:
+            if results_array is None:
                 results_array = mean_values
             else:
                 results_array = np.vstack((results_array, mean_values))
             
             print(results_array)
-
-
-
-
-
 
 def main():
     options = get_options()
