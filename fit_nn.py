@@ -353,7 +353,7 @@ def train_model(options):
     print("Loss: %.2f" % best_loss)
     #print("RMSE: %.2f" % np.sqrt(best_mse))
     plt.plot(history)
-    plt.savefig(outpref + "_MSE.png")
+    plt.savefig(outpref + "_loss.png")
     plt.close()
 
 def inference_model(options):
@@ -402,33 +402,47 @@ def inference_model(options):
     X = torch.tensor(scaler.transform(df), dtype=torch.float32)
     batch_start = torch.arange(0, len(X), batch_size)
 
-    results_array = None
+    mean_array = np.empty((0, len(params)))
+    std_array = np.empty((0, len(params)))
+
     model.eval()
     with tqdm.tqdm(batch_start, unit="batch", mininterval=0, disable=False) as bar:
-        bar.set_description(f"Epoch {epoch}")
+        bar.set_description("Sample iteration")
         for start in bar:
             # take a batch
             X_batch = X[start:start+batch_size]
             # forward pass
             if bayesian:
                 models_result = np.array([model(X_batch).data.numpy() for k in range(num_samples)])
-                models_result = models_result[:,:,0]    
-                models_result = models_result.T
-                mean_values = np.array([models_result[i].mean() for i in range(len(models_result))])
-                std_values = np.array([models_result[i].std() for i in range(len(models_result))])
-                print(mean_values.shape)
-                print(std_values.shape)
-                fail
+                #print(models_result)
+                #print(models_result.shape)
+                #models_result = models_result[:,:,0]    
+                #models_result = models_result.T
+                mean_values = np.mean(models_result, axis=0)
+                std_values = np.std(models_result, axis=0)
+                #print(mean_values)
+                #print(mean_values.shape)
+                #print(std_values)
+                #print(std_values.shape)
             else:
                 mean_values = np.array(model(X_batch).data.numpy())
-                print(mean_values.shape)
+                std_values = None
+                #print(mean_values.shape)
             
-            if results_array is None:
-                results_array = mean_values
-            else:
-                results_array = np.vstack((results_array, mean_values))
+            mean_array = np.vstack((mean_array, mean_values))
+            #print(mean_array)
+            if std_values is not None:
+                std_array = np.vstack((std_array, std_values))
             
-            print(results_array)
+    if bayesian:
+        std_df = pd.DataFrame(std_array)
+        std_df.columns = params
+        std_df.to_csv(outpref + "_std_estimates.tsv", sep = "\t", index = False)
+
+    mean_df = pd.DataFrame(mean_array)
+    mean_df.columns = params
+    mean_df.to_csv(outpref + "_mean_estimates.tsv", sep = "\t", index = False)
+
 
 def main():
     options = get_options()
