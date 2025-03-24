@@ -14,7 +14,6 @@ import tqdm
 import copy
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from sklearn.externals.joblib import dump, load
 
 class EarlyStopping:
     """
@@ -61,12 +60,14 @@ def save_checkpoint(model, optimizer, epoch, loss, lr_scheduler, scaler, save_pa
             "optimizer_state_dict": optimizer.state_dict(),
             "lr_scheduler" : lr_scheduler,
             "loss": loss,
+            "scaler_mean": scaler.mean_,
+            "scaler_scale": scaler.scale_
         }
         torch.save(checkpoint, save_path)
     except IOError as e:
         print(f"Failed to save checkpoint to '{save_path}': {e}")
 
-def load_checkpoint(model, optimizer, lr_scheduler, checkpoint_path, restart, rank, map_location=None):
+def load_checkpoint(model, optimizer, lr_scheduler, checkpoint_path, restart, scaler):
     if not os.path.exists(checkpoint_path):
         print("No checkpoint found. Starting from scratch.")
         return 0, False
@@ -82,6 +83,8 @@ def load_checkpoint(model, optimizer, lr_scheduler, checkpoint_path, restart, ra
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         lr_scheduler = checkpoint["lr_scheduler"]
         start_epoch = checkpoint["epoch"] + 1
+        scaler.mean_ = checkpoint["scaler_mean"]
+        scaler.scale_ = checkpoint["scaler_scale"]
         print(f"Checkpoint loaded. Resuming training from epoch {start_epoch}")
         return start_epoch, True
     except Exception as e:
@@ -113,7 +116,7 @@ def get_options():
                     help='Size of hidden layers. Default = 512')
     IO.add_argument('--epochs',
                     type=int,
-                    default=100,
+                    default=300,
                     help='Number of training epochs. Default = 100')
     IO.add_argument('--batch-size',
                     type=int,
@@ -122,10 +125,10 @@ def get_options():
     parser.add_argument("--learning-rate", 
                         type=float, 
                         default=0.000001, 
-                        help="Learning rate. Default = 0.0001")
+                        help="Learning rate. Default = 0.000001")
     parser.add_argument("--lr-scheduler-factor",
                         type=float,
-                        default=0.5, 
+                        default=0.1, 
                         help="Factor by which the learning rate will be reduced by the learning rate scheduler")
     parser.add_argument("--lr-patience",
                         type=int, 
@@ -227,9 +230,6 @@ def main():
     scaler = StandardScaler()
     scaler.fit(X_train_raw)
     
-    # save scaler
-    dump(scaler, outpref + '_scaler.bin', compress=True)
-
     X_train = torch.tensor(scaler.transform(X_train_raw), dtype=torch.float32)
     X_test = torch.tensor(scaler.transform(X_test_raw.to_numpy()), dtype=torch.float32)
     y_train = torch.tensor(y_train.to_numpy(), dtype=torch.float32)
@@ -293,6 +293,7 @@ def main():
         y_pred = model(X_test)
         mse = loss_fn(y_pred, y_test)
         mse = float(mse)
+        print(f"Epoch: {epoch} Test Loss: {mse}")
         
         # archive loss
         history.append(mse)
@@ -301,7 +302,7 @@ def main():
             best_weights = copy.deepcopy(model.state_dict())
             save_checkpoint(model, optimizer, epoch, best_mse, lr_scheduler, scaler, outpref + ".chk")
         
-        #lr_scheduler.step(mse)
+        lr_scheduler.step(mse)
         early_stopping(mse)
 
         early_stop_tensor = torch.tensor(int(early_stopping.early_stop)).to(device)

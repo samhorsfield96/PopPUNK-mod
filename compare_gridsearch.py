@@ -288,6 +288,9 @@ def main():
     for path in Path(indir).glob("**/*.tsv"):
         # Print the path (file or directory) to the console
         files.append(str(path))
+    
+    # print(indir)
+    # print(files)
 
     #print(files)
     
@@ -298,7 +301,7 @@ def main():
     
     df = pd.DataFrame.from_dict(value_dict_list)
     #print(df)
-    df.to_csv(outpref + "_results.csv", sep = "\t", index = False)
+    df.to_csv(outpref + "_results.tsv", sep = "\t", index = False)
 
 
 if __name__ == "__main__":
