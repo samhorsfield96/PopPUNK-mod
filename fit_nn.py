@@ -14,6 +14,7 @@ import tqdm
 import copy
 import matplotlib.pyplot as plt
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torchbnn as bnn
 
 class EarlyStopping:
     """
@@ -146,6 +147,10 @@ def get_options():
                         type=float, 
                         default=0.01, 
                         help="Minimum delta for early stopping")
+    parser.add_argument("--kl-weight", 
+                        type=float, 
+                        default=0.01, 
+                        help="Weight for KL divergence in calculating loss.")
     parser.add_argument("--device", 
                         default=None, 
                         help="GPU device number if available. If not specified, will use all available Default = None")
@@ -170,13 +175,13 @@ class MultipleLinearRegression(torch.nn.Module):
     def __init__(self, input_dim, output_dim, hidden_size):
         super(MultipleLinearRegression, self).__init__()
         self.linear = nn.Sequential(
-            nn.Linear(input_dim, hidden_size),
+            bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, output_dim)
+            #bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=hidden_size),
+            #nn.ReLU(),
+            #bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=hidden_size),
+            #nn.ReLU(),
+            bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=output_dim),
         )
         #self.linear = torch.nn.Linear(input_dim, output_dim)
     # Prediction
@@ -198,6 +203,7 @@ def main():
     lr_patience = options.lr_patience
     early_stop_patience = options.early_stop_patience
     min_delta = options.min_delta
+    kl_weight = options.kl_weight
 
     # get device
     device = get_device(options.device)
@@ -246,7 +252,8 @@ def main():
     # loss function and optimizer
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     # defining the loss criterion
-    loss_fn = torch.nn.MSELoss()
+    mse_loss = torch.nn.MSELoss()
+    kl_loss = bnn.BKLLoss(reduction='mean', last_layer_only=False)
     #loss_fn = torch.nn.L1Loss()
 
     # lr scheduler
@@ -259,7 +266,7 @@ def main():
     batch_start = torch.arange(0, len(X_train), batch_size)
     
     # Hold the best model
-    best_mse = np.inf   # init to infinity
+    best_loss = np.inf   # init to infinity
     best_weights = None
     history = []
     
@@ -274,7 +281,9 @@ def main():
                 y_batch = y_train[start:start+batch_size]
                 # forward pass
                 y_pred = model(X_batch)
-                loss = loss_fn(y_pred, y_batch)
+                mse = mse_loss(y_pred, y_batch)
+                kl = kl_loss(model)
+                loss = mse + kl_weight*kl
                 # print(f"loss\n{loss}")
                 # if np.isnan(float(loss)) or np.isinf(float(loss)):
                 #     print(f"y_pred\n{y_pred}")
@@ -286,24 +295,26 @@ def main():
                 # update weights
                 optimizer.step()
                 # print progress
-                bar.set_postfix(mse=float(loss))
+                bar.set_postfix({"mse": float(mse), "kl": float(kl.item()), "loss": float(loss.item())})
         
         # evaluate accuracy at end of each epoch
         model.eval()
         y_pred = model(X_test)
-        mse = loss_fn(y_pred, y_test)
-        mse = float(mse)
-        print(f"Epoch: {epoch} Test Loss: {mse}")
+        mse = mse_loss(y_pred, y_test)
+        kl = kl_loss(model)
+        loss = mse + kl_weight*kl
+        loss = float(loss.item())
+        print(f"Epoch: {epoch} Test MSE: {float(mse)} KL: {float(kl.item())} Loss: {loss}")
         
         # archive loss
-        history.append(mse)
-        if mse < best_mse:
-            best_mse = mse
+        history.append(loss)
+        if loss < best_loss:
+            best_loss = loss
             best_weights = copy.deepcopy(model.state_dict())
-            save_checkpoint(model, optimizer, epoch, best_mse, lr_scheduler, scaler, outpref + ".chk")
+            save_checkpoint(model, optimizer, epoch, best_loss, lr_scheduler, scaler, outpref + ".chk")
         
-        lr_scheduler.step(mse)
-        early_stopping(mse)
+        lr_scheduler.step(loss)
+        early_stopping(loss)
 
         early_stop_tensor = torch.tensor(int(early_stopping.early_stop)).to(device)
         if early_stop_tensor.item() == 1:
@@ -313,10 +324,10 @@ def main():
     # restore model and return best accuracy
     #model.load_state_dict(best_weights)
 
-    print("MSE: %.2f" % best_mse)
-    print("RMSE: %.2f" % np.sqrt(best_mse))
+    print("Loss: %.2f" % best_loss)
+    #print("RMSE: %.2f" % np.sqrt(best_mse))
     plt.plot(history)
-    plt.savefig(outpref + "_" + "_MSE.png")
+    plt.savefig(outpref + "_MSE.png")
     plt.close()
 
 if __name__ == "__main__":
