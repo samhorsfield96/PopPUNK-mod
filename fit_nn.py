@@ -86,7 +86,7 @@ def load_checkpoint(model, optimizer, lr_scheduler, checkpoint_path, restart, sc
         start_epoch = checkpoint["epoch"] + 1
         scaler.mean_ = checkpoint["scaler_mean"]
         scaler.scale_ = checkpoint["scaler_scale"]
-        print(f"Checkpoint loaded. Resuming training from epoch {start_epoch}")
+        #print(f"Checkpoint loaded. Resuming training from epoch {start_epoch}")
         return start_epoch, True
     except Exception as e:
         if "size mismatch" in str(e):
@@ -102,14 +102,21 @@ def get_options():
                                      prog='python test_classifiers.py')
 
     IO = parser.add_argument_group('Input/Output options')
+    IO.add_argument('--mode',
+                    choices=['inference', 'train'],
+                    default="train",
+                    help='Run mode, must be one of "inference" or "train"')
     IO.add_argument('--infile',
                     required=True,
                     help='Directory containing run files from gridsearch run')
     IO.add_argument('--outpref',
                     default = "output",
                     help='Output prefix. Default = "output"')
+    IO.add_argument('--checkpoint',
+                    default = "checkpoint.chk",
+                    help='Model output path. Default = "checkpoint.chk"')
     IO.add_argument('--params',
-                    required=True,
+                    default=None,
                     help='Comma separated list of predictors to estimate. Must match columns in infile')
     IO.add_argument('--hidden-size',
                     type=int,
@@ -155,6 +162,10 @@ def get_options():
                         type=float, 
                         default=0.01, 
                         help="Weight for KL divergence in calculating loss.")
+    parser.add_argument("--num-samples", 
+                        type=int, 
+                        default=100, 
+                        help="Number of model queries per sample if using Bayesian inference.")
     parser.add_argument("--device", 
                         default=None, 
                         help="GPU device number if available. If not specified, will use all available Default = None")
@@ -177,7 +188,7 @@ def get_device(device):
 class BayesianMultipleLinearRegression(torch.nn.Module):
     # Constructor
     def __init__(self, input_dim, output_dim, hidden_size):
-        super(MultipleLinearRegression, self).__init__()
+        super(BayesianMultipleLinearRegression, self).__init__()
         self.linear = nn.Sequential(
             bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=hidden_size),
             nn.ReLU(),
@@ -208,10 +219,10 @@ class MultipleLinearRegression(torch.nn.Module):
         y_pred = self.linear(x)
         return y_pred
 
-def main():
-    options = get_options()
+def train_model(options):
     infile = options.infile
     outpref = options.outpref
+    checkpoint = options.checkpoint
     params = options.params.split(",")
     hidden_size = options.hidden_size
     n_epochs = options.epochs
@@ -233,15 +244,18 @@ def main():
     df = df.fillna(0)
 
     params = [col for col in params if col in df.columns]
+    if len(params) == 0:
+        print("Error: no valid parameters to fit to.")
+        sys.exit(1)
 
-    # Split data into X and Y parameters, convert bools to integers
-
+    # Split data into X and Y parameters
     # generate training/test split
     train_df, test_df = train_test_split(df, train_size=0.7, shuffle=True)
 
     #print(f"train_df\n{train_df}")
     #print(f"test_df\n{test_df}")
 
+    # convert bools to integers
     X_train_raw = train_df.drop(columns=params)*1
     X_test_raw = test_df.drop(columns=params)*1
     y_train = train_df[params]*1
@@ -308,7 +322,7 @@ def main():
                 loss = mse
                 if bayesian:
                     kl = kl_loss(model)
-                    loss += kl_weight*kl
+                    loss = mse + kl_weight * kl
 
                 # print(f"loss\n{loss}")
                 # if np.isnan(float(loss)) or np.isinf(float(loss)):
@@ -330,13 +344,13 @@ def main():
         model.eval()
         y_pred = model(X_test)
         mse = mse_loss(y_pred, y_test)
-        loss = mse
         if bayesian:
             kl = kl_loss(model)
             loss = mse + kl_weight*kl
             loss = float(loss.item())
             print(f"Epoch: {epoch} Test MSE: {float(mse)} KL: {float(kl.item())} Loss: {loss}")
         else:
+            loss = mse
             loss = float(loss.item())
             print(f"Epoch: {epoch} Test MSE: {float(mse)} Loss: {loss}")
         
@@ -345,7 +359,7 @@ def main():
         if loss < best_loss:
             best_loss = loss
             best_weights = copy.deepcopy(model.state_dict())
-            save_checkpoint(model, optimizer, epoch, best_loss, lr_scheduler, scaler, outpref + ".chk")
+            save_checkpoint(model, optimizer, epoch, best_loss, lr_scheduler, scaler, checkpoint)
         
         lr_scheduler.step(loss)
         early_stopping(loss)
@@ -363,6 +377,82 @@ def main():
     plt.plot(history)
     plt.savefig(outpref + "_MSE.png")
     plt.close()
+
+def inference_model(options):
+    infile = options.infile
+    checkpoint = options.checkpoint
+    outpref = options.outpref
+    params = options.params.split(",")
+    hidden_size = options.hidden_size
+    n_epochs = options.epochs
+    batch_size = options.batch_size
+    learning_rate = options.learning_rate
+    lr_scheduler_factor = options.lr_scheduler_factor
+    weight_decay = options.weight_decay
+    lr_patience = options.lr_patience
+    early_stop_patience = options.early_stop_patience
+    min_delta = options.min_delta
+    kl_weight = options.kl_weight
+    bayesian = options.bayesian
+    num_samples = options.num_samples
+    restart = True
+
+    # initialise trained objects
+    scaler = StandardScaler()
+    lr_scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=lr_scheduler_factor, patience=lr_patience)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    # initialise model
+    if bayesian:
+        model = BayesianMultipleLinearRegression(input_size, output_size, hidden_size)
+    else:
+        model = MultipleLinearRegression(input_size, output_size, hidden_size)
+
+    epoch, restart = load_checkpoint(model, optimizer, lr_scheduler, checkpoint, restart, scaler)
+
+    df = pd.read_csv(infile, header=0, sep="\t")*1
+    # set NAs to zero
+    df = df.fillna(0)
+    X = torch.tensor(scaler.transform(df), dtype=torch.float32)
+
+    results_array = None
+    model.eval()
+    with tqdm.tqdm(batch_start, unit="batch", mininterval=0, disable=False) as bar:
+        bar.set_description(f"Epoch {epoch}")
+        for start in bar:
+            # take a batch
+            X_batch = X[start:start+batch_size]
+            # forward pass
+            if bayesian:
+                models_result = np.array([model(X_batch).data.numpy() for k in range(num_samples)])
+                models_result = models_result[:,:,0]    
+                models_result = models_result.T
+                mean_values = np.array([models_result[i].mean() for i in range(len(models_result))])
+                std_values = np.array([models_result[i].std() for i in range(len(models_result))])
+                print(mean_values.shape)
+                print(std_values.shape)
+            else:
+                mean_values = np.array(model(X_batch).data.numpy())
+                print(mean_values.shape)
+            
+            if results_array == None:
+                results_array = mean_values
+            else:
+                results_array = np.vstack((results_array, mean_values))
+            
+            print(results_array)
+
+
+
+
+
+
+def main():
+    options = get_options()
+    if options.mode == "train":
+        train_model(options)
+    else:
+        inference_model(options)
+    
 
 if __name__ == "__main__":
     main()
