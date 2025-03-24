@@ -147,6 +147,10 @@ def get_options():
                         type=float, 
                         default=0.01, 
                         help="Minimum delta for early stopping")
+    parser.add_argument("--bayesian", 
+                        default=False,
+                        action="store_true",
+                        help="Fit Bayesian neural network.")
     parser.add_argument("--kl-weight", 
                         type=float, 
                         default=0.01, 
@@ -170,18 +174,33 @@ def get_device(device):
     
     return device
 
-class MultipleLinearRegression(torch.nn.Module):
+class BayesianMultipleLinearRegression(torch.nn.Module):
     # Constructor
     def __init__(self, input_dim, output_dim, hidden_size):
         super(MultipleLinearRegression, self).__init__()
         self.linear = nn.Sequential(
             bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=input_dim, out_features=hidden_size),
             nn.ReLU(),
-            #bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=hidden_size),
-            #nn.ReLU(),
-            #bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=hidden_size),
-            #nn.ReLU(),
             bnn.BayesLinear(prior_mu=0, prior_sigma=0.1, in_features=hidden_size, out_features=output_dim),
+        )
+        #self.linear = torch.nn.Linear(input_dim, output_dim)
+    # Prediction
+    def forward(self, x):
+        y_pred = self.linear(x)
+        return y_pred
+
+class MultipleLinearRegression(torch.nn.Module):
+    # Constructor
+    def __init__(self, input_dim, output_dim, hidden_size):
+        super(MultipleLinearRegression, self).__init__()
+        self.linear = nn.Sequential(
+            nn.Linear(input_dim, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, output_dim)
         )
         #self.linear = torch.nn.Linear(input_dim, output_dim)
     # Prediction
@@ -204,6 +223,7 @@ def main():
     early_stop_patience = options.early_stop_patience
     min_delta = options.min_delta
     kl_weight = options.kl_weight
+    bayesian = options.bayesian
 
     # get device
     device = get_device(options.device)
@@ -247,7 +267,10 @@ def main():
     # print(f"y_test\n{y_test}\n{y_test.shape}")
 
     # initialise model
-    model = MultipleLinearRegression(input_size, output_size, hidden_size)
+    if bayesian:
+        model = BayesianMultipleLinearRegression(input_size, output_size, hidden_size)
+    else:
+        model = MultipleLinearRegression(input_size, output_size, hidden_size)
 
     # loss function and optimizer
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -282,8 +305,11 @@ def main():
                 # forward pass
                 y_pred = model(X_batch)
                 mse = mse_loss(y_pred, y_batch)
-                kl = kl_loss(model)
-                loss = mse + kl_weight*kl
+                loss = mse
+                if bayesian:
+                    kl = kl_loss(model)
+                    loss += kl_weight*kl
+
                 # print(f"loss\n{loss}")
                 # if np.isnan(float(loss)) or np.isinf(float(loss)):
                 #     print(f"y_pred\n{y_pred}")
@@ -295,16 +321,24 @@ def main():
                 # update weights
                 optimizer.step()
                 # print progress
-                bar.set_postfix({"mse": float(mse), "kl": float(kl.item()), "loss": float(loss.item())})
+                if bayesian:
+                    bar.set_postfix({"mse": float(mse), "kl": float(kl.item()), "loss": float(loss.item())})
+                else:
+                    bar.set_postfix({"mse": float(mse), "loss": float(loss.item())})
         
         # evaluate accuracy at end of each epoch
         model.eval()
         y_pred = model(X_test)
         mse = mse_loss(y_pred, y_test)
-        kl = kl_loss(model)
-        loss = mse + kl_weight*kl
-        loss = float(loss.item())
-        print(f"Epoch: {epoch} Test MSE: {float(mse)} KL: {float(kl.item())} Loss: {loss}")
+        loss = mse
+        if bayesian:
+            kl = kl_loss(model)
+            loss = mse + kl_weight*kl
+            loss = float(loss.item())
+            print(f"Epoch: {epoch} Test MSE: {float(mse)} KL: {float(kl.item())} Loss: {loss}")
+        else:
+            loss = float(loss.item())
+            print(f"Epoch: {epoch} Test MSE: {float(mse)} Loss: {loss}")
         
         # archive loss
         history.append(loss)
