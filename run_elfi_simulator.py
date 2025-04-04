@@ -42,15 +42,15 @@ def get_options():
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--core_size',
-                    type=int,
+                    type=float,
                     default=1200000,
                     help='Number of positions in core genome. Default = 1200000 ')
     IO.add_argument('--pan_genes',
-                    type=int,
+                    type=float,
                     default=6000,
                     help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
     IO.add_argument('--core_genes',
-                    type=int,
+                    type=float,
                     default=2000,
                     help='Number of core genes in pangenome only. Default = 2000')
     IO.add_argument('--core_mu',
@@ -153,9 +153,9 @@ if __name__ == "__main__":
     prop_positive = options.prop_positive
     pos_lambda = options.pos_lambda
     neg_lambda = options.neg_lambda
-    core_size = options.core_size
-    pan_genes = options.pan_genes
-    core_genes = options.core_genes
+    core_size = int(options.core_size)
+    pan_genes = int(options.pan_genes)
+    core_genes = int(options.core_genes)
     avg_gene_freq = options.avg_gene_freq
     n_gen = options.n_gen
     pop_size = options.pop_size
