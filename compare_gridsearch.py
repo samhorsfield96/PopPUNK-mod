@@ -41,7 +41,7 @@ def get_options():
     IO.add_argument('--threads',
                     type=int,
                     default=1,
-                    help='Number of threads. Default = 1.')
+                    help='Number of threads. Default = 1.')            
 
     return parser.parse_args()
 
@@ -100,17 +100,22 @@ def generate_summary_stats(file, plot, outpref):
 
     # get all variables for file:
     values_dict = {}
-    values_dict["competition"] = False
+    parsed_name = False
     for i in range(len(split_filename) - 2):
         current_index = split_filename[i]
 
         try:
             next_index = float(split_filename[i + 1])
             values_dict[current_index] = next_index
+            parsed_name = True
         except:
             continue
 
-    if "non_competition" not in filename and "competition" in filename:
+    if parsed_name == False:
+        values_dict["filename"] = filename
+
+    values_dict["competition"] = False
+    if "non_competition" not in file and "competition" in file:
         values_dict["competition"] = True
     
     obs_df = np.loadtxt(file, delimiter='\t', dtype='float64')
