@@ -5,6 +5,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 import pandas as pd
 import elfi
+import GPy
 import os
 import sys
 import matplotlib.pyplot as plt
@@ -149,6 +150,10 @@ def get_options():
                     type=int,
                     default=100000,
                     help='Number of distances to sample with Pansim. Default = 100000')
+    IO.add_argument('--covar-scaling',
+                    type=float,
+                    default=0.1,
+                    help='Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1')
     IO.add_argument('--load',
                     default=None,
                     help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
@@ -287,10 +292,15 @@ def process_result(completed_process, *inputs, **kwinputs):
     except:
         b0, b1, b2, b0_err, b1_err, b2_err = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     
+    mean_acc = np.mean(simulations[:,1])
+
     #sim = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    sim = np.array([b0, b1, b2])
+    #sim = np.array([b0, b1, b2])
     #sim = sim_acc
     #sim_dist = (sim_core, sim_acc)
+    
+    # based on random forest and hypercube (b0 for r1, mean_acc for prop2, b1 and b1_err for HGT)
+    sim = np.array([b0, b1, b1_err, mean_acc])
 
     #obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
     #obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
@@ -360,6 +370,7 @@ if __name__ == "__main__":
     HR_rate = options.HR_rate
     HGT_rate = options.HGT_rate
     competition = options.competition
+    covar_scaling = options.covar_scaling
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -386,6 +397,16 @@ if __name__ == "__main__":
     print("core_mu set to: {}".format(core_mu))
 
     # set up model
+    input_dim = 0
+    if HR_rate != None and HGT_rate != None:
+        input_dim = 2
+    elif HR_rate != None and HGT_rate == None:
+        input_dim = 3
+    elif HR_rate == None and HGT_rate != None:
+        input_dim = 3
+    else:
+        input_dim = 4
+    kernel_ard = GPy.kern.RBF(input_dim=input_dim, ARD=True)
     m = elfi.ElfiModel(name='pansim_model')
 
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
@@ -416,6 +437,8 @@ if __name__ == "__main__":
     # get 1 std deviation error of parameters
     b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
 
+    mean_acc = np.mean(obs_df[:,1])
+
     # plot fit
     fig, ax = plt.subplots()
     ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
@@ -442,7 +465,8 @@ if __name__ == "__main__":
 
     # save observed parameters
     #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    obs = np.array([b0, b1, b2])
+    #obs = np.array([b0, b1, b2])
+    obs = np.array([b0, b1, b1_err, mean_acc])
 
     # simulate and fit
     if run_mode == "sim":
@@ -460,6 +484,10 @@ if __name__ == "__main__":
 
         WF_sim_vec = elfi.tools.vectorize(WF_sim)
 
+        # save model
+        save_path = outpref
+        os.makedirs(save_path, exist_ok=True)      
+
         if HR_rate != None and HGT_rate != None:
             bounds = {
                 'rate_genes1' : (0.0, max_mu),
@@ -468,6 +496,7 @@ if __name__ == "__main__":
             }
 
             elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
+            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
                 'rate_genes1' : (0.0, max_mu),
@@ -477,48 +506,6 @@ if __name__ == "__main__":
             }
 
             elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
-        elif HR_rate == None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, max_mu),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
-        else:
-            bounds = {
-                'rate_genes1' : (0.0, max_mu),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
-                'HGT_rate' : (0.0, recomb_max),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
-
-        m['sim'].uses_meta = True
-
-        # use euclidean between
-        elfi.Distance('canberra', m['sim'], model=m, name='d')
-        elfi.Operation(np.log, m['d'], model=m, name='log_d')
-
-        # save model
-        save_path = outpref
-        os.makedirs(save_path, exist_ok=True)
-
-        if HR_rate != None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, max_mu),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-            }
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
-        elif HR_rate != None and HGT_rate == None:
-            bounds = {
-                'rate_genes1' : (0.0, max_mu),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, recomb_max),
-            }
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
@@ -527,6 +514,7 @@ if __name__ == "__main__":
                 'prop_genes2' : (0.0, 1.0),
                 'HR_rate' : (0.0, recomb_max),
             }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
         else:
             bounds = {
@@ -536,13 +524,21 @@ if __name__ == "__main__":
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
             }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
+
+        m['sim'].uses_meta = True
+
+        # use euclidean between
+        elfi.Distance('canberra', m['sim'], model=m, name='d')
+        elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
+        target_model_ard = elfi.GPyRegression(parameter_names=[*bounds], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model_ard)
 
         #post = mod.fit(n_evidence=n_evidence)
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
@@ -606,11 +602,12 @@ if __name__ == "__main__":
                 'HR_rate' : (0.0, recomb_max),
                 'HGT_rate' : (0.0, recomb_max),
             }
-
+        
+        target_model_ard = elfi.GPyRegression(parameter_names=[*bounds], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model_ard)
 
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
