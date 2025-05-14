@@ -398,15 +398,6 @@ if __name__ == "__main__":
 
     # set up model
     input_dim = 0
-    if HR_rate != None and HGT_rate != None:
-        input_dim = 2
-    elif HR_rate != None and HGT_rate == None:
-        input_dim = 3
-    elif HR_rate == None and HGT_rate != None:
-        input_dim = 3
-    else:
-        input_dim = 4
-    kernel_ard = GPy.kern.RBF(input_dim=input_dim, ARD=True)
     m = elfi.ElfiModel(name='pansim_model')
 
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
@@ -533,7 +524,8 @@ if __name__ == "__main__":
         elfi.Distance('canberra', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
-        target_model_ard = elfi.GPyRegression(parameter_names=[*bounds], bounds=bounds, kernel=kernel_ard)
+        kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model_ard)
 
@@ -603,9 +595,10 @@ if __name__ == "__main__":
                 'HGT_rate' : (0.0, recomb_max),
             }
         
-        target_model_ard = elfi.GPyRegression(parameter_names=[*bounds], bounds=bounds, kernel=kernel_ard)
+        kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model_ard)
+                            acq_noise_var=acq_noise_var, seed=seed, pool=arraypool, target_model=target_model_ard)
 
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
