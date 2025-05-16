@@ -24,36 +24,9 @@ def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.gith
 def rmse(y_true, y_pred):
     return np.sqrt(np.mean((y_true - y_pred)**2))
 
-# Custom class to enforce the conditional prior on rate_genes2
-class ConditionalUniformPrior(ss.rv_continuous):
-    def __init__(self, lower, upper, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lower = lower
-        self.upper = upper
-
-    def _pdf(self, y, z):
-        """Probability Density Function for Y given Z."""
-        if np.isscalar(z):
-            if z == 0:
-                return 1.0 if y == 0.0 else 0.0  # Dirac delta at Y = 0 when Z = 0
-            elif self.lower <= y <= self.upper:
-                return 1.0 / (self.upper - self.lower)
-            else:
-                return 0.0
-        else:
-            return np.where(
-                z == 0,
-                np.where(y == 0.0, 1.0, 0.0),  # If Z == 0, Y must be 0
-                np.where((self.lower <= y) & (y <= self.upper), 1.0 / (self.upper - self.lower), 0.0)
-            )
-
-    def rvs(self, z, size=None, random_state=None):
-        """Sampling function for Y given Z."""
-        rng = random_state or np.random  # Ensure reproducibility with BOLFI
-        if np.isscalar(z):
-            return 0.0 if z == 0 else rng.uniform(self.lower, self.upper)
-        else:
-            return np.where(z == 0, 0.0, rng.uniform(self.lower, self.upper, size))
+# converts uniform[0,1] to logunifrom[min_val,max_val]
+def from_unit_to_loguniform(u, min_val, max_val):
+    return np.exp(np.log(min_val) + u * (np.log(max_val) - np.log(min_val)))
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -228,12 +201,12 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate = inputs
+    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
     kwinputs['core_mu'] = core_mu
-    kwinputs['rate_genes1'] = rate_genes1
+    kwinputs['rate_genes1'] = from_unit_to_loguniform(rate_genes1, epsilon, max_mu)
     # rate_genes2 is always faster make it so all genes in pangenome mutate once on average per generation
     kwinputs['rate_genes2'] = rate_genes2 * prop_genes2
     kwinputs['prop_genes2'] = prop_genes2
@@ -244,8 +217,8 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['core_genes'] = core_genes
     kwinputs['n_gen'] = n_gen
     kwinputs['max_distances'] = max_distances
-    kwinputs['HR_rate'] = HR_rate
-    kwinputs['HGT_rate'] = HGT_rate
+    kwinputs['HR_rate'] = from_unit_to_loguniform(HR_rate, epsilon, recomb_max)
+    kwinputs['HGT_rate'] = from_unit_to_loguniform(HGT_rate, epsilon, recomb_max)
 
     meta = kwinputs['meta']
 
@@ -403,24 +376,22 @@ if __name__ == "__main__":
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
     max_mu = (pan_genes - core_genes) / n_gen
     epsilon = (10**-6)
-    elfi.Prior('loguniform', 0.0 + epsilon, max_mu - epsilon, model=m, name='rate_genes1')
-    elfi.Prior('loguniform', 0.0 + epsilon, 1.0 - epsilon, model=m, name='prop_genes2')
+    #elfi.Prior('loguniform', 0.0 + epsilon, max_mu - epsilon, model=m, name='rate_genes1')
+    #elfi.Prior('loguniform', 0.0 + epsilon, 1.0 - epsilon, model=m, name='prop_genes2')
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
     
     # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
     rate_genes2 = (pan_genes - core_genes) * 10
 
-    # constrained prior to ensure rate_genes2 is set to 0 if prop_genes2 == 0. Add epsilon to ensure rate_genes2 is always > 1
-    #elfi.Prior('uniform', 0.0, max_mu, model=m, name='rate_genes2')
-    #epsilon = 0.1
-    #custom_prior = ConditionalUniformPrior(lower=epsilon, upper=max_mu - epsilon, name="custom_prior")
-    #elfi.Prior(custom_prior, m['prop_genes2'], model=m, name='rate_genes2')
-
     # set as arbitarily high value, 10 events per core genome mutation
     recomb_max = options.recomb_max
     if HGT_rate == None:
-        elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HGT_rate')
+        #elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HGT_rate')
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HGT_rate')
     if HR_rate == None:
-        elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HR_rate')
+        #elfi.Prior('loguniform', 0.0 + epsilon, recomb_max - epsilon, model=m, name='HR_rate')
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HR_rate')
 
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
@@ -481,41 +452,41 @@ if __name__ == "__main__":
 
         if HR_rate != None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, recomb_max),
+                'HGT_rate' : (0.0, 1.0),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
+                'HR_rate' : (0.0, 1.0),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
         else:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
-                'HGT_rate' : (0.0, recomb_max),
+                'HR_rate' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
 
         m['sim'].uses_meta = True
@@ -524,10 +495,10 @@ if __name__ == "__main__":
         elfi.Distance('canberra', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
-        kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
-        target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
+        #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')
+        #target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model_ard)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
 
         #post = mod.fit(n_evidence=n_evidence)
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
@@ -568,37 +539,37 @@ if __name__ == "__main__":
 
         if HR_rate != None and HGT_rate != None:
                 bounds = {
-                    'rate_genes1' : (0.0, max_mu),
+                    'rate_genes1' : (0.0, 1.0),
                     #'rate_genes2' : (epsilon, max_mu),
                     'prop_genes2' : (0.0, 1.0)
                 }
         elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
                 'HGT_rate' : (0.0, recomb_max),
             }
         elif HR_rate == None and HGT_rate != None:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
                 'HR_rate' : (0.0, recomb_max),
             }
         else:
             bounds = {
-                'rate_genes1' : (0.0, max_mu),
+                'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
-                'HGT_rate' : (0.0, recomb_max),
+                'HR_rate' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
             }
         
-        kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
-        target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
+        #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')
+        #target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, pool=arraypool, target_model=target_model_ard)
+                            acq_noise_var=acq_noise_var, seed=seed, pool=arraypool)
 
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
@@ -631,5 +602,55 @@ if __name__ == "__main__":
     result.plot_pairs()
     plt.savefig(outpref + '_pairs.png')
     plt.close()
+
+    # generate output
+    # Define real-world log-uniform min/max for each parameter
+    param_names = mod.model.parameter_names
+    param_bounds = {
+        'rate_genes1': (epsilon, max_mu),
+        'prop_genes2': (0.0, 1.0),
+        'HR_rate': (epsilon, recomb_max),
+        'HGT_rate': (epsilon, recomb_max),
+        # Add all your parameter bounds here
+    }
+
+    # Extract normalized samples
+    X = mod.target_model.X  # shape: (n_samples, n_params)
+    Y = mod.target_model.Y.flatten()
+
+    # Transform normalized samples back to real-world scale
+    X_real = np.zeros_like(X)
+    df_post = pd.DataFrame(result.samples)
+
+    for i, pname in enumerate(param_names):
+        if pname in param_bounds:
+            if pname != "prop_genes2":
+                min_val, max_val = param_bounds[pname]
+                X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
+                df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+            else:
+                X_real[:, i] = X[:, i]
+
+            # Compute posterior summaries
+            mean = np.mean(df_post[pname])
+            ci_2_5 = np.percentile(df_post[pname], 2.5)
+            ci_97_5 = np.percentile(df_post[pname], 97.5)
+            median = np.median(df_post[pname])
+
+            summary_rows.append({
+                'parameter': param,
+                'mean': mean,
+                'median': median,
+                'CI_2.5%': ci_2_5,
+                'CI_97.5%': ci_97_5
+            })
+
+    # Store in DataFrame and save
+    df_evidence_scaled = pd.DataFrame(X_real, columns=param_names)
+    df_evidence_scaled['discrepancy'] = Y
+    df_evidence_scaled.to_csv(outpref + '_gp_evidence.csv', index=False)        
+    df_post.to_csv(outpref + '_mcmc_posterior_samples.csv', index=False)
+    df_summary = pd.DataFrame(summary_rows)
+    df_summary.to_csv(outpref + '_parameter_estimates_summary.csv', index=False)
 
     sys.exit(0)
