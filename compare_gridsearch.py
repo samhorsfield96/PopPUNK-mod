@@ -86,7 +86,7 @@ def plot_scatter(X, out_prefix, x_fit, y_fit):
 
     plt.xlabel('Core distance (' + r'$\pi$' + ')')
     plt.ylabel('Accessory distance (' + r'$a$' + ')')
-    plt.savefig(out_prefix + '_distanceDistribution.png')
+    plt.savefig(out_prefix + '_contours.png')
     plt.close()
 
 # fit asymptotic curve using exponential decay

@@ -426,7 +426,7 @@ if __name__ == "__main__":
     fig.savefig(outpref + "_curve_fit.png")
     plt.close()
 
-    plot_scatter(obs_df, outpref + "_contour_fit.png", x_fit, y_fit)
+    plot_scatter(obs_df, outpref, x_fit, y_fit)
 
     # save observed parameters
     #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
