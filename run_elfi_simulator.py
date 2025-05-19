@@ -72,7 +72,7 @@ def get_options():
     IO.add_argument('--prop_positive',
                     type=float,
                     default=-1.0,
-                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0Proportion of pangenome made up of positively selected genes. Must be 0.0 <= X <= 1.0. If negative, neutral selection is simulated.')
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0. If negative, neutral selection is simulated.')
     IO.add_argument('--pos_lambda',
                     type=float,
                     default=0.1,

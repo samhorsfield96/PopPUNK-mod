@@ -14,6 +14,7 @@ from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
+from compare_gridsearch import compare_gridsearch
 #from scipy.special import logit
 
 # fit asymptotic curve using exponential decay
@@ -419,11 +420,13 @@ if __name__ == "__main__":
     ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
              fontsize=10, color="green")
 
-    ax.set_xlabel("Core distance")
-    ax.set_ylabel("Accessory distance")
+    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
+    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
 
     fig.savefig(outpref + "_curve_fit.png")
     plt.close()
+
+    plot_scatter(obs_df, outpref + "_contour_fit.png", x_fit, y_fit)
 
     # save observed parameters
     #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
@@ -622,6 +625,8 @@ if __name__ == "__main__":
     X_real = np.zeros_like(X)
     df_post = pd.DataFrame(result.samples)
 
+    summary_rows = []
+
     for i, pname in enumerate(param_names):
         if pname in param_bounds:
             if pname != "prop_genes2":
@@ -638,7 +643,7 @@ if __name__ == "__main__":
             median = np.median(df_post[pname])
 
             summary_rows.append({
-                'parameter': param,
+                'parameter': pname,
                 'mean': mean,
                 'median': median,
                 'CI_2.5%': ci_2_5,
