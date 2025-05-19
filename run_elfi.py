@@ -14,7 +14,7 @@ from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
-from compare_gridsearch import compare_gridsearch
+from compare_gridsearch import plot_scatter
 #from scipy.special import logit
 
 # fit asymptotic curve using exponential decay
