@@ -399,12 +399,12 @@ if __name__ == "__main__":
     if HGT_rate == None:
         elfi.Prior('uniform', 0.0, 1.0, model=m, name='HGT_rate')
     else:
-        HGT_rate = to_normalised_log_uniform(HGT_rate, epsilon, recomb_max, epsilon)
+        HGT_rate = to_normalised_log_uniform(HGT_rate, 0.0, recomb_max, epsilon)
     
     if HR_rate == None:
         elfi.Prior('uniform', 0.0, 1.0, model=m, name='HR_rate')
     else:
-        HR_rate = to_normalised_log_uniform(HR_rate, epsilon, recomb_max, epsilon)
+        HR_rate = to_normalised_log_uniform(HR_rate, 0.0, recomb_max, epsilon)
 
     # fit negative_exponential curve
     popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
@@ -412,7 +412,7 @@ if __name__ == "__main__":
     # get 1 std deviation error of parameters
     b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
 
-    mean_acc = np.mean(obs_df[:,1])
+    mean_acc = np.min(obs_df[:,1])
 
     # plot fit
     fig, ax = plt.subplots()
