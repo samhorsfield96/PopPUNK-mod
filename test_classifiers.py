@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 import numpy as np
 import pandas as pd
@@ -33,15 +34,19 @@ def main():
     outpref = options.outpref
     params = options.params.split(",")
     n_estimators = options.n_estimators
+    #print(f"Params-pre: {params}", file=sys.stderr)
 
     df = pd.read_csv(infile, header=0, sep="\t")
     params = [col for col in params if col in df.columns]
+    print(f"Params: {params}", file=sys.stderr)
+    print(f"df: {df}", file=sys.stderr)
 
     # DataFrame with remaining columns
     X = df.drop(columns=params)
 
     element_dict_list = []
     for element in params:
+        print(f"Anaylsing: {element}", file=sys.stderr)
         element_dict = {}
         element_dict["feature"] = element
 
