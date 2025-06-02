@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 rng = np.random.default_rng()
 import subprocess
 import sys
-from scipy.optimize import curve_fit
 from scipy.stats import qmc
 
 # run

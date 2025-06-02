@@ -14,12 +14,63 @@ from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
-from compare_gridsearch import plot_scatter
-#from scipy.special import logit
+
+try:  # sklearn >= 0.22
+    from sklearn.neighbors import KernelDensity
+except ImportError:
+    from sklearn.neighbors.kde import KernelDensity
 
 # fit asymptotic curve using exponential decay
+# b0 is asymptote, b1 is y-intercept, b2 is rate of decay
 def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
-    return b0 * (1 - np.exp(-b1 * x)) + b2
+    return b0 - (b0 - b1) * np.exp(-b2 * x)
+
+def fit_negative_exponential(x, y, p0=[1.0, 0.0, 1.0], bounds=([0.0, 0.0, 0.0], [1.0, 1.0, np.inf])):
+    return curve_fit(negative_exponential, x, y, p0=p0, bounds=bounds)
+
+# Copyright John Lees and Nicholas Croucher 2025
+def get_grid(minimum, maximum, resolution):
+    x = np.linspace(minimum, maximum, resolution)
+    y = np.linspace(minimum, maximum, resolution)
+    xx, yy = np.meshgrid(x, y)
+    xy = np.vstack([yy.ravel(), xx.ravel()]).T
+
+    return(xx, yy, xy)
+
+# Copyright John Lees and Nicholas Croucher 2025
+def plot_scatter(X, out_prefix, x_fit, y_fit):
+    # Plot results - max 1M for speed
+    max_plot_samples = 1000000
+    if X.shape[0] > max_plot_samples:
+        X = utils.shuffle(X, random_state=random.randint(1,10000))[0:max_plot_samples,]
+
+    # Kernel estimate uses scaled data 0-1 on each axis
+    scale = np.amax(X, axis = 0)
+    X /= scale
+
+    plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
+    xx, yy, xy = get_grid(0, 1, 100)
+
+    # KDE estimate
+    kde = KernelDensity(bandwidth=0.03, metric='euclidean',
+                        kernel='epanechnikov', algorithm='ball_tree')
+    kde.fit(X)
+    z = np.exp(kde.score_samples(xy))
+    z = z.reshape(xx.shape).T
+
+    levels = np.linspace(z.min(), z.max(), 10)
+    # Rescale contours
+    plt.contour(xx*scale[0], yy*scale[1], z, levels=levels[1:], cmap='plasma')
+    scatter_alpha = 1
+
+    # Plot on correct scale
+    plt.scatter(X[:,0]*scale[0].flat, X[:,1]*scale[1].flat, s=1, alpha=scatter_alpha)
+    plt.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    plt.xlabel('Core distance (' + r'$\pi$' + ')')
+    plt.ylabel('Accessory distance (' + r'$a$' + ')')
+    plt.savefig(out_prefix + '_contours.png')
+    plt.close()
 
 # RMSE
 def rmse(y_true, y_pred):
@@ -271,7 +322,7 @@ def process_result(completed_process, *inputs, **kwinputs):
     #sim = np.concatenate((sim_core, sim_acc), axis=0)
 
     try:
-        popt, pcov = curve_fit(negative_exponential, simulations[:,0], simulations[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+        popt, pcov = fit_negative_exponential(simulations[:,0], simulations[:,1])
         b0, b1, b2 = popt
         b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
     except:
@@ -280,12 +331,12 @@ def process_result(completed_process, *inputs, **kwinputs):
     mean_acc = np.mean(simulations[:,1])
 
     #sim = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    #sim = np.array([b0, b1, b2])
+    sim = np.array([b0, b1, b2])
     #sim = sim_acc
     #sim_dist = (sim_core, sim_acc)
     
     # based on random forest and hypercube (b0 for r1, mean_acc for prop2, b1 and b1_err for HGT)
-    sim = np.array([b0, b1, b1_err, mean_acc])
+    #sim = np.array([b0, b1, b1_err, mean_acc])
 
     #obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
     #obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
@@ -407,7 +458,7 @@ if __name__ == "__main__":
         HR_rate = to_normalised_log_uniform(HR_rate, 0.0, recomb_max, epsilon)
 
     # fit negative_exponential curve
-    popt, pcov = curve_fit(negative_exponential, obs_df[:,0], obs_df[:,1], p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
     b0, b1, b2 = popt
     # get 1 std deviation error of parameters
     b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
@@ -442,8 +493,8 @@ if __name__ == "__main__":
 
     # save observed parameters
     #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    #obs = np.array([b0, b1, b2])
-    obs = np.array([b0, b1, b1_err, mean_acc])
+    obs = np.array([b0, b1, b2])
+    #obs = np.array([b0, b1, b1_err, mean_acc])
 
     # simulate and fit
     if run_mode == "sim":
@@ -504,7 +555,7 @@ if __name__ == "__main__":
         m['sim'].uses_meta = True
 
         # use euclidean between
-        elfi.Distance('canberra', m['sim'], model=m, name='d')
+        elfi.Distance('cosine', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
         #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')

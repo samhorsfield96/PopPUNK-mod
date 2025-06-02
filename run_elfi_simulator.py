@@ -5,10 +5,7 @@ import matplotlib.pyplot as plt
 rng = np.random.default_rng()
 import subprocess
 import sys
-from scipy.optimize import curve_fit
-
-def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
-    return b0 * (1 - np.exp(-b1 * x)) + b2
+from run_elfi import negative_exponential, fit_negative_exponential
 
 def read_distfile(filename):
     # read first line, determine if csv
@@ -191,7 +188,7 @@ if __name__ == "__main__":
 
     ax.scatter(x, y, s=10, alpha=0.3)
 
-    popt1, pco1v = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
+    popt1, pco1v = fit_negative_exponential(x, y)
 
     x_fit = np.linspace(0, x.max(), 100)
     y_fit = negative_exponential(x_fit, *popt1)
