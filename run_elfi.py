@@ -272,7 +272,7 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['rate_genes1'] = from_unit_to_loguniform(rate_genes1, epsilon, max_mu)
     # rate_genes2 is always faster make it so all genes in pangenome mutate once on average per generation
     kwinputs['rate_genes2'] = rate_genes2 * prop_genes2
-    kwinputs['prop_genes2'] = prop_genes2
+    kwinputs['prop_genes2'] = from_unit_to_loguniform(prop_genes2, epsilon, 1.0)
     kwinputs['seed'] = seed
     kwinputs['pop_size'] = pop_size
     kwinputs['core_size'] = core_size
@@ -326,17 +326,17 @@ def process_result(completed_process, *inputs, **kwinputs):
         b0, b1, b2 = popt
         b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
     except:
-        b0, b1, b2, b0_err, b1_err, b2_err = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        b0, b1, b2, b0_err, b1_err, b2_err = -1e6, -1e6, -1e6, -1e6, -1e6, -1e6
     
     mean_acc = np.mean(simulations[:,1])
 
-    #sim = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    sim = np.array([b0, b1, b2])
+    #sim = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
+    #sim = np.array([b0, b1, b2])
     #sim = sim_acc
     #sim_dist = (sim_core, sim_acc)
     
     # based on random forest and hypercube (b0 for r1, mean_acc for prop2, b1 and b1_err for HGT)
-    #sim = np.array([b0, b1, b1_err, mean_acc])
+    sim = np.array([b0, b2, b2_err, mean_acc])
 
     #obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
     #obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
@@ -463,7 +463,7 @@ if __name__ == "__main__":
     # get 1 std deviation error of parameters
     b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
 
-    mean_acc = np.min(obs_df[:,1])
+    mean_acc = np.mean(obs_df[:,1])
 
     # plot fit
     fig, ax = plt.subplots()
@@ -492,9 +492,9 @@ if __name__ == "__main__":
     plot_scatter(obs_df, outpref, x_fit, y_fit)
 
     # save observed parameters
-    #obs = np.array([b0, b1, b2, b0_err, b1_err, b2_err])
-    obs = np.array([b0, b1, b2])
-    #obs = np.array([b0, b1, b1_err, mean_acc])
+    #obs = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
+    #obs = np.array([b0, b1, b2])
+    obs = np.array([b0, b2, b2_err, mean_acc])
 
     # simulate and fit
     if run_mode == "sim":
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         m['sim'].uses_meta = True
 
         # use euclidean between
-        elfi.Distance('cosine', m['sim'], model=m, name='d')
+        elfi.Distance('canberra', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
         #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')
@@ -671,7 +671,7 @@ if __name__ == "__main__":
     param_names = mod.model.parameter_names
     param_bounds = {
         'rate_genes1': (epsilon, max_mu),
-        'prop_genes2': (0.0, 1.0),
+        'prop_genes2': (epsilon, 1.0),
         'HR_rate': (epsilon, recomb_max),
         'HGT_rate': (epsilon, recomb_max),
         # Add all your parameter bounds here
@@ -689,12 +689,9 @@ if __name__ == "__main__":
 
     for i, pname in enumerate(param_names):
         if pname in param_bounds:
-            if pname != "prop_genes2":
-                min_val, max_val = param_bounds[pname]
-                X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
-                df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
-            else:
-                X_real[:, i] = X[:, i]
+            min_val, max_val = param_bounds[pname]
+            X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
+            df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
 
             # Compute posterior summaries
             mean = np.mean(df_post[pname])
