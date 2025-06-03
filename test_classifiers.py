@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import ElasticNet
 
 def get_options():
     description = 'Tests importance of classifiers from Pansim gridsearch'
@@ -24,6 +25,10 @@ def get_options():
                 type=int,
                 default=500,
                 help='Number of trees for random forest. Default = 500')
+    IO.add_argument('--regression',
+                default="elastic_net",
+                choices=['random_forest', 'elastic_net'],
+                help='Type of regression to use. Choices: random_forest or random_forest')
 
     return parser.parse_args()
 
@@ -34,9 +39,13 @@ def main():
     outpref = options.outpref
     params = options.params.split(",")
     n_estimators = options.n_estimators
+    regression = options.regression
     #print(f"Params-pre: {params}", file=sys.stderr)
 
     df = pd.read_csv(infile, header=0, sep="\t")
+    if regression == "elastic_net":
+        df.dropna(inplace=True)
+
     params = [col for col in params if col in df.columns]
     print(f"Params: {params}", file=sys.stderr)
     print(f"df: {df}", file=sys.stderr)
@@ -52,12 +61,23 @@ def main():
 
         y = df[element]
         
-        regr = RandomForestRegressor(random_state=42, n_estimators=n_estimators)
-        regr.fit(X, y)
-        importances = regr.feature_importances_
+        if regression == "random_forest":
+            regr = RandomForestRegressor(random_state=42, n_estimators=n_estimators)
+            regr.fit(X, y)
+            importances = regr.feature_importances_
+        else:
+            regr = ElasticNet(random_state=0)
+            regr.fit(X, y)
+            coefficients = regr.coef_
+        
+            feature_importance = pd.Series(index = X.columns, data = np.abs(regr.coef_))
+            total_feature_importance = feature_importance.sum()
+
+            feature_importance = feature_importance / total_feature_importance
+            importances = feature_importance.to_dict()
         
         for i in range(len(importances)):
-            element_dict[X.columns[i]] = importances[i]
+            element_dict[X.columns[i]] = importances[X.columns[i]]
         
         element_dict_list.append(element_dict)
     
