@@ -32,6 +32,10 @@ def get_options():
 
     return parser.parse_args()
 
+def clean_dataset(df):
+    assert isinstance(df, pd.DataFrame), "df needs to be a pd.DataFrame"
+    indices_to_keep = ~df.isin([np.inf, -np.inf]).any(axis=1)
+    return df[indices_to_keep].astype(np.float64)
 
 def main():
     options = get_options()
@@ -42,16 +46,25 @@ def main():
     regression = options.regression
     #print(f"Params-pre: {params}", file=sys.stderr)
 
-    df = pd.read_csv(infile, header=0, sep="\t")
+    df = pd.read_csv(infile, header=0, sep="\t").astype(np.float64)
+    
+    # clean up data
+    float32_max = np.finfo(np.float32).max  # ~3.4e+38
+    df[df > float32_max] = np.nan  # Replace overflow-prone values with NaN
     if regression == "elastic_net":
         df.dropna(inplace=True)
-
+    
     params = [col for col in params if col in df.columns]
     print(f"Params: {params}", file=sys.stderr)
     print(f"df: {df}", file=sys.stderr)
 
     # DataFrame with remaining columns
-    X = df.drop(columns=params)
+    X = df.drop(columns=params).astype(np.float64)
+
+    print("Max value in X:", np.nanmax(X))
+    print("Min value in X:", np.nanmin(X))
+    print("Any inf in X:", np.any(np.isinf(X)))
+    print("Any NaN in X:", np.any(np.isnan(X)))
 
     element_dict_list = []
     for element in params:
@@ -59,7 +72,7 @@ def main():
         element_dict = {}
         element_dict["feature"] = element
 
-        y = df[element]
+        y = df[element].astype(np.float64)
         
         if regression == "random_forest":
             regr = RandomForestRegressor(random_state=42, n_estimators=n_estimators)

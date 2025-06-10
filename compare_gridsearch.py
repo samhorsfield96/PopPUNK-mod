@@ -155,7 +155,6 @@ def generate_summary_stats(file, plot, outpref):
         # Sort by cluster size
         hdb_data = hdb_data[hdb_data[:, 0].argsort()]  # Sort by first column (size)
         
-
         # Extract sizes and centroids
         sizes = hdb_data[:, 0]       # Cluster sizes
         centroids = hdb_data[:, 1:]  # Centroid positions (x, y)
