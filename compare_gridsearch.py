@@ -17,6 +17,108 @@ from multiprocessing import Pool
 from functools import partial
 from run_elfi import negative_exponential, fit_negative_exponential, plot_scatter
 
+# generate hdbscan fit
+def hdbscan(obs_df, plot=False, outpref=None, filename=None):
+    values_dict = {}
+    min_cluster_size = max(round(len(obs_df[:,1]) * 0.01), 10)
+    min_samples = max(round(len(obs_df[:,1]) * 0.0001), 10)
+    success = False
+    try: 
+        success = True
+        hdb = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, algorithm="ball_tree")
+        hdb.fit(obs_df)
+
+        # Get unique cluster labels (excluding noise, which is labeled as -1)
+        labels = hdb.labels_
+        unique_labels = np.unique(labels[labels != -1])  # Ignore noise (-1)
+
+        # Compute cluster sizes and centroids
+        data = []
+
+        for label in unique_labels:
+            hdb_points = obs_df[labels == label]
+            centroid = hdb_points.mean(axis=0)
+            size = len(hdb_points)
+            data.append([size, centroid[0], centroid[1]])
+
+        # Convert to NumPy array
+        hdb_data = np.array(data)
+
+        # Sort by cluster size
+        hdb_data = hdb_data[hdb_data[:, 0].argsort()]  # Sort by first column (size)
+        
+        # Extract sizes and centroids
+        sizes = hdb_data[:, 0]       # Cluster sizes
+        centroids = hdb_data[:, 1:]  # Centroid positions (x, y)
+
+        # Extract min/max cluster size and corresponding centroids
+        min_size, min_centroid = sizes[0], centroids[0]
+        max_size, max_centroid = sizes[-1], centroids[-1]
+
+        # Compute percentiles
+        size_percentiles = np.percentile(sizes, [25, 50, 75])
+        centroid_percentiles = np.percentile(centroids, [25, 50, 75], axis=0)
+
+        # Extract percentile values
+        size_25th, size_median, size_75th = size_percentiles
+        centroid_25th, centroid_median, centroid_75th = centroid_percentiles
+
+        # cluster positions
+        values_dict["min_centroid_core"] = min_centroid[0]
+        values_dict["min_centroid_acc"] = min_centroid[1]
+        values_dict["max_centroid_acc"] = max_centroid[0]
+        values_dict["max_centroid_core"] = max_centroid[1]
+        values_dict["quant_25_centroid_core"] = centroid_25th[0]
+        values_dict["quant_25_centroid_acc"] = centroid_25th[1]
+        values_dict["quant_75_centroid_core"] = centroid_75th[0]
+        values_dict["quant_75_centroid_acc"] = centroid_75th[1]
+        values_dict["median_centroid_core"] = centroid_median[0] 
+        values_dict["median_centroid_acc"] = centroid_median[1]
+
+        # cluster sizes
+        values_dict["min_centroid_size"] = int(min_size) / len(obs_df[:,1])
+        values_dict["max_centroid_size"] = int(max_size) / len(obs_df[:,1])
+        values_dict["quant_25_centroid_size"] = int(size_25th) / len(obs_df[:,1])
+        values_dict["quant_75_centroid_size"] = int(size_75th) / len(obs_df[:,1])
+        values_dict["median_centroid_size"] = int(size_median) / len(obs_df[:,1])
+
+        # Plot clustered points
+        if plot:
+            #print(f"Plotting HDBSCAN, saving to {outpref + "_" + filename + "_HDBSCAN.png"}", file=sys.stderr)
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x=obs_df[:, 0], y=obs_df[:, 1], hue=labels, palette="viridis", s=5, alpha=0.6, edgecolor=None)
+
+            # Mark centroids
+            centroid_markers = {
+                "Smallest": ("grey", "o"),
+                "Largest": ("grey", "p"),
+                "25th %": ("grey", "s"),
+                "Median": ("grey", "D"),
+                "75th %": ("grey", "^"),
+            }
+
+            for name, (color, marker), centroid in zip(
+                centroid_markers.keys(),
+                centroid_markers.values(),
+                [min_centroid, max_centroid, centroid_25th, centroid_median, centroid_75th]
+            ):
+                plt.scatter(*centroid, color=color, marker=marker, s=200, label=name, edgecolor="black")
+
+            # Customize plot
+            plt.legend(title="Centroids", loc="best")
+            plt.title("HDBSCAN Clustering with Centroid Markers")
+            plt.xlabel("Feature 1")
+            plt.ylabel("Feature 2")
+            plt.grid(True)
+
+            # Show plot
+            plt.savefig(outpref + "_" + filename + "_HDBSCAN.png")
+            plt.close()
+    except:
+        pass
+            
+    return success, values_dict
+
 def get_options():
     description = 'Compare parameters from a gridsearch of Pansim runs'
     parser = argparse.ArgumentParser(description=description,
@@ -129,102 +231,10 @@ def generate_summary_stats(file, plot, outpref):
     except:
         pass
     
-    # try HDSCAN, absolute minimum 10 samples per cluster
-    min_cluster_size = max(round(len(obs_df[:,1]) * 0.01), 10)
-    min_samples = max(round(len(obs_df[:,1]) * 0.0001), 10)
-    try: 
-        hdb = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, algorithm="ball_tree")
-        hdb.fit(obs_df)
-
-        # Get unique cluster labels (excluding noise, which is labeled as -1)
-        labels = hdb.labels_
-        unique_labels = np.unique(labels[labels != -1])  # Ignore noise (-1)
-
-        # Compute cluster sizes and centroids
-        data = []
-
-        for label in unique_labels:
-            hdb_points = obs_df[labels == label]
-            centroid = hdb_points.mean(axis=0)
-            size = len(hdb_points)
-            data.append([size, centroid[0], centroid[1]])
-
-        # Convert to NumPy array
-        hdb_data = np.array(data)
-
-        # Sort by cluster size
-        hdb_data = hdb_data[hdb_data[:, 0].argsort()]  # Sort by first column (size)
-        
-        # Extract sizes and centroids
-        sizes = hdb_data[:, 0]       # Cluster sizes
-        centroids = hdb_data[:, 1:]  # Centroid positions (x, y)
-
-        # Extract min/max cluster size and corresponding centroids
-        min_size, min_centroid = sizes[0], centroids[0]
-        max_size, max_centroid = sizes[-1], centroids[-1]
-
-        # Compute percentiles
-        size_percentiles = np.percentile(sizes, [25, 50, 75])
-        centroid_percentiles = np.percentile(centroids, [25, 50, 75], axis=0)
-
-        # Extract percentile values
-        size_25th, size_median, size_75th = size_percentiles
-        centroid_25th, centroid_median, centroid_75th = centroid_percentiles
-
-        # cluster positions
-        values_dict["min_centroid_core"] = min_centroid[0]
-        values_dict["min_centroid_acc"] = min_centroid[1]
-        values_dict["max_centroid_acc"] = max_centroid[0]
-        values_dict["max_centroid_core"] = max_centroid[1]
-        values_dict["quant_25_centroid_core"] = centroid_25th[0]
-        values_dict["quant_25_centroid_acc"] = centroid_25th[1]
-        values_dict["quant_75_centroid_core"] = centroid_75th[0]
-        values_dict["quant_75_centroid_acc"] = centroid_75th[1]
-        values_dict["median_centroid_core"] = centroid_median[0] 
-        values_dict["median_centroid_acc"] = centroid_median[1]
-
-        # cluster sizes
-        values_dict["min_centroid_size"] = int(min_size) / len(obs_df[:,1])
-        values_dict["max_centroid_size"] = int(max_size) / len(obs_df[:,1])
-        values_dict["quant_25_centroid_size"] = int(size_25th) / len(obs_df[:,1])
-        values_dict["quant_75_centroid_size"] = int(size_75th) / len(obs_df[:,1])
-        values_dict["median_centroid_size"] = int(size_median) / len(obs_df[:,1])
-
-        #print(values_dict)
-
-        # Plot clustered points
-        if plot:
-            plt.figure(figsize=(10, 6))
-            sns.scatterplot(x=obs_df[:, 0], y=obs_df[:, 1], hue=labels, palette="viridis", s=5, alpha=0.6, edgecolor=None)
-
-            # Mark centroids
-            centroid_markers = {
-                "Smallest": ("grey", "o"),
-                "Largest": ("grey", "p"),
-                "25th %": ("grey", "s"),
-                "Median": ("grey", "D"),
-                "75th %": ("grey", "^"),
-            }
-
-            for name, (color, marker), centroid in zip(
-                centroid_markers.keys(),
-                centroid_markers.values(),
-                [min_centroid, max_centroid, centroid_25th, centroid_median, centroid_75th]
-            ):
-                plt.scatter(*centroid, color=color, marker=marker, s=200, label=name, edgecolor="black")
-
-            # Customize plot
-            plt.legend(title="Centroids", loc="best")
-            plt.title("HDBSCAN Clustering with Centroid Markers")
-            plt.xlabel("Feature 1")
-            plt.ylabel("Feature 2")
-            plt.grid(True)
-
-            # Show plot
-            plt.savefig(outpref + "_" + filename + "_HBSCAN.png")
-            plt.close()
-    except:
-        pass
+    # run hdbscan
+    success, values_dict_temp = hdbscan(obs_df, plot=True, outpref=outpref, filename=filename)
+    if success:
+        values_dict = values_dict | values_dict_temp
             
     return values_dict
 
