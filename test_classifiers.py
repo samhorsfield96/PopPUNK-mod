@@ -78,6 +78,10 @@ def main():
             regr = RandomForestRegressor(random_state=42, n_estimators=n_estimators)
             regr.fit(X, y)
             importances = regr.feature_importances_
+
+            for i in range(len(importances)):
+                element_dict[X.columns[i]] = importances[i]
+
         else:
             regr = ElasticNet(random_state=0)
             regr.fit(X, y)
@@ -89,8 +93,8 @@ def main():
             feature_importance = feature_importance / total_feature_importance
             importances = feature_importance.to_dict()
         
-        for i in range(len(importances)):
-            element_dict[X.columns[i]] = importances[X.columns[i]]
+            for i in range(len(importances)):
+                element_dict[X.columns[i]] = importances[X.columns[i]]
         
         element_dict_list.append(element_dict)
     
