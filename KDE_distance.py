@@ -40,6 +40,13 @@ def generate_samples(grid_params, kde):
 
     return z
 
+def create_KDE_dist(df, grid_params):
+    kde = get_kde(df)
+    z = generate_samples(grid_params, kde)
+    z = z.ravel()
+    z /= z.sum()
+
+    return z
 
 def main():
     options = get_options()
@@ -49,43 +56,10 @@ def main():
     infile1_df = np.loadtxt(infile1, delimiter='\t', dtype='float64')
     infile2_df = np.loadtxt(infile2, delimiter='\t', dtype='float64')
 
-    kde1 = get_kde(infile1_df)
-    kde2 = get_kde(infile2_df)
-
     grid_params = get_grid(0, 1, 100)
-    xx, yy, xy = grid_params
 
-    # print(f"xx: {xx}")
-    # print(f"yy: {yy}")
-    # print(f"xy: {xy}")
-
-    z1 = generate_samples(grid_params, kde1)
-    z2 = generate_samples(grid_params, kde2)
-
-    z1 = z1.ravel()
-    z2 = z2.ravel()
-
-    z1 /= z1.sum()
-    z2 /= z2.sum()
-
-    # print(f"z1: {z1}")
-    # print(f"z2: {z2}")
-
-    # Compute KL divergence
-    # kl_pq = np.sum(rel_entr(z1, z2))
-    # print(f"kl_pq: {kl_pq}")
-
-    # m = 0.5 * (z1 + z2)
-
-    # Compute Jensen-Shannon divergence (symmetric and bounded)
-    # js_divergence = 0.5 * np.sum(rel_entr(z1, m)) + 0.5 * np.sum(rel_entr(z2, m))
-    # print(f"js_divergence: {js_divergence}")
-
-    # Convert to Jensen-Shannon distance (metric)
-    # js_distance = np.sqrt(js_divergence)
-    # print(f"js_distance: {js_distance}")
-    # print(f"z1.shape: {z1.shape}")
-    # print(f"z2.shape: {z2.shape}")
+    z1 = create_KDE_dist(infile1_df, grid_params)
+    z2 = create_KDE_dist(infile2_df, grid_params)
 
     js_distance = jensenshannon(z1, z2, axis=0)
     print(f"js_distance: {js_distance}")
