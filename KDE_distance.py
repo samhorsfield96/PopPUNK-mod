@@ -2,10 +2,8 @@
 import numpy as np
 import argparse
 from scipy.spatial.distance import jensenshannon, canberra, cosine, euclidean
-from scipy.special import rel_entr
-from run_elfi import get_grid
+from scipy.special import rel_entr, kl_div
 from sklearn.preprocessing import MinMaxScaler
-
 from scipy.integrate import nquad
 
 try:  # sklearn >= 0.22
@@ -46,11 +44,11 @@ def js_distance_integral_kde(kde_p, kde_q, eps=1e-12):
 
 
 # Copyright John Lees and Nicholas Croucher 2025
-def get_grid_nonsymmetric(min_x, max_x, min_y, max_y, resolution):
-    x = np.linspace(min_x, max_x, resolution)
-    y = np.linspace(min_y, max_y, resolution)
+def get_grid(minimum, maximum, resolution):
+    x = np.linspace(minimum, maximum, resolution)
+    y = np.linspace(minimum, maximum, resolution)
     xx, yy = np.meshgrid(x, y)
-    xy = np.vstack([xx.ravel(), yy.ravel()]).T
+    xy = np.vstack([yy.ravel(), xx.ravel()]).T
 
     return(xx, yy, xy)
 
@@ -85,7 +83,7 @@ def generate_samples(grid_params, kde):
 
     return z
 
-def create_KDE_dist(df, grid_params):
+def create_KDE_dist(df, grid_params, eps=1e-12):
     scale = np.amax(df, axis = 0)
     df /= scale
 
@@ -93,75 +91,57 @@ def create_KDE_dist(df, grid_params):
     z = generate_samples(grid_params, kde)
     #print(f"z: {z}")
     z = z.ravel()
+    z += eps
     z /= z.sum()
 
     return z
+
+def scale_KDE(df1, df2, eps=1e-12):
+    scaler = MinMaxScaler()
+    scaler.fit(np.vstack([df1, df2]))
+
+    # scale dataframes between 0-1
+    df1 = scaler.transform(df1)
+    df2 = scaler.transform(df2)
+
+    # generate grid
+    grid_params = get_grid(0, 1, 100)
+
+    # get KDE samples
+    z1 = create_KDE_dist(df1, grid_params, eps)
+    z2 = create_KDE_dist(df2, grid_params, eps)
+
+    return z1, z2
+
+def KDE_KL_divergence(df1, df2, eps=1e-12):
+    z1, z2 = scale_KDE(df1, df2, eps)
+
+    # calculate KL divergence
+    KL_divergence = np.sum(rel_entr(z1, z2))
+    return KL_divergence
+
+def KDE_JS_divergence(df1, df2, eps=1e-12):
+    z1, z2 = scale_KDE(df1, df2, eps)
+
+    # calculate KL divergence
+    js_distance = jensenshannon(z1, z2, axis=0)
+    return js_distance
 
 def main():
     options = get_options()
     infile1 = options.infile1
     infile2 = options.infile2
 
-    infile1_df = np.loadtxt(infile1, delimiter='\t', dtype='float64')
-    infile2_df = np.loadtxt(infile2, delimiter='\t', dtype='float64')
+    df1 = np.loadtxt(infile1, delimiter='\t', dtype='float64')
+    df2 = np.loadtxt(infile2, delimiter='\t', dtype='float64')
 
-    scaler = MinMaxScaler()
-    scaler.fit(np.vstack([infile1_df, infile2_df]))
-    #print(f"infile1_df_pre: {infile1_df}")
-    infile1_df = scaler.transform(infile1_df)
-    infile2_df = scaler.transform(infile2_df)
 
-    #print(f"infile1_df_post: {infile1_df}")
-
-    max_infile1 = np.max(infile1_df, axis=0)
-    min_infile1 = np.min(infile1_df, axis=0)
-    max_infile2 = np.max(infile2_df, axis=0)
-    min_infile2 = np.min(infile2_df, axis=0)
-
-    # print(f"max_infile1: {max_infile1}")
-
-    #print(f"max_acc1: {max_infile1[1]}, max_core1: {max_infile1[0]}")
-    #print(f"max_acc2: {max_infile2[1]}, max_core2: {max_infile2[0]}")
-    #print(f"min_acc1: {min_infile1[1]}, min_core1: {min_infile1[0]}")
-    #print(f"min_acc2: {min_infile2[1]}, min_core2: {min_infile2[0]}")
-
-    min_x = min(min_infile1[0], min_infile2[0])
-    max_x = max(max_infile1[0], max_infile2[0])
-    min_y = min(min_infile1[1], min_infile2[1])
-    max_y = max(max_infile1[1], max_infile2[1])
-
-    # print(f"min_x: {min_x}")
-    # print(f"max_x: {max_x}")
-    # print(f"min_y: {min_y}")
-    # print(f"max_y: {max_y}")
-
-    #grid_params = get_grid_nonsymmetric(min_x, max_x, min_y, max_y, 100)
-    grid_params = get_grid(0, 1, 100)
-
-    #print(f"grid_params[0]: {grid_params[0]}")
-    #print(f"grid_params[1]: {grid_params[1]}")
-    #print(f"grid_params[2]: {grid_params[2]}")
-
-    #print("z1")
-    z1 = create_KDE_dist(infile1_df, grid_params)
-    #print("z2")
-    z2 = create_KDE_dist(infile2_df, grid_params)
-
-    js_distance = jensenshannon(z1, z2, axis=0)
+    js_distance = KDE_JS_divergence(df1, df2)
     print(f"js_distance: {js_distance}")
 
-    #js_distance2 = js_distance_integral_kde(get_kde(infile1_df), get_kde(infile2_df))
-    #print(f"js_distance2: {js_distance2}")
-
-    # infile1_arr = np.array([0, min_infile1[0], min_infile1[1], max_infile1[0], max_infile1[1]])
-    # infile2_arr = np.array([js_distance, min_infile1[0], min_infile1[1], max_infile1[0], max_infile1[1]])
-
-    # canberra_distance = canberra(infile1_arr, infile2_arr)
-    # print(f"canberra_distance: {canberra_distance}")
-    # cosine_distance = cosine(infile1_arr, infile2_arr)
-    # print(f"cosine_distance: {cosine_distance}")
-    # euclidean_distance = euclidean(infile1_arr, infile2_arr)
-    # print(f"euclidean_distance: {euclidean_distance}")
+    #KL_distance = np.sum(rel_entr(z1, z2))
+    KL_distance = KDE_KL_divergence(df1, df2)
+    print(f"KL_distance: {KL_distance}")
 
 if __name__ == "__main__":
     main()
