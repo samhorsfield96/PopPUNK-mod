@@ -71,6 +71,9 @@ def get_kde(X):
     # KDE estimate
     kde = KernelDensity(bandwidth=0.03, metric='euclidean',
                         kernel='epanechnikov', algorithm='ball_tree')
+    # convert nan values to 0.0
+    X[np.isnan(X)] = 0.0
+    
     kde.fit(X)
     return kde
 
