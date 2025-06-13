@@ -88,7 +88,6 @@ def generate_samples(grid_params, kde):
 
 def create_KDE_dist(df, grid_params, eps=1e-12):
     scale = np.amax(df, axis = 0)
-    df /= scale
 
     kde = get_kde(df)
     z = generate_samples(grid_params, kde)
