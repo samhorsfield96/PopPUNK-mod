@@ -74,6 +74,12 @@ def get_kde(X):
                         kernel='epanechnikov', algorithm='ball_tree')
     # convert nan values to 0.0
     X[np.isnan(X)] = 0.0
+    #scale = np.amax(X, axis = 0)
+
+    #X /= scale
+
+    # convert nan values to 0.0 again incase of 0 division error
+    #X[np.isnan(X)] = 0.0
     
     kde.fit(X)
     return kde
@@ -153,7 +159,9 @@ def KDE_KL_divergence(df1, df2, eps=1e-12):
     KL_divergence = np.sum(rel_entr(z1, z2))
     return KL_divergence
 
-def KDE_JS_divergence(df1, df2, eps=0.0):
+def KDE_JS_divergence(df1, df2, eps=0.0, log=False):
+    if log:
+        df1, df2 = np.log(df1 + eps), np.log(df2 + eps)
     z1, z2 = scale_KDE(df1, df2, eps)
 
     # calculate KL divergence
@@ -169,7 +177,7 @@ def main():
     df2 = np.loadtxt(infile2, delimiter='\t', dtype='float64')
 
 
-    js_distance = KDE_JS_divergence(df1, df2)
+    js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=True)
     print(f"js_distance: {js_distance}")
     print(f"log_js_distance: {np.log(js_distance)}")
     #euc_dist = euclidean(np.array([0.0]), np.array([js_distance]))
