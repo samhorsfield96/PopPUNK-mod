@@ -12,8 +12,9 @@ import matplotlib.pyplot as plt
 import pickle
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
-from scipy.stats import wasserstein_distance_nd
+#from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
+from KDE_distance import KDE_KL_divergence, KDE_JS_divergence, get_grid
 
 try:  # sklearn >= 0.22
     from sklearn.neighbors import KernelDensity
@@ -28,14 +29,11 @@ def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.gith
 def fit_negative_exponential(x, y, p0=[1.0, 0.0, 1.0], bounds=([0.0, 0.0, 0.0], [1.0, 1.0, np.inf])):
     return curve_fit(negative_exponential, x, y, p0=p0, bounds=bounds)
 
-# Copyright John Lees and Nicholas Croucher 2025
-def get_grid(minimum, maximum, resolution):
-    x = np.linspace(minimum, maximum, resolution)
-    y = np.linspace(minimum, maximum, resolution)
-    xx, yy = np.meshgrid(x, y)
-    xy = np.vstack([yy.ravel(), xx.ravel()]).T
+def safe_neg_inv(d):
+    return -1 / np.log(np.clip(d, 1e-12, None))
 
-    return(xx, yy, xy)
+def smooth_d(d):
+    return np.power(np.clip(d, 0, None), 0.5)
 
 # Copyright John Lees and Nicholas Croucher 2025
 def plot_scatter(X, out_prefix, x_fit, y_fit):
@@ -145,15 +143,20 @@ def get_options():
                     default=1e-5,
                     help='The minimum value for transformations to log-uniform space.  '
                          'Default = 1e-5 ')
+    IO.add_argument('--noise-scale',
+                    type=float,
+                    default=1e-4,
+                    help='The minimum value for transformations to log-uniform space.  '
+                         'Default = 1e-4 ')
     IO.add_argument('--samples',
                     type=int,
                     default=100000,
                     help='No. samples for posterior estimation. Default = 100000 ')
     IO.add_argument('--init_evidence',
                     type=int,
-                    default=1000,
+                    default=50,
                     help='Number of initialization points sampled straight from the priors before starting to '
-                         'optimize the acquisition of points. Default = 1000 ')
+                         'optimize the acquisition of points. Default = 50 ')
     IO.add_argument('--threshold',
                     type=float,
                     default=None,
@@ -161,24 +164,24 @@ def get_options():
                          'Default = None ')
     IO.add_argument('--n_evidence',
                     type=int,
-                    default=1000,
+                    default=200,
                     help='Evidence points requested (including init-evidence). '
-                         'Default = 1000 ')
+                         'Default = 200 ')
     IO.add_argument('--update-int',
-                type=int,
-                default=10,
-                help='Defines how often the GP hyperparameters are optimized. '
-                        'Default = 10 ')
+                    type=int,
+                    default=1,
+                    help='Defines how often the GP hyperparameters are optimized. '
+                            'Default = 1 ')
     IO.add_argument('--acq-noise-var',
-                type=float,
-                default=0.01,
-                help='Defines the diagonal covariance of noise added to the acquired points. '
-                        'Default = 0.01 ')
+                    type=float,
+                    default=0.01,
+                    help='Defines the diagonal covariance of noise added to the acquired points. '
+                            'Default = 0.01 ')
     IO.add_argument('--chains',
-                type=int,
-                default=4,
-                help='Number of chains for sampler. '
-                        'Default = 4 ')
+                    type=int,
+                    default=4,
+                    help='Number of chains for sampler. '
+                            'Default = 4 ')
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
@@ -264,7 +267,7 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon = inputs
+    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file = inputs
     
     # add to kwinputs
     kwinputs['avg_gene_freq'] = avg_gene_freq
@@ -282,6 +285,8 @@ def prepare_inputs(*inputs, **kwinputs):
     kwinputs['max_distances'] = max_distances
     kwinputs['HR_rate'] = from_unit_to_loguniform(HR_rate, epsilon, recomb_max)
     kwinputs['HGT_rate'] = from_unit_to_loguniform(HGT_rate, epsilon, recomb_max)
+    kwinputs['obs_file'] = obs_file
+    kwinputs['noise_scale'] = noise_scale
 
     meta = kwinputs['meta']
 
@@ -302,83 +307,25 @@ def prepare_inputs(*inputs, **kwinputs):
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['outpref'] + ".tsv"
+    noise_scale = kwinputs['noise_scale']
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
     # Clean up the files after reading the data in
     os.remove(output_filename)
 
-    #obs_file = kwinputs['obs_file']
-    #obs = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+    # read observations file
+    obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
-    # get maximum core and accessory for distibution
-    #max_core = max(np.max(obs[:,0]), np.max(simulations[:,0]))
-    #max_acc = max(np.max(obs[:,1]), np.max(simulations[:,1]))
-    #max_val = ma(max_core, max_acc)
-    
-    # process distributions
-    #sim_core = np.histogram(simulations[:,0], bins=500, range=(0, max_hamming_core))[0]
-    #sim_acc = np.histogram(simulations[:,1], bins=500, range=(0, max_jacc_pan))[0]
-    #sim = np.concatenate((sim_core, sim_acc), axis=0)
+    divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
 
-    try:
-        popt, pcov = fit_negative_exponential(simulations[:,0], simulations[:,1])
-        b0, b1, b2 = popt
-        b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
-    except:
-        b0, b1, b2, b0_err, b1_err, b2_err = -1e6, -1e6, -1e6, -1e6, -1e6, -1e6
-    
-    mean_acc = np.mean(simulations[:,1])
-
-    #sim = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
-    #sim = np.array([b0, b1, b2])
-    #sim = sim_acc
-    #sim_dist = (sim_core, sim_acc)
-    
-    # based on random forest and hypercube (b0 for r1, mean_acc for prop2, b1 and b1_err for HGT)
-    sim = np.array([b0, b2, b2_err, mean_acc])
-
-    #obs_core = np.histogram(obs[:,0], bins=200, range=(0, max_core))[0]
-    #obs_acc = np.histogram(obs[:,1], bins=200, range=(0, max_acc))[0]
-    #obs_dist = (obs_core, obs_acc)
-
-    #js_core = js_distance(sim_dist, 0, obs_dist)
-    #js_pan = js_distance(sim_dist, 1, obs_dist)
-    #was_dist = wasserstein_distance(sim_dist, obs_dist)
-
-    #dist = (js_core + js_pan) / 2
-    #dist = was_dist
-    #dist = js_pan
+    # add some noise to the acquisition points
+    #divergence += np.random.normal(0, noise_scale, size=1)
 
     # This will be passed to ELFI as the result of the command
-    return sim
+    return divergence
 
 if __name__ == "__main__":
-    # #testing
-    # core_size = 1200000
-    # pan_genes = 6000
-    # #avg_gene_freq = 0.5
-    # N_samples = 10
-    # seed = 254
-    # obs_file = "GPSv4_distances_sample1.txt"
-    # threads = 4
-    # mode = "BOLFI"
-    # outpref = "test"
-    # initial_evidence = 20
-    # update_interval = 10
-    # acq_noise_var = 0.1
-    # n_evidence = 200
-    # info_freq = 1000
-    # cluster = False
-    # #complexity = "simple"
-    # #schedule = "0.7,0.2,0.05"
-    # pop_size = 1000
-    # n_gen = 100
-    # load = "test_pools/outputpool_254"
-    # run_mode = "sim"
-    # pansim_exe = "/Users/shorsfield/Documents/Software/Pansim/pansim/target/release/pansim"
-    # max_distances = 100000
-
     options = get_options()
     threads = options.threads
     obs_file = options.distfile
@@ -408,6 +355,7 @@ if __name__ == "__main__":
     competition = options.competition
     covar_scaling = options.covar_scaling
     epsilon = options.epsilon
+    noise_scale = options.noise_scale
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -494,7 +442,7 @@ if __name__ == "__main__":
     # save observed parameters
     #obs = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
     #obs = np.array([b0, b1, b2])
-    obs = np.array([b0, b2, b2_err, mean_acc])
+    obs = np.array([0.0])
 
     # simulate and fit
     if run_mode == "sim":
@@ -523,7 +471,7 @@ if __name__ == "__main__":
                 'prop_genes2' : (0.0, 1.0),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate != None and HGT_rate == None:
             bounds = {
@@ -532,7 +480,7 @@ if __name__ == "__main__":
                 'HGT_rate' : (0.0, 1.0),
             }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
         elif HR_rate == None and HGT_rate != None:
             bounds = {
@@ -540,7 +488,7 @@ if __name__ == "__main__":
                 'prop_genes2' : (0.0, 1.0),
                 'HR_rate' : (0.0, 1.0),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
         else:
             bounds = {
@@ -549,21 +497,22 @@ if __name__ == "__main__":
                 'HR_rate' : (0.0, 1.0),
                 'HGT_rate' : (0.0, 1.0),
             }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, name='sim', model=m, observed=obs)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
             arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
 
         m['sim'].uses_meta = True
 
         # use euclidean between
-        elfi.Distance('canberra', m['sim'], model=m, name='d')
+        elfi.Distance('euclidean', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
-        #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')
-        #target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
+        #kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=False)
+        kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
 
-        #post = mod.fit(n_evidence=n_evidence)
+        post = mod.fit(n_evidence=n_evidence, threshold=threshold)
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
         mod.plot_discrepancy()
@@ -629,11 +578,13 @@ if __name__ == "__main__":
                 'HGT_rate' : (0.0, 1.0),
             }
         
-        #kernel_ard = GPy.kern.RBF(input_dim=len(bounds), ARD=True, name='rbf')
-        #target_model_ard = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel_ard)
+        #kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=False)
+        kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, pool=arraypool)
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
 
+        post = mod.fit(n_evidence=n_evidence, threshold=threshold)
         result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
         mod.plot_discrepancy()
