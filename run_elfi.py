@@ -94,6 +94,10 @@ def get_options():
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
+    IO.add_argument('--core_mu',
+                    type=float,
+                    default=None,
+                    help='Number of core mutations per generation. Will infer using JC adjustment if not set.')
     IO.add_argument('--core_size',
                     type=int,
                     default=1200000,
@@ -356,6 +360,7 @@ if __name__ == "__main__":
     covar_scaling = options.covar_scaling
     epsilon = options.epsilon
     noise_scale = options.noise_scale
+    core_mu = options.core_mu
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -376,17 +381,18 @@ if __name__ == "__main__":
     obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
 
     # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    max_hamming_core = float(np.max(obs_df[:,0]))
-    max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-    core_mu = max_real_core
-    print("core_mu set to: {}".format(core_mu))
+    if core_mu == None:
+        max_hamming_core = float(np.max(obs_df[:,0]))
+        max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
+        core_mu = max_real_core
+        print("core_mu set to: {}".format(core_mu))
 
     # set up model
     input_dim = 0
     m = elfi.ElfiModel(name='pansim_model')
 
     # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
-    max_mu = (pan_genes - core_genes) / n_gen
+    max_mu = ((pan_genes - core_genes) / n_gen) * 10
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
     elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
     
@@ -506,8 +512,8 @@ if __name__ == "__main__":
         elfi.Distance('euclidean', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')     
         
-        #kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=False)
-        kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
@@ -560,14 +566,14 @@ if __name__ == "__main__":
                 'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, recomb_max),
+                'HGT_rate' : (0.0, 1.0),
             }
         elif HR_rate == None and HGT_rate != None:
             bounds = {
                 'rate_genes1' : (0.0, 1.0),
                 #'rate_genes2' : (epsilon, max_mu),
                 'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, recomb_max),
+                'HR_rate' : (0.0, 1.0),
             }
         else:
             bounds = {
@@ -578,8 +584,8 @@ if __name__ == "__main__":
                 'HGT_rate' : (0.0, 1.0),
             }
         
-        #kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=False)
-        kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
