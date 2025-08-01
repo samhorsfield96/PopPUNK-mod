@@ -303,6 +303,8 @@ def prepare_inputs(*inputs, **kwinputs):
                 real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
             
             param_values[node_name] = real_val
+        else:
+            param_values[node_name] = node.meta.get('fixed_value')
     
     # Add all parameters to kwinputs for the simulator
     for param_name, param_value in param_values.items():
@@ -314,7 +316,6 @@ def prepare_inputs(*inputs, **kwinputs):
         filename = f"{kwinputs['workdir']}/{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
     else:
         filename = f"{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
-        #filename = f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
 
     # Add the filenames to kwinputs
     kwinputs['outpref'] = filename
@@ -325,7 +326,6 @@ def prepare_inputs(*inputs, **kwinputs):
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['outpref'] + ".tsv"
-    noise_scale = kwinputs['noise_scale']
 
     # Read the simulations from the file.
     simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
@@ -336,9 +336,6 @@ def process_result(completed_process, *inputs, **kwinputs):
     obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
     divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
-
-    # add some noise to the acquisition points
-    #divergence += np.random.normal(0, noise_scale, size=1)
 
     # This will be passed to ELFI as the result of the command
     return divergence
@@ -364,7 +361,6 @@ if __name__ == "__main__":
     threshold = options.threshold
     covar_scaling = options.covar_scaling
     epsilon = options.epsilon
-    noise_scale = options.noise_scale
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -495,8 +491,6 @@ if __name__ == "__main__":
             'max_distances': max_distances,
             'workdir': workdir,
             'obs_file': obs_file,
-            'max_mu': max_mu,
-            'recomb_max': recomb_max,
             'epsilon': epsilon,
             'noise_scale': noise_scale,
             'model': m,  # Pass the model to prepare_inputs
@@ -554,12 +548,8 @@ if __name__ == "__main__":
             node = m[param_name]
             spec = node.meta.get('param_spec', {'dist': 'uniform'})
             
-            if spec['dist'] == 'loguniform':
-                # For loguniform parameters, use a log-scaled proposal
-                sigma_proposals[param_name] = np.log10(high) - np.log10(low) * covar_scaling
-            else:
-                # For uniform parameters, use a linear proposal
-                sigma_proposals[param_name] = (high - low) * covar_scaling
+            # Scale proposals accordingly
+            sigma_proposals[param_name] = (high - low) * covar_scaling
         
         # Run MCMC sampling
         result = mod.sample(
