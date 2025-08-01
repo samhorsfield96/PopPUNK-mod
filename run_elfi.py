@@ -310,7 +310,6 @@ def prepare_inputs(*inputs, **kwinputs):
 
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
-    print(f"completed_process: {completed_process}")
     output_filename = kwinputs['outpref'] + ".tsv"
 
     # Read the simulations from the file.
@@ -325,7 +324,7 @@ def process_result(completed_process, *inputs, **kwinputs):
 
         divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
     except FileNotFoundError:
-        print(f"{output_filename} not found.\nInput arguments: {kwinputs}")
+        print(f"{output_filename} not found.\ncompleted_process: {completed_process}\nInput arguments: {kwinputs}")
         divergence = 1.0
         raise FileNotFoundError
 
