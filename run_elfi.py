@@ -281,7 +281,10 @@ def prepare_inputs(*inputs, **kwinputs):
     param_values = {}
     param_index = 0
     
-    # Process each node in the model
+    # Get fixed parameters from keyword arguments
+    fixed_params = {k: v for k, v in kwinputs.items() if k not in ['model', 'meta', 'workdir', 'obs_file', 'epsilon']}
+    
+    # Process each node in the model (these are only the fitted parameters)
     for node_name, node in model.nodes.items():
         if isinstance(node, elfi.Prior) and node_name not in ['d', 'log_d', 'Y']:
             # Get the normalized parameter value [0,1]
@@ -303,9 +306,10 @@ def prepare_inputs(*inputs, **kwinputs):
                 real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
             
             param_values[node_name] = real_val
-        else:
-            param_values[node_name] = node.meta.get('fixed_value')
     
+    # Add fixed parameters to param_values
+    param_values.update(fixed_params)
+
     # Add all parameters to kwinputs for the simulator
     for param_name, param_value in param_values.items():
         kwinputs[param_name] = param_value
@@ -492,7 +496,6 @@ if __name__ == "__main__":
             'workdir': workdir,
             'obs_file': obs_file,
             'epsilon': epsilon,
-            'noise_scale': noise_scale,
             'model': m,  # Pass the model to prepare_inputs
             **fixed_params  # Add all fixed parameters
         }
