@@ -159,7 +159,7 @@ def KDE_KL_divergence(df1, df2, eps=1e-12):
     KL_divergence = np.sum(rel_entr(z1, z2))
     return KL_divergence
 
-def KDE_JS_divergence(df1, df2, eps=0.0, log=False):
+def KDE_JS_divergence(df1, df2, eps=1e-12, log=False):
     if log:
         df1, df2 = np.log(df1 + eps), np.log(df2 + eps)
     z1, z2 = scale_KDE(df1, df2, eps)
@@ -178,10 +178,18 @@ def main():
 
 
     js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=True)
-    print(f"js_distance: {js_distance}")
-    print(f"log_js_distance: {np.log(js_distance)}")
+    print(f"js_distance_logged: {js_distance}")
+    print(f"log_js_distance_logged: {np.log(js_distance)}")
     #euc_dist = euclidean(np.array([0.0]), np.array([js_distance]))
     #print(f"js_euc_distance: {js_distance}")
+
+    js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=False)
+    print(f"js_distance: {js_distance}")
+    print(f"log_js_distance: {np.log(js_distance)}")
+
+    js_distance = KDE_JS_divergence(df1, df2, 0.0, log=False)
+    print(f"js_distance_no_eps: {js_distance}")
+    print(f"log_js_distance_no_eps: {np.log(js_distance)}")
 
     #KL_distance = np.sum(rel_entr(z1, z2))
     KL_distance = KDE_KL_divergence(df1, df2)
