@@ -129,23 +129,14 @@ def get_options():
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--epsilon',
-                    type=float,
-                    default=1e-5,
-                    help='The minimum value for transformations to log-uniform space.  '
-                         'Default = 1e-5 ')
-    IO.add_argument('--noise-scale',
-                    type=float,
-                    default=1e-4,
-                    help='The minimum value for transformations to log-uniform space.  '
-                         'Default = 1e-4 ')
+
     IO.add_argument('--samples',
                     type=int,
                     default=100000,
                     help='No. samples for posterior estimation. Default = 100000 ')
     IO.add_argument('--init_evidence',
                     type=int,
-                    default=50,
+                    default=150,
                     help='Number of initialization points sampled straight from the priors before starting to '
                          'optimize the acquisition of points. Default = 50 ')
     IO.add_argument('--threshold',
@@ -155,9 +146,9 @@ def get_options():
                          'Default = None ')
     IO.add_argument('--n_evidence',
                     type=int,
-                    default=200,
+                    default=600,
                     help='Evidence points requested (including init-evidence). '
-                         'Default = 200 ')
+                         'Default = 600 ')
     IO.add_argument('--update-int',
                     type=int,
                     default=1,
@@ -273,47 +264,40 @@ def prepare_inputs(*inputs, **kwinputs):
     back to their original ranges based on the parameter specifications.
     """
 
-    # get sim_params
-    fixed_params, other_params = inputs
+    # get all model parameters for sampling
+    fixed_params, other_params, model_priors_index = inputs[0], inputs[1], inputs[2]
+    model_priors = list(inputs[3:])
 
-    # Get the model from keyword arguments
-    model = kwinputs.get('model')
-    if model is None:
-        raise ValueError("Model instance not found in keyword arguments")
+    print(model_priors_index)
+    print(model_priors)
     
     # Get parameter values in the order they were defined in the model
     param_values = {}
     param_index = 0
     
-    # Get fixed parameters from keyword arguments
-    #fixed_params = {k: v for k, v in kwinputs.items() if k not in ['model', 'meta', 'workdir', 'obs_file', 'epsilon']}
-    
     # Process each node in the model (these are only the fitted parameters)
-    for node_name, node in model.nodes.items():
-        if isinstance(node, elfi.Prior) and node_name not in ['d', 'log_d', 'Y']:
-            # Get the normalized parameter value [0,1]
-            if param_index >= len(inputs):
-                raise ValueError(f"Not enough input values for parameter {node_name}")
+    for index, (node_name, spec) in enumerate(model_priors_index):
+        # get normalised value of prior
+        norm_val = model_priors[index]
+        print(norm_val)
                 
-            norm_val = inputs[param_index][0] if isinstance(inputs[param_index], (list, np.ndarray)) else inputs[param_index]
-            param_index += 1
-            
-            # Get parameter specification (default to uniform if not specified)
-            spec = model.fitted_params[node_name]
-            
-            # Transform back to original range
-            if spec['dist'] == 'uniform':
-                # Linear scaling for uniform distribution
-                real_val = spec['min'] + norm_val * (spec['max'] - spec['min'])
-            else:  # loguniform
-                # Log scaling for loguniform distribution
-                real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
-            
-            param_values[node_name] = real_val
+        # Transform back to original range
+        if spec['dist'] == 'uniform':
+            # Linear scaling for uniform distribution
+            real_val = spec['min'] + norm_val * (spec['max'] - spec['min'])
+        else:  # loguniform
+            # Log scaling for loguniform distribution
+            real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
+        
+        print(real_val)
+        
+        param_values[node_name] = real_val
     
     # Add fixed parameters to param_values
     param_values.update(fixed_params)
     param_values.update(other_params)
+
+    print(param_values)
 
     # Add all parameters to kwinputs for the simulator
     for param_name, param_value in param_values.items():
@@ -369,7 +353,6 @@ if __name__ == "__main__":
     workdir = options.workdir
     threshold = options.threshold
     covar_scaling = options.covar_scaling
-    epsilon = options.epsilon
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -489,24 +472,24 @@ if __name__ == "__main__":
         bounds = {}
         
         # Get all parameters that are ELFI Priors (i.e., being fitted)
-        for node_name, node in fitted_params.items():
-            print(f"node_name, node: {node_name}, {node}")
+        model_priors = []
+        model_priors_index = []
+        for node_name, node_info in fitted_params.items():
             bounds[node_name] = (0.0, 1.0)
-        
-        print(bounds)
+            model_priors_index.append((node_name, node_info))
+            model_priors.append(m[node_name])
 
         # Create simulator with all required parameters
         other_other_params = {
             'workdir': workdir,
             'obs_file': obs_file,
-            'epsilon': epsilon,
         }
 
         # add all non model parameters together
         other_params.update(other_other_params)
                 
         # Create the simulator with all parameters
-        elfi.Simulator(WF_sim_vec, fixed_params, other_params, name='sim', model=m, observed=obs)
+        elfi.Simulator(WF_sim_vec, fixed_params, other_params, model_priors_index, *model_priors, name='sim', model=m, observed=obs)
         
         # Create array pool with all fitted parameters
         arraypool_fields = ['Y', 'd', 'log_d'] + [x for x in fitted_params.keys()]
@@ -662,13 +645,6 @@ if __name__ == "__main__":
     # generate output
     # Define real-world log-uniform min/max for each parameter
     param_names = mod.model.parameter_names
-    param_bounds = {
-        'rate_genes1': (epsilon, max_mu),
-        'prop_genes2': (epsilon, 1.0),
-        'HR_rate': (epsilon, recomb_max),
-        'HGT_rate': (epsilon, recomb_max),
-        # Add all your parameter bounds here
-    }
 
     # Extract normalized samples
     X = mod.target_model.X  # shape: (n_samples, n_params)
@@ -681,24 +657,23 @@ if __name__ == "__main__":
     summary_rows = []
 
     for i, pname in enumerate(param_names):
-        if pname in param_bounds:
-            min_val, max_val = param_bounds[pname]
-            X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
-            df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+        min_val, max_val = fitted_params[pname][1], fitted_params[pname][2]
+        X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
+        df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
 
-            # Compute posterior summaries
-            mean = np.mean(df_post[pname])
-            ci_2_5 = np.percentile(df_post[pname], 2.5)
-            ci_97_5 = np.percentile(df_post[pname], 97.5)
-            median = np.median(df_post[pname])
+        # Compute posterior summaries
+        mean = np.mean(df_post[pname])
+        ci_2_5 = np.percentile(df_post[pname], 2.5)
+        ci_97_5 = np.percentile(df_post[pname], 97.5)
+        median = np.median(df_post[pname])
 
-            summary_rows.append({
-                'parameter': pname,
-                'mean': mean,
-                'median': median,
-                'CI_2.5%': ci_2_5,
-                'CI_97.5%': ci_97_5
-            })
+        summary_rows.append({
+            'parameter': pname,
+            'mean': mean,
+            'median': median,
+            'CI_2.5%': ci_2_5,
+            'CI_97.5%': ci_97_5
+        })
 
     # Store in DataFrame and save
     df_evidence_scaled = pd.DataFrame(X_real, columns=param_names)
