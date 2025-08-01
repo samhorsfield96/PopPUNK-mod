@@ -392,11 +392,14 @@ if __name__ == "__main__":
     
     # Process fixed parameters first
     fixed_params = {}
+    print(options.fixed_param)
     if hasattr(options, 'fixed_param') and options.fixed_param:
         for name, value in options.fixed_param:
             try:
-                fixed_params[name] = float(value)
-                print(f"Using fixed parameter: {name} = {value}")
+                # remove quotation marks if string used
+                value_parsed = value.replace('"', '')
+                fixed_params[name] = float(value_parsed)
+                print(f"Using fixed parameter: {name} = {str(fixed_params[name])}")
             except ValueError:
                 raise ValueError(f"Invalid value for fixed parameter {name}: {value}. Must be a number.")
     
