@@ -29,6 +29,41 @@ def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.gith
 def fit_negative_exponential(x, y, p0=[1.0, 0.0, 1.0], bounds=([0.0, 0.0, 0.0], [1.0, 1.0, np.inf])):
     return curve_fit(negative_exponential, x, y, p0=p0, bounds=bounds)
 
+def plot_negative_exponential(obs_df, outpref):
+    # fit negative_exponential curve
+    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
+    b0, b1, b2 = popt
+    # get 1 std deviation error of parameters
+    b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
+
+    mean_acc = np.mean(obs_df[:,1])
+
+    # plot fit
+    fig, ax = plt.subplots()
+    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
+    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
+    y_fit = negative_exponential(x_fit, *popt)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+    # Calculate the initial rate at x=0
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
+
+    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
+    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
+
+    fig.savefig(outpref + "_curve_fit.png")
+    plt.close()
+
+    plot_scatter(obs_df, outpref, x_fit, y_fit)
+
 def safe_neg_inv(d):
     return -1 / np.log(np.clip(d, 1e-12, None))
 
@@ -319,7 +354,6 @@ if __name__ == "__main__":
     update_interval = options.update_int
     acq_noise_var = options.acq_noise_var
     n_evidence = options.n_evidence
-    avg_gene_freq = options.avg_gene_freq
     cluster = options.cluster
     load = options.load
     run_mode = options.run_mode
@@ -331,7 +365,6 @@ if __name__ == "__main__":
     covar_scaling = options.covar_scaling
     epsilon = options.epsilon
     noise_scale = options.noise_scale
-    core_mu = options.core_mu
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -348,15 +381,10 @@ if __name__ == "__main__":
             elfi.set_client('native')
 
     # read in real files
-    #obs = read_distfile(obs_file)
     obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
 
-    # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    if core_mu == None:
-        max_hamming_core = float(np.max(obs_df[:,0]))
-        max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-        core_mu = max_real_core
-        print("core_mu set to: {}".format(core_mu))
+    # plot contours and curve fit
+    plot_negative_exponential(obs_df, outpref)
 
     # set up model
     input_dim = 0
@@ -404,60 +432,39 @@ if __name__ == "__main__":
         
         # Log the parameter being fitted
         print(f"Fitting parameter: {param_name} with {spec['dist']} prior in range [{spec['min']}, {spec['max']}]")
-    
-    # Set max mutation rate to each gene being gained/lost once per generation
-    max_mu = ((pan_genes - core_genes) / n_gen) * 10
-    
-    # Set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
-    rate_genes2 = (pan_genes - core_genes) * 10
-
-    # fit negative_exponential curve
-    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
-    b0, b1, b2 = popt
-    # get 1 std deviation error of parameters
-    b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
-
-    mean_acc = np.mean(obs_df[:,1])
-
-    # plot fit
-    fig, ax = plt.subplots()
-    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
-    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
-    y_fit = negative_exponential(x_fit, *popt)
-    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
-
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
-    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
-
-    # Calculate the initial rate at x=0
-    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
-
-    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
-             fontsize=10, color="green")
-
-    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
-    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
-
-    fig.savefig(outpref + "_curve_fit.png")
-    plt.close()
-
-    plot_scatter(obs_df, outpref, x_fit, y_fit)
 
     # save observed parameters
-    #obs = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
-    #obs = np.array([b0, b1, b2])
     obs = np.array([0.0])
 
     # simulate and fit
     if run_mode == "sim":
         print("Simulating data...")
 
-        if competition:
-            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate} --competition'
-        else:
-            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
+        # Define base command parameters with values from fixed_params and param_specs
+        base_params = []
+        
+        # Add fixed parameters to the command
+        for param_name, param_value in fixed_params.items():
+            base_params.append(f'--{param_name} {param_value}')
+            
+        # Add parameters being fitted to the command (they will be formatted later)
+        for param_name in param_specs.keys():
+            base_params.append(f'--{param_name} {{{param_name}}}')
+            
+        # Add other required parameters that should always be passed
+        other_params = {
+            'seed': seed,
+            'outpref': outpref,
+            'max_distances': max_distances,
+        }
+        
+        # Add other parameters that are not being fitted
+        for param_name, param_value in other_params.items():
+            if param_name not in fixed_params and param_name not in param_specs:
+                base_params.append(f'--{param_name} {param_value}')
+            
+        # Construct the final command
+        command = pansim_exe + ' ' + ' '.join(base_params)
 
         WF_sim = elfi.tools.external_operation(command,
                                         prepare_inputs=prepare_inputs,
@@ -483,13 +490,7 @@ if __name__ == "__main__":
         
         # Create simulator with all required parameters
         sim_params = {
-            'avg_gene_freq': avg_gene_freq,
-            'core_mu': core_mu,
             'seed': seed,
-            'pop_size': pop_size,
-            'core_size': core_size,
-            'pan_genes': pan_genes,
-            'core_genes': core_genes,
             'n_gen': n_gen,
             'max_distances': max_distances,
             'workdir': workdir,
@@ -589,41 +590,61 @@ if __name__ == "__main__":
         print('Model saved to ', save_path + "/BOLFI_model")
 
     else:
-        print("Loading models in {}".format(load))
-        if load == None:
-            print('Previously saved ELFI output required for "sample" mode. Please specify "--load."')
+        print("Loading models from: {}".format(load))
+        if load is None:
+            print('Error: Previously saved ELFI output required for "sample" mode. Please specify "--load".')
             sys.exit(1)
 
-        # parse filename
-        load_pref = load.rsplit('/', 1)[0]
-        load_name = load.rsplit('/', 1)[-1]
-
-        arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
-        print(arraypool[0])
-        print('This pool has', len(arraypool), 'batches')
-
-        m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
-
-        if HR_rate != None and HGT_rate != None:
+        try:
+            # Parse the load path
+            load_pref = os.path.dirname(load) if '/' in load else '.'
+            load_name = os.path.basename(load)
+            model_path = os.path.join(load_pref, "BOLFI_model")
+            
+            # Load the array pool
+            print(f"Loading array pool from {load_pref}")
+            arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
+            print(f'Successfully loaded array pool with {len(arraypool)} batches')
+            
+            # Load the ELFI model
+            print(f"Loading ELFI model from {model_path}")
+            m = elfi.load_model(name="pansim_model", prefix=model_path)
+            print("Successfully loaded ELFI model")
+            
+            # Define bounds based on which parameters are being fitted
+            if HR_rate is not None and HGT_rate is not None:
                 bounds = {
-                    'rate_genes1' : (0.0, 1.0),
-                    #'rate_genes2' : (epsilon, max_mu),
-                    'prop_genes2' : (0.0, 1.0)
+                    'rate_genes1': (0.0, 1.0),
+                    'prop_genes2': (0.0, 1.0)
                 }
-        elif HR_rate != None and HGT_rate == None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
-        elif HR_rate == None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-            }
+            elif HR_rate is not None and HGT_rate is None:
+                bounds = {
+                    'rate_genes1': (0.0, 1.0),
+                    'prop_genes2': (0.0, 1.0),
+                    'HGT_rate': (0.0, 1.0)
+                }
+            elif HR_rate is None and HGT_rate is not None:
+                bounds = {
+                    'rate_genes1': (0.0, 1.0),
+                    'prop_genes2': (0.0, 1.0),
+                    'HR_rate': (0.0, 1.0)
+                }
+            else:
+                # Default bounds if neither condition is met
+                bounds = {
+                    'rate_genes1': (0.0, 1.0),
+                    'prop_genes2': (0.0, 1.0),
+                    'HR_rate': (0.0, 1.0),
+                    'HGT_rate': (0.0, 1.0)
+                }
+                
+            print(f"Using bounds: {bounds}")
+            
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            if 'arraypool' in locals():
+                arraypool.close()
+            raise
         else:
             bounds = {
                 'rate_genes1' : (0.0, 1.0),
