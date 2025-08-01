@@ -310,17 +310,24 @@ def prepare_inputs(*inputs, **kwinputs):
 
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
+    print(f"completed_process: {completed_process}")
     output_filename = kwinputs['outpref'] + ".tsv"
 
     # Read the simulations from the file.
-    simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
-    # Clean up the files after reading the data in
-    os.remove(output_filename)
+    try:
+        simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
+        
+        # Clean up the files after reading the data in
+        os.remove(output_filename)
 
-    # read observations file
-    obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
+        # read observations file
+        obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
-    divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
+        divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
+    except FileNotFoundError:
+        print(f"{output_filename} not found.\nInput arguments: {kwinputs}")
+        divergence = 1.0
+        raise FileNotFoundError
 
     # This will be passed to ELFI as the result of the command
     return divergence
