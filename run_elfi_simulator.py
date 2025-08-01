@@ -1,14 +1,36 @@
-from run_elfi import gen_distances_elfi
-from simulate_divergence import read_distfile
 import numpy as np
+import pandas as pd
 import argparse
-import os
-import sys
-from functools import partial
-from multiprocessing import Pool
-import tqdm
 import matplotlib.pyplot as plt
 rng = np.random.default_rng()
+import subprocess
+import sys
+from run_elfi import negative_exponential, fit_negative_exponential
+
+def read_distfile(filename):
+    # read first line, determine if csv
+    with open(filename, "r") as f:
+        first_line = f.readline()
+        if "," in first_line:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
+        else:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+
+    if len(obs.columns) == 2:
+        obs.rename(columns={obs.columns[0]: "Core",
+                           obs.columns[1]: "Accessory"}, inplace=True)
+    elif len(obs.columns) == 4:
+        # rename columns
+        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
+                           obs.columns[3]: "Accessory"}, inplace=True)
+    else:
+        print("Incorrect number of columns in distfile. Should be 2 or 4.")
+        sys.exit(1)
+
+    obs['Core'] = pd.to_numeric(obs['Core'])
+    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
+
+    return obs
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -16,148 +38,186 @@ def get_options():
                                      prog='python run_elfi_simulator.py')
 
     IO = parser.add_argument_group('Input/Output options')
-    IO.add_argument('--distfile',
-                    required=True,
-                    help='popPUNK distance file to fit to. ')
-    IO.add_argument('--params',
-                    required=True,
-                    help='Parameters file to run simulation.')
+    IO.add_argument('--core_size',
+                    type=float,
+                    default=1200000,
+                    help='Number of positions in core genome. Default = 1200000 ')
+    IO.add_argument('--pan_genes',
+                    type=float,
+                    default=6000,
+                    help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
+    IO.add_argument('--core_genes',
+                    type=float,
+                    default=2000,
+                    help='Number of core genes in pangenome only. Default = 2000')
+    IO.add_argument('--core_mu',
+                    type=float,
+                    default=0.05,
+                    help='Maximum pairwise distance for core genome. Default = 0.05 ')
+    IO.add_argument('--rate_genes1',
+                    type=float,
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 1. Must be >= 0.0. Default = 10.0 ')
+    IO.add_argument('--rate_genes2',
+                    type=float,
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 2. Must be >= 0.0. Default = 10.0')
+    IO.add_argument('--prop_genes2',
+                    type=float,
+                    default=2.0,
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0')
+    IO.add_argument('--prop_positive',
+                    type=float,
+                    default=-1.0,
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0. If negative, neutral selection is simulated.')
+    IO.add_argument('--pos_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of positively selected genes. Must be > 0.0')
+    IO.add_argument('--neg_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of negatively selected genes. Must be > 0.0')
+    IO.add_argument('--pop_size',
+                    type=int,
+                    default=1000,
+                    help='Population size for Wright-Fisher model. Default = 1000 ')
+    IO.add_argument('--n_gen',
+                    type=int,
+                    default=100,
+                    help='Number of generations for Wright-Fisher model. Default = 100 ')
+    IO.add_argument('--avg_gene_freq',
+                    type=float,
+                    default=0.5,
+                    help='Average gene frequency in accessory genome. '
+                         'Default = "0.5" ')
+    IO.add_argument('--HR_rate',
+                    type=float,
+                    default=0.0,
+                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
+                         'Default=0.0 ')
+    IO.add_argument('--HGT_rate',
+                    type=float,
+                    default=0.0,
+                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
+                         'Default=0.0 ')
+    IO.add_argument('--competition',
+                    action='store_true',
+                    default=False,
+                    help='Run simulator with competition.')
+    IO.add_argument('--max_distances',
+                    type=int,
+                    default=100000,
+                    help='Number of distances to sample with Pansim. Default = 100000')
     IO.add_argument('--outpref',
                     default="sim",
                     help='Output prefix. Default = "sim"')
+    IO.add_argument('--seed',
+                    type=int,
+                    default=254,
+                    help='Seed for random number generation. Default = 254. ')
     IO.add_argument('--threads',
                     type=int,
                     default=1,
                     help='Number of threads. Default = 1')
+    IO.add_argument('--pansim_exe',
+                    required=True,
+                    help='Path to pansim executable.')
 
     return parser.parse_args()
 
-def run_sim(index, params_list, max_real_core, max_hamming_core):
-    param_set = params_list[index]
-    size_pan = int(param_set[0])
-    size_core = int(param_set[1])
-    avg_gene_freq = float(param_set[2])
-    base_mu = param_set[3]
-    n_gen = int(param_set[4])
-    pop_size = int(param_set[5])
-    ratio_gene_gl = float(param_set[6])
-    gene_gl_speed = float(param_set[7])
-    prop_gene = float(param_set[8])
-
-    base_mu = [float(i) for i in base_mu.split(",")]
-
-    # set evenly spaced core hamming values across generations. Divide by two as pairwise divergence, final generation has no mutations
-    core_mu = (max_real_core / (n_gen - 1)) / 2
-
-    # round to 6 dp
-    base_mu = [round(i, 6) for i in base_mu]
-
-    # ensure probabilities sum to 1
-    if sum(base_mu) != 1:
-        base_mu[-1] = 1 - sum(base_mu[0:3])
-    base_mu1 = base_mu[0]
-    base_mu2 = base_mu[1]
-    base_mu3 = base_mu[2]
-    base_mu4 = base_mu[3]
-    core_site_mu1 = 0.25
-    core_site_mu2 = 0.25
-    core_site_mu3 = 0.25
-    core_site_mu4 = 0.25
-
-    dist_mat, avg_core, avg_acc = gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
-                                                     base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                                                     core_site_mu4, pop_size, n_gen, max_real_core, max_hamming_core, True)
-
-    #dist_mat[:, 0] = dist_mat[:, 0] * max_hamming_core
-    #dist_mat[:, 1] = dist_mat[:, 1] * max_jaccard_acc
-
-    return index, dist_mat, avg_core, avg_acc
-
 if __name__ == "__main__":
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # threads = 4
-    # paramsfile = "parameter_example_test.txt"
+    # core_mu = 0.05
+    # rate_genes1 = 0.05
+    # rate_genes2 = 0.5
+    # prop_genes2 = 2.0
+    # core_size = 1200000
+    # pan_genes = 6000
+    # avg_gene_freq = 0.5
+    # n_gen = 10
+    # pop_size = 1000
+    # max_distances = 100000
+    # threads = 8
     # outpref = "test"
+    # pansim_exe = "/home/shorsfield/software/Pansim/pansim/target/release/pansim"
+    # seed = 254
 
     options = get_options()
+    core_mu = options.core_mu
+    rate_genes1 = options.rate_genes1
+    rate_genes2 = options.rate_genes2
+    prop_genes2 = options.prop_genes2
+    prop_positive = options.prop_positive
+    pos_lambda = options.pos_lambda
+    neg_lambda = options.neg_lambda
+    core_size = int(options.core_size)
+    pan_genes = int(options.pan_genes)
+    core_genes = int(options.core_genes)
+    avg_gene_freq = options.avg_gene_freq
+    n_gen = options.n_gen
+    pop_size = options.pop_size
+    max_distances = options.max_distances
     threads = options.threads
-    distfile = options.distfile
-    paramsfile = options.params
     outpref = options.outpref
+    pansim_exe = options.pansim_exe
+    seed = options.seed
+    HR_rate = options.HR_rate
+    HGT_rate = options.HGT_rate
+    competition = options.competition
 
-    # read in real files
-    df = read_distfile(distfile)
+    if competition:
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
+    else:
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
 
-    # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    max_hamming_core = float(df["Core"].max())
-    max_jaccard_acc = float(df["Accessory"].max())
-    max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
+    print("Simulating...")
+    try:
+        result = subprocess.run(command.split(" "))
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with exit code {e.returncode}")
+        print(e.output)
+        sys.exit(1)
+    
+    print("Generating figures...")
+    df = read_distfile(outpref + ".tsv")
 
-    params_list = []
-    with open(paramsfile, "r") as f:
-        next(f)
-        for line in f:
-            params_list.append(line.rstrip().split("\t"))
+    fig, ax = plt.subplots()
 
-    print("Running Simulations...")
-    with Pool(processes=threads) as pool:
-        for index, dist_mat, avg_core, avg_acc in tqdm.tqdm(pool.imap(
-                partial(run_sim, params_list=params_list, max_real_core=max_real_core, max_hamming_core=max_hamming_core),
-                range(0, len(params_list))), total=len(params_list)):
-            # save to file
-            np.savetxt(outpref + "_results_sim_" + str(index + 1) + ".csv", dist_mat, delimiter=",")
-            avg_mat = np.zeros((avg_core.shape[0], 2))
-            avg_mat[:, 0] = avg_core
-            avg_mat[:, 1] = avg_acc
-            np.savetxt(outpref + "_averages_sim_" + str(index + 1) + ".csv", avg_mat, delimiter=",")
+    x = df["Core"]
+    y = df["Accessory"]
 
-            fig, ax = plt.subplots()
+    ax.scatter(x, y, s=10, alpha=0.3)
 
-            x = df["Core"]
-            y = df["Accessory"]
+    popt1, pco1v = fit_negative_exponential(x, y)
 
-            ax.scatter(x, y, label="Real")
+    x_fit = np.linspace(0, x.max(), 100)
+    y_fit = negative_exponential(x_fit, *popt1)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
 
-            x = np.array(dist_mat[:, 0])
-            y = np.array(dist_mat[:, 1])
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
 
-            ax.scatter(x, y, label="Sim " + str(index + 1))
+    # Calculate the initial rate at x=0
+    b0, b1, b2 = popt1
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
 
-            ax.set_xlabel("Core Hamming")
-            ax.set_ylabel("Accessory Jaccard")
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
+    # print(f"Scaling factor a: {a}")
+    # print(f"Rate parameter b: {b}")
+    # print(f"Intercept constant c: {c}")
+    # print(f"Initial rate at x=0: {initial_rate}")
+    # b0, b1 = popt2
+    # print("Negative exponential 2 param, b0: {}, b1: {}".format(b0, b1))
 
-            fig.savefig(outpref + "_" + "sim_" + str(index + 1) + ".png")
+    # a, b, c = popt3
+    # print("Asymptotic 3 param, a: {}, b: {}, c: {}".format(a, b, c))
 
-            ax.clear()
-            plt.clf
-            plt.cla
+    ax.set_xlabel("Core distance")
+    ax.set_ylabel("Accessory distance")
 
-            # plot average distances over time
-            y = avg_core
-
-            ax.plot(y)
-
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("Average Core Hamming")
-
-            fig.savefig(outpref + "_" + "avg_core_sim_" + str(index + 1) + ".png")
-
-            ax.clear()
-            plt.clf
-            plt.cla
-
-            # plot average distances over time
-            y = avg_acc
-
-            ax.plot(y)
-
-            ax.set_xlabel("Generation")
-            ax.set_ylabel("Average Acc Jaccard")
-
-            fig.savefig(outpref + "_" + "avg_acc_sim_" + str(index + 1) + ".png")
-
-            ax.clear()
-            plt.clf
-            plt.cla
+    fig.savefig(outpref + "_sim" + ".png")
 
 

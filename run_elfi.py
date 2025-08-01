@@ -1,14 +1,88 @@
 import argparse
 
 import numpy as np
-import scipy.stats
 import logging
 logging.basicConfig(level=logging.INFO)
-
+import pandas as pd
 import elfi
-from simulate_divergence import *
+import GPy
 import os
 import sys
+import matplotlib.pyplot as plt
+import pickle
+from scipy.spatial import distance
+from scipy.optimize import curve_fit
+#from scipy.stats import wasserstein_distance_nd
+import scipy.stats as ss
+from KDE_distance import KDE_KL_divergence, KDE_JS_divergence, get_grid
+
+try:  # sklearn >= 0.22
+    from sklearn.neighbors import KernelDensity
+except ImportError:
+    from sklearn.neighbors.kde import KernelDensity
+
+# fit asymptotic curve using exponential decay
+# b0 is asymptote, b1 is y-intercept, b2 is rate of decay
+def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
+    return b0 - (b0 - b1) * np.exp(-b2 * x)
+
+def fit_negative_exponential(x, y, p0=[1.0, 0.0, 1.0], bounds=([0.0, 0.0, 0.0], [1.0, 1.0, np.inf])):
+    return curve_fit(negative_exponential, x, y, p0=p0, bounds=bounds)
+
+def safe_neg_inv(d):
+    return -1 / np.log(np.clip(d, 1e-12, None))
+
+def smooth_d(d):
+    return np.power(np.clip(d, 0, None), 0.5)
+
+# Copyright John Lees and Nicholas Croucher 2025
+def plot_scatter(X, out_prefix, x_fit, y_fit):
+    # Plot results - max 1M for speed
+    max_plot_samples = 1000000
+    if X.shape[0] > max_plot_samples:
+        X = utils.shuffle(X, random_state=random.randint(1,10000))[0:max_plot_samples,]
+
+    # Kernel estimate uses scaled data 0-1 on each axis
+    scale = np.amax(X, axis = 0)
+    X /= scale
+
+    plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
+    xx, yy, xy = get_grid(0, 1, 100)
+
+    # KDE estimate
+    kde = KernelDensity(bandwidth=0.03, metric='euclidean',
+                        kernel='epanechnikov', algorithm='ball_tree')
+    kde.fit(X)
+    z = np.exp(kde.score_samples(xy))
+    z = z.reshape(xx.shape).T
+
+    levels = np.linspace(z.min(), z.max(), 10)
+    # Rescale contours
+    plt.contour(xx*scale[0], yy*scale[1], z, levels=levels[1:], cmap='plasma')
+    scatter_alpha = 1
+
+    # Plot on correct scale
+    plt.scatter(X[:,0]*scale[0].flat, X[:,1]*scale[1].flat, s=1, alpha=scatter_alpha)
+    plt.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    plt.xlabel('Core distance (' + r'$\pi$' + ')')
+    plt.ylabel('Accessory distance (' + r'$a$' + ')')
+    plt.savefig(out_prefix + '_contours.png')
+    plt.close()
+
+# RMSE
+def rmse(y_true, y_pred):
+    return np.sqrt(np.mean((y_true - y_pred)**2))
+
+# converts uniform[0,1] to logunifrom[min_val,max_val]
+def from_unit_to_loguniform(u, min_val, max_val):
+    return np.exp(np.log(min_val) + u * (np.log(max_val) - np.log(min_val)))
+
+def to_normalised_log_uniform(x_real, low, high, eps=1e-12):
+    x_safe = np.clip(x_real, low + eps, high)  # avoid log(0)
+    log_low = np.log(low + eps)
+    log_high = np.log(high)
+    return (np.log(x_safe) - log_low) / (log_high - log_low)
 
 def get_options():
     description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
@@ -16,88 +90,126 @@ def get_options():
                                      prog='python run_ELFI.py')
 
     IO = parser.add_argument_group('Input/Output options')
-    IO.add_argument('--run-mode',
-                    required=True,
+    IO.add_argument('--run_mode',
+                    default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--core-size',
+    IO.add_argument('--core_mu',
+                    type=float,
+                    default=None,
+                    help='Number of core mutations per generation. Will infer using JC adjustment if not set.')
+    IO.add_argument('--core_size',
                     type=int,
-                    default=10000,
-                    help='Number of positions in core genome. Default = 10000 ')
-    IO.add_argument('--pan-size',
+                    default=1200000,
+                    help='Number of positions in core genome. Default = 1200000 ')
+    IO.add_argument('--pan_genes',
                     type=int,
-                    default=10000,
-                    help='Number of positions in pangenome. Default = 10000 ')
-    IO.add_argument('--pop-size',
+                    default=6000,
+                    help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
+    IO.add_argument('--core_genes',
+                    type=int,
+                    default=2000,
+                    help='Number of core genes in pangenome only. Default = 2000')
+    IO.add_argument('--pop_size',
                     type=int,
                     default=1000,
                     help='Population size for Wright-Fisher model. Default = 1000 ')
-    IO.add_argument('--ngen',
+    IO.add_argument('--n_gen',
                     type=int,
-                    default=100,
-                    help='Number of generations for Wright-Fisher model. Default = 100 ')
-    IO.add_argument('--base-mu',
-                    default="0.25,0.25,0.25,0.25",
-                    help='Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25" ')
-    IO.add_argument('--avg-gene-freq',
+                    default=200,
+                    help='Number of generations for Wright-Fisher model. Default = 200 ')
+    IO.add_argument('--avg_gene_freq',
                     type=float,
                     default=0.5,
-                    help='Average gene frequency in accessory genome. '
-                         'Determines gene gain/loss rate e.g. 0.1 = gene gain/loss rate 1:9 '
+                    help='Average gene frequency in accessory genome.'
                          'Default = "0.5" ')
-    IO.add_argument('--batch-size',
-                    type=int,
-                    default=10000,
-                    help='Batch size for processing. Default = 10000 ')
+    IO.add_argument('--HR_rate',
+                    type=float,
+                    default=None,
+                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
+                         'If unspecified, will fit parameter. ')
+    IO.add_argument('--HGT_rate',
+                    type=float,
+                    default=None,
+                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
+                         'If unspecified, will fit parameter. ')
+    IO.add_argument('--recomb_max',
+                    type=float,
+                    default=10.0,
+                    help='Maximum HGT and HR rate for parameterisation, as number of transfer events transferred per core genome mutation.'
+                         'Default = 10.0. ')
+    IO.add_argument('--competition',
+                    action='store_true',
+                    default=False,
+                    help='Run simulator with competition.')
+    IO.add_argument('--epsilon',
+                    type=float,
+                    default=1e-5,
+                    help='The minimum value for transformations to log-uniform space.  '
+                         'Default = 1e-5 ')
+    IO.add_argument('--noise-scale',
+                    type=float,
+                    default=1e-4,
+                    help='The minimum value for transformations to log-uniform space.  '
+                         'Default = 1e-4 ')
     IO.add_argument('--samples',
                     type=int,
-                    default=1000,
-                    help='No. samples for posterior estimation. Default = 1000 ')
-    IO.add_argument('--schedule',
-                    type=str,
-                    default="0.7,0.2,0.05",
-                    help='SMC schedule, a list of thresholds to use for each population. Default = 0.7,0.2,0.05 ')
-    IO.add_argument('--qnt',
-                    type=float,
-                    default=0.01,
-                    help='Quantile of the samples with smallest discrepancies is accepted. Default = 0.01 ')
-    IO.add_argument('--init-evidence',
+                    default=100000,
+                    help='No. samples for posterior estimation. Default = 100000 ')
+    IO.add_argument('--init_evidence',
                     type=int,
-                    default=5000,
+                    default=50,
                     help='Number of initialization points sampled straight from the priors before starting to '
-                         'optimize the acquisition of points. Default = 5000 ')
+                         'optimize the acquisition of points. Default = 50 ')
+    IO.add_argument('--threshold',
+                    type=float,
+                    default=None,
+                    help='The threshold (bandwidth) for posterior  '
+                         'Default = None ')
+    IO.add_argument('--n_evidence',
+                    type=int,
+                    default=200,
+                    help='Evidence points requested (including init-evidence). '
+                         'Default = 200 ')
     IO.add_argument('--update-int',
                     type=int,
-                    default=10,
+                    default=1,
                     help='Defines how often the GP hyperparameters are optimized. '
-                         'Default = 10 ')
+                            'Default = 1 ')
     IO.add_argument('--acq-noise-var',
                     type=float,
-                    default=0.1,
+                    default=0.01,
                     help='Defines the diagonal covariance of noise added to the acquired points. '
-                         'Default = 0.1 ')
-    IO.add_argument('--n-evidence',
+                            'Default = 0.01 ')
+    IO.add_argument('--chains',
                     type=int,
-                    default=5000,
-                    help='Evidence points requested (including init-evidence). '
-                         'Default = 5000 ')
+                    default=4,
+                    help='Number of chains for sampler. '
+                            'Default = 4 ')
     IO.add_argument('--distfile',
                     required=True,
                     help='popPUNK distance file to fit to. ')
+    IO.add_argument('--max_distances',
+                    type=int,
+                    default=100000,
+                    help='Number of distances to sample with Pansim. Default = 100000')
+    IO.add_argument('--covar-scaling',
+                    type=float,
+                    default=0.1,
+                    help='Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1')
     IO.add_argument('--load',
                     default=None,
-                    help='Directory of previous ELFI model. Required if running "sample" mode ')
+                    help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
     IO.add_argument('--seed',
                     type=int,
                     default=254,
                     help='Seed for random number generation. Default = 254. ')
-    IO.add_argument('--mode',
-                    choices=['rejection', 'SMC', 'BOLFI'],
-                    default="rejection",
-                    help='Mode for running model fit, either "rejection", "SMC or "BOLFI". Default = "rejection". ')
     IO.add_argument('--outpref',
                     default="PopPUNK-mod",
                     help='Output prefix. Default = "PopPUNK-mod"')
+    IO.add_argument('--pansim_exe',
+                    required=True,
+                    help='Path to pansim executable.')
     IO.add_argument('--threads',
                     type=int,
                     default=1,
@@ -106,210 +218,154 @@ def get_options():
                     action='store_true',
                     default=False,
                     help='Parallelise using ipyparallel if using cluster. Default = False')
+    IO.add_argument('--workdir',
+                default=None,
+                help='Specify workdir to save intermediate files. If unset, will write to working directory.')
+    
 
     return parser.parse_args()
 
+def read_distfile(filename):
+    # read first line, determine if csv
+    with open(filename, "r") as f:
+        first_line = f.readline()
+        if "," in first_line:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
+        else:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
 
-def gen_distances_elfi(size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
-                       base_mu1, base_mu2, base_mu3, base_mu4,
-                       core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4,
-                       pop_size, n_gen, max_real_core, max_hamming_core, simulate, batch_size=1, random_state=None):
-    # determine vectors of core and accessory per-site mutation rate.
-    core_mu_arr = np.array([core_mu] * batch_size)
-    acc_mu_arr = core_mu_arr * gene_gl_speed
-
-    # core mu array increased by factor max_real_core as only looking at subset
-    #core_mu_arr = core_mu_arr / max_real_core
-
-    # calculate actual number of sites mutating
-    #size_core_mut = round(max_real_core * size_core)
-    size_core_mut = size_core
-
-    # generate vectors for mutation rates
-    base_mu = np.tile(np.array([base_mu1, base_mu2, base_mu3, base_mu4]), (batch_size, 1))
-    core_site = np.tile(np.array([core_site_mu1, core_site_mu2, core_site_mu3, core_site_mu4]), (batch_size, 1))
-    acc_site_1 = ratio_gene_gl
-    acc_site_2 = 1 - acc_site_1
-    if simulate:
-        acc_site = np.stack(([acc_site_1], [acc_site_2]), axis=1)
-        proportion_gene = np.stack(([prop_gene], [1 - prop_gene]), axis=1)
+    if len(obs.columns) == 2:
+        obs.rename(columns={obs.columns[0]: "Core",
+                           obs.columns[1]: "Accessory"}, inplace=True)
+    elif len(obs.columns) == 4:
+        # rename columns
+        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
+                           obs.columns[3]: "Accessory"}, inplace=True)
     else:
-        acc_site = np.stack((acc_site_1, acc_site_2), axis=1)
-        proportion_gene = np.stack((prop_gene, 1 - prop_gene), axis=1)
-    gene_mu = np.stack(([1 - avg_gene_freq] * batch_size, [avg_gene_freq] * batch_size), axis=1)
+        print("Incorrect number of columns in distfile. Should be 2 or 4.")
+        sys.exit(1)
 
-    # calculate per-site mutation rate
-    core_site_mu = calc_man_vec(size_core_mut, size_core_mut, core_site, batch_size)
-    acc_site_mu = calc_man_vec(size_pan, size_pan, acc_site, batch_size, proportion_gene)
+    obs['Core'] = pd.to_numeric(obs['Core'])
+    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
 
-    # generate starting genomes, rows are batches, columns are positions
-    core_ref = np.zeros((batch_size, size_core_mut))
-    acc_ref = np.zeros((batch_size, size_pan))
-    for i in range(batch_size):
-        core_ref[i] = np.random.choice([1, 2, 3, 4], size_core_mut, p=base_mu[i])
-        acc_ref[i] = np.random.choice([0, 1], size_pan, p=gene_mu[i])
+    return obs
 
-    pop_core = np.repeat([core_ref.copy()], pop_size, axis=0)
-    pop_acc = np.repeat([acc_ref.copy()], pop_size, axis=0)
+# process the summary statistic, 0 for core, 1 for accessory
+def js_distance(sim, col, obs):
+    y_sim = sim[col]
+    y_obs = obs[col]
 
-    # generate core tuple
-    choices_1 = np.array([2, 3, 4])
-    choices_2 = np.array([1, 3, 4])
-    choices_3 = np.array([1, 2, 4])
-    choices_4 = np.array([1, 2, 3])
-    prob_1 = base_mu.copy()
-    prob_2 = base_mu.copy()
-    prob_3 = base_mu.copy()
-    prob_4 = base_mu.copy()
-    prob_1 = np.delete(prob_1, 0, 1)
-    prob_1 = prob_1 / np.sum(prob_1)
-    prob_2 = np.delete(prob_2, 1, 1)
-    prob_2 = prob_2 / np.sum(prob_2)
-    prob_3 = np.delete(prob_3, 2, 1)
-    prob_3 = prob_3 / np.sum(prob_3)
-    prob_4 = np.delete(prob_4, 3, 1)
-    prob_4 = prob_4 / np.sum(prob_4)
+    #print("sim: {}".format(y_sim))
+    #print("obs: {}".format(y_obs))
 
-    core_tuple = (choices_1, choices_2, choices_3, choices_4, prob_1, prob_2, prob_3, prob_4)
+    js = distance.jensenshannon(y_obs, y_sim)
+    #print("js: {}".format(js))
+    
+    return js
 
-    # run numba-backed WF model
-    pop_core, pop_acc, avg_core, avg_acc = run_WF_model(pop_core, pop_acc, n_gen, pop_size, core_mu_arr, acc_mu_arr,
-                                                        core_site_mu, acc_site_mu, max_real_core, max_hamming_core, simulate, core_tuple)
+def wasserstein_distance(sim, obs):
+    sim_array = np.column_stack(sim)
+    obs_array = np.column_stack(obs)
 
-    # run numba-backed distance calculator
-    core_mat, acc_mat = calc_dists(pop_core, pop_acc, batch_size, max_real_core, max_hamming_core, simulate)
+    return wasserstein_distance_nd(obs_array, sim_array)
 
-    if simulate:
-        dist_mat = np.zeros((core_mat.shape[0], 2))
-        dist_mat[:, 0] = core_mat
-        dist_mat[:, 1] = acc_mat
-        return dist_mat, avg_core, avg_acc
+# Function to prepare the inputs for the simulator. We will create filenames and write an input file.
+def prepare_inputs(*inputs, **kwinputs):
+    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file = inputs
+    
+    # add to kwinputs
+    kwinputs['avg_gene_freq'] = avg_gene_freq
+    kwinputs['core_mu'] = core_mu
+    kwinputs['rate_genes1'] = from_unit_to_loguniform(rate_genes1, epsilon, max_mu)
+    # rate_genes2 is always faster make it so all genes in pangenome mutate once on average per generation
+    kwinputs['rate_genes2'] = rate_genes2 * prop_genes2
+    kwinputs['prop_genes2'] = from_unit_to_loguniform(prop_genes2, epsilon, 1.0)
+    kwinputs['seed'] = seed
+    kwinputs['pop_size'] = pop_size
+    kwinputs['core_size'] = core_size
+    kwinputs['pan_genes'] = pan_genes
+    kwinputs['core_genes'] = core_genes
+    kwinputs['n_gen'] = n_gen
+    kwinputs['max_distances'] = max_distances
+    kwinputs['HR_rate'] = from_unit_to_loguniform(HR_rate, epsilon, recomb_max)
+    kwinputs['HGT_rate'] = from_unit_to_loguniform(HGT_rate, epsilon, recomb_max)
+    kwinputs['obs_file'] = obs_file
+    kwinputs['noise_scale'] = noise_scale
+
+    meta = kwinputs['meta']
+
+    # Prepare a unique filename for parallel settings
+    if workdir != None:
+        filename = workdir + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
+        #filename = workdir + f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
     else:
-        dist_mat = np.zeros((batch_size, (acc_mat.shape[1])))
-        for j in range(0, batch_size):
-            #dist_mat[j] = np.concatenate([core_mat[j], acc_mat[j]])
-            dist_mat[j] = acc_mat[j]
-        return dist_mat
+        filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
+        #filename = f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
+
+    # Add the filenames to kwinputs
+    kwinputs['outpref'] = filename
+
+    # Return new inputs that the command will receive
+    return inputs, kwinputs
+
+# Function to process the result of the simulation
+def process_result(completed_process, *inputs, **kwinputs):
+    output_filename = kwinputs['outpref'] + ".tsv"
+    noise_scale = kwinputs['noise_scale']
+
+    # Read the simulations from the file.
+    simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
+    # Clean up the files after reading the data in
+    os.remove(output_filename)
+
+    # read observations file
+    obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
+
+    divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
+
+    # add some noise to the acquisition points
+    #divergence += np.random.normal(0, noise_scale, size=1)
+
+    # This will be passed to ELFI as the result of the command
+    return divergence
 
 if __name__ == "__main__":
-    #testing
-    # size_core = 4
-    # size_pan = 2
-    # avg_gene_freq = 0.5
-    # batch_size = 10
-    # N_samples = 10
-    # qnt = 0.01
-    # seed = 254
-    # distfile = "distances/GPSv4_distances_sample1.txt"
-    # num_steps = 10
-    # threads = 4
-    # mode = "BOLFI"
-    # outpref = "test"
-    # initial_evidence = 20
-    # update_interval = 10
-    # acq_noise_var = 0.1
-    # n_evidence = 200
-    # info_freq = 1000
-    # base_mu = [0.25, 0.25, 0.25, 0.25]
-    # cluster = False
-    # complexity = "simple"
-    # schedule = "0.7,0.2,0.05"
-    # pop_size = 5
-    # n_gen = 100
-    # load = "test_pools/outputpool_254"
-    # run_mode = "sim"
-
     options = get_options()
     threads = options.threads
-    distfile = options.distfile
-    size_core = options.core_size
-    size_pan = options.pan_size
-    batch_size = options.batch_size
-    qnt = options.qnt
+    obs_file = options.distfile
+    core_size = options.core_size
+    pan_genes = options.pan_genes
+    core_genes = options.core_genes
     N_samples = options.samples
     seed = options.seed
     outpref = options.outpref
-    mode = options.mode
     initial_evidence = options.init_evidence
     update_interval = options.update_int
     acq_noise_var = options.acq_noise_var
     n_evidence = options.n_evidence
     avg_gene_freq = options.avg_gene_freq
-    base_mu = [float(i) for i in options.base_mu.split(",")]
     cluster = options.cluster
-    schedule = options.schedule
-    n_gen = options.ngen
+    n_gen = options.n_gen
     pop_size = options.pop_size
     load = options.load
     run_mode = options.run_mode
-
-    # parse schedule
-    schedule = [float(x) for x in schedule.split(",")]
-
-    # read in real files
-    df = read_distfile(distfile)
-
-    # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    max_hamming_core = float(df["Core"].max())
-    max_jaccard_acc = float(df["Accessory"].max())
-    max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-
-    # set constants
-    # set evenly spaced core hamming values across generations
-    core_mu = (max_real_core / (n_gen - 1)) / 2
-
-    # round to 6 dp
-    base_mu = [round(i, 6) for i in base_mu]
-
-    # ensure probabilities sum to 1
-    if sum(base_mu) != 1:
-        base_mu[-1] = 1 - sum(base_mu[0:3])
-    base_mu1 = base_mu[0]
-    base_mu2 = base_mu[1]
-    base_mu3 = base_mu[2]
-    base_mu4 = base_mu[3]
-    # base_mu1 = elfi.Prior('uniform', 0, 1)
-    # base_mu2 = elfi.Prior('uniform', 0, 1)
-    # base_mu3 = elfi.Prior('uniform', 0, 1)
-    # base_mu4 = elfi.Prior('uniform', 0, 1)
-
-    core_site_mu1 = 0.25
-    core_site_mu2 = 0.25
-    core_site_mu3 = 0.25
-    core_site_mu4 = 0.25
-    # core_site_mu1 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu2 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu3 = elfi.Prior('uniform', 0, 1)
-    # core_site_mu4 = elfi.Prior('uniform', 0, 1)
-    #core_site_mu5 = elfi.Prior('uniform', 0, 1)
-
-    #get observed data, normalise
-    #obs_core = get_quantile(df['Core'].to_numpy())# / max_hamming_core)
-    #obs_acc = get_quantile(df['Accessory'].to_numpy())# / max_jaccard_acc)
-    obs_acc = np.histogram(df['Accessory'].to_numpy(), bins=100, range=(0, 1), density=True)[0]
-
-    # calculate euclidean distance to origin
-    #obs = np.concatenate([obs_core, obs_acc])
-    obs = obs_acc
-
-    # set priors
-    # priors for gene gain and loss rates per site
-    max_value = 10 ** 6
-    gene_gl_speed = elfi.Prior('uniform', 0, max_value)
-
-    # prior for difference in probability of sample fast vs. slow two gene compartments
-    ratio_gene_gl = elfi.Prior('uniform', 0.5, 1 - 0.5)
-
-    # prior for difference size of compartments
-    prop_gene = elfi.Prior('uniform', 0, 1)
-
-    Y = elfi.Simulator(gen_distances_elfi, size_core, size_pan, core_mu, avg_gene_freq, ratio_gene_gl, gene_gl_speed, prop_gene,
-                        base_mu1, base_mu2, base_mu3, base_mu4, core_site_mu1, core_site_mu2, core_site_mu3,
-                        core_site_mu4, pop_size, n_gen, max_real_core, max_hamming_core, False, observed=obs)
-
-    d = elfi.Distance('jensenshannon', Y)
+    max_distances = options.max_distances
+    pansim_exe = options.pansim_exe
+    chains = options.chains
+    workdir = options.workdir
+    threshold = options.threshold
+    HR_rate = options.HR_rate
+    HGT_rate = options.HGT_rate
+    competition = options.competition
+    covar_scaling = options.covar_scaling
+    epsilon = options.epsilon
+    noise_scale = options.noise_scale
+    core_mu = options.core_mu
 
     #set multiprocessing client
+    os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
+    os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
+
     if cluster == True:
         # must start ipyarallel cluster e.g. !ipcluster start -n threads --daemon
         elfi.set_client('ipyparallel')
@@ -320,102 +376,236 @@ if __name__ == "__main__":
         else:
             elfi.set_client('native')
 
-    os.environ['NUMEXPR_MAX_THREADS'] = str(threads)
+    # read in real files
+    #obs = read_distfile(obs_file)
+    obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
 
+    # detemine highest core hamming distance, convert to real space using Jukes-Cantor
+    if core_mu == None:
+        max_hamming_core = float(np.max(obs_df[:,0]))
+        max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
+        core_mu = max_real_core
+        print("core_mu set to: {}".format(core_mu))
+
+    # set up model
+    input_dim = 0
+    m = elfi.ElfiModel(name='pansim_model')
+
+    # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
+    max_mu = ((pan_genes - core_genes) / n_gen) * 10
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
+    elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
+    
+    # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
+    rate_genes2 = (pan_genes - core_genes) * 10
+
+    # set as arbitarily high value, 10 events per core genome mutation, or adjust to fit in normalised space
+    recomb_max = options.recomb_max
+    if HGT_rate == None:
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HGT_rate')
+    else:
+        HGT_rate = to_normalised_log_uniform(HGT_rate, 0.0, recomb_max, epsilon)
+    
+    if HR_rate == None:
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HR_rate')
+    else:
+        HR_rate = to_normalised_log_uniform(HR_rate, 0.0, recomb_max, epsilon)
+
+    # fit negative_exponential curve
+    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
+    b0, b1, b2 = popt
+    # get 1 std deviation error of parameters
+    b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
+
+    mean_acc = np.mean(obs_df[:,1])
+
+    # plot fit
+    fig, ax = plt.subplots()
+    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
+    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
+    y_fit = negative_exponential(x_fit, *popt)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+    # Calculate the initial rate at x=0
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
+
+    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
+    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
+
+    fig.savefig(outpref + "_curve_fit.png")
+    plt.close()
+
+    plot_scatter(obs_df, outpref, x_fit, y_fit)
+
+    # save observed parameters
+    #obs = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
+    #obs = np.array([b0, b1, b2])
+    obs = np.array([0.0])
+
+    # simulate and fit
     if run_mode == "sim":
         print("Simulating data...")
-        if mode == "rejection":
-            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed)
-            result = mod.sample(N_samples, quantile=qnt)
 
-        elif mode == "SMC":
-            mod = elfi.SMC(d, batch_size=batch_size, seed=seed)
-            result = mod.sample(N_samples, schedule)
+        if competition:
+            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate} --competition'
         else:
-            log_d = elfi.Operation(np.log, d)
+            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
+
+        WF_sim = elfi.tools.external_operation(command,
+                                        prepare_inputs=prepare_inputs,
+                                        process_result=process_result,
+                                        stdout=False)
+
+        WF_sim_vec = elfi.tools.vectorize(WF_sim)
+
+        # save model
+        save_path = outpref
+        os.makedirs(save_path, exist_ok=True)      
+
+        if HR_rate != None and HGT_rate != None:
             bounds = {
-                'gene_gl_speed' : (0, max_value),
-                'ratio_gene_gl' : (0.5, 1),
-                'prop_gene' : (0, 1),
+                'rate_genes1' : (0.0, 1.0),
+                #'rate_genes2' : (epsilon, max_mu),
+                'prop_genes2' : (0.0, 1.0),
             }
-            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                               acq_noise_var=acq_noise_var, seed=seed, bounds=bounds)
 
-            post = mod.fit(n_evidence=n_evidence)
-            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
+            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
+        elif HR_rate != None and HGT_rate == None:
+            bounds = {
+                'rate_genes1' : (0.0, 1.0),
+                'prop_genes2' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
+            }
 
-            # not implemented for more than 2 dimensions
-            # post.plot(logpdf=True)
-            # plt.savefig("posterior.svg")
-            # plt.close()
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
+            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
+        elif HR_rate == None and HGT_rate != None:
+            bounds = {
+                'rate_genes1' : (0.0, 1.0),
+                'prop_genes2' : (0.0, 1.0),
+                'HR_rate' : (0.0, 1.0),
+            }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
+            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
+        else:
+            bounds = {
+                'rate_genes1' : (0.0, 1.0),
+                'prop_genes2' : (0.0, 1.0),
+                'HR_rate' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
+            }
+            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
+            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
 
-            mod.plot_discrepancy()
-            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
-            plt.close()
+        m['sim'].uses_meta = True
 
-            # plot MCMC traces
-            result.plot_traces();
-            plt.savefig(outpref + '_BOLFI_traces.svg')
-            plt.close()
+        # use euclidean between
+        elfi.Distance('euclidean', m['sim'], model=m, name='d')
+        elfi.Operation(np.log, m['d'], model=m, name='log_d')     
+        
+        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
+        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
 
-            # # plot results
-            # mod.plot_state()
-            # plt.savefig(outpref + "_" + mode + "_state.svg")
-            # plt.close()
+        post = mod.fit(n_evidence=n_evidence, threshold=threshold)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
+
+        mod.plot_discrepancy()
+        plt.savefig(outpref + "_BOLFI_discrepancy.png")
+        plt.close()
+
+        # plot MCMC traces
+        result.plot_traces(); 
+        plt.savefig(outpref + '_BOLFI_traces.png')
+        plt.close()
 
         with open(outpref + "_ELFI_summary.txt", "w") as f:
             print(result, file=f)
-
-        # save model
-        save_path = outpref + '_pools'
-        os.makedirs(save_path, exist_ok=True)
-        arraypool = elfi.OutputPool(['ratio_gene_gl', 'gene_gl_speed', 'prop_gene', 'Y', 'd'], prefix=save_path)
-        arraypool.set_context(mod)
+        
         arraypool.save()
+        print('Files in', arraypool.path, 'are', os.listdir(arraypool.path))
+
+        m.save(prefix=save_path + "/BOLFI_model")
+        print('Model saved to ', save_path + "/BOLFI_model")
 
     else:
         print("Loading models in {}".format(load))
         if load == None:
-            print('Previously saved ELFI pool required for "sample" mode. Please specify "--load."')
+            print('Previously saved ELFI output required for "sample" mode. Please specify "--load."')
             sys.exit(1)
 
         # parse filename
         load_pref = load.rsplit('/', 1)[0]
         load_name = load.rsplit('/', 1)[-1]
 
-        arraypool = elfi.OutputPool.open(name=load_name, prefix=load_pref)
+        arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
+        print(arraypool[0])
+        print('This pool has', len(arraypool), 'batches')
 
-        if mode == "rejection":
-            mod = elfi.Rejection(d, batch_size=batch_size, seed=seed, pool=arraypool)
-            result = mod.sample(N_samples, quantile=qnt)
-        elif mode == "SMC":
-            mod = elfi.SMC(d, batch_size=batch_size, seed=seed, pool=arraypool)
-            result = mod.sample(N_samples, schedule)
-        else:
-            log_d = elfi.Operation(np.log, d)
+        m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
+
+        if HR_rate != None and HGT_rate != None:
+                bounds = {
+                    'rate_genes1' : (0.0, 1.0),
+                    #'rate_genes2' : (epsilon, max_mu),
+                    'prop_genes2' : (0.0, 1.0)
+                }
+        elif HR_rate != None and HGT_rate == None:
             bounds = {
-                'gene_gl_speed' : (0, max_value),
-                'ratio_gene_gl' : (0.5, 1),
-                'prop_gene': (0, 1),
+                'rate_genes1' : (0.0, 1.0),
+                #'rate_genes2' : (epsilon, max_mu),
+                'prop_genes2' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
             }
-            mod = elfi.BOLFI(log_d, batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool)
+        elif HR_rate == None and HGT_rate != None:
+            bounds = {
+                'rate_genes1' : (0.0, 1.0),
+                #'rate_genes2' : (epsilon, max_mu),
+                'prop_genes2' : (0.0, 1.0),
+                'HR_rate' : (0.0, 1.0),
+            }
+        else:
+            bounds = {
+                'rate_genes1' : (0.0, 1.0),
+                #'rate_genes2' : (epsilon, max_mu),
+                'prop_genes2' : (0.0, 1.0),
+                'HR_rate' : (0.0, 1.0),
+                'HGT_rate' : (0.0, 1.0),
+            }
+        
+        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
+        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
+                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
 
-            result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence)
+        post = mod.fit(n_evidence=n_evidence, threshold=threshold)
+        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
 
-            mod.plot_discrepancy()
-            plt.savefig(outpref + "_BOLFI_discrepancy.svg")
-            plt.close()
+        mod.plot_discrepancy()
+        plt.savefig(outpref + "_BOLFI_discrepancy.png")
+        plt.close()
 
-            # plot results
-            mod.plot_state()
-            plt.savefig(outpref + "_" + mode + "_state.svg")
-            plt.close()
+        # # plot results
+        # mod.plot_state()
+        # plt.savefig(outpref + "_state.png")
+        # plt.close()
 
-            #plot MCMC traces
-            result.plot_traces();
-            plt.savefig(outpref + '_BOLFI_traces.svg')
-            plt.close()
+        #plot MCMC traces
+        result.plot_traces()
+        plt.savefig(outpref + '_BOLFI_traces.png')
+        plt.close()
 
     with open(outpref + "_ELFI_summary.txt", "w") as f:
         print(result, file=f)
@@ -423,14 +613,63 @@ if __name__ == "__main__":
     # plot graphs
     # plot marginals
     result.plot_marginals()
-    plt.savefig(outpref + "_" + mode + '_marginals.svg')
+    plt.savefig(outpref + '_marginals.png')
 
     plt.clf
     plt.cla
 
     # plot paired marginals
     result.plot_pairs()
-    plt.savefig(outpref + "_" + mode + '_pairs.svg')
+    plt.savefig(outpref + '_pairs.png')
     plt.close()
+
+    # generate output
+    # Define real-world log-uniform min/max for each parameter
+    param_names = mod.model.parameter_names
+    param_bounds = {
+        'rate_genes1': (epsilon, max_mu),
+        'prop_genes2': (epsilon, 1.0),
+        'HR_rate': (epsilon, recomb_max),
+        'HGT_rate': (epsilon, recomb_max),
+        # Add all your parameter bounds here
+    }
+
+    # Extract normalized samples
+    X = mod.target_model.X  # shape: (n_samples, n_params)
+    Y = mod.target_model.Y.flatten()
+
+    # Transform normalized samples back to real-world scale
+    X_real = np.zeros_like(X)
+    df_post = pd.DataFrame(result.samples)
+
+    summary_rows = []
+
+    for i, pname in enumerate(param_names):
+        if pname in param_bounds:
+            min_val, max_val = param_bounds[pname]
+            X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
+            df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+
+            # Compute posterior summaries
+            mean = np.mean(df_post[pname])
+            ci_2_5 = np.percentile(df_post[pname], 2.5)
+            ci_97_5 = np.percentile(df_post[pname], 97.5)
+            median = np.median(df_post[pname])
+
+            summary_rows.append({
+                'parameter': pname,
+                'mean': mean,
+                'median': median,
+                'CI_2.5%': ci_2_5,
+                'CI_97.5%': ci_97_5
+            })
+
+    # Store in DataFrame and save
+    df_evidence_scaled = pd.DataFrame(X_real, columns=param_names)
+    df_evidence_scaled['discrepancy'] = Y
+    df_evidence_scaled.to_csv(outpref + '_gp_evidence.csv', index=False)        
+    df_post.to_csv(outpref + '_mcmc_posterior_samples.csv', index=False)
+    df_summary = pd.DataFrame(summary_rows)
+    df_summary.to_csv(outpref + '_parameter_estimates_summary.csv', index=False)
 
     sys.exit(0)
