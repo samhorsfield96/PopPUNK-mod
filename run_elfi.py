@@ -272,6 +272,10 @@ def prepare_inputs(*inputs, **kwinputs):
     This function processes the normalized parameter values [0,1] and transforms them
     back to their original ranges based on the parameter specifications.
     """
+
+    # get sim_params
+    fixed_params, other_params = inputs
+
     # Get the model from keyword arguments
     model = kwinputs.get('model')
     if model is None:
@@ -282,7 +286,7 @@ def prepare_inputs(*inputs, **kwinputs):
     param_index = 0
     
     # Get fixed parameters from keyword arguments
-    fixed_params = {k: v for k, v in kwinputs.items() if k not in ['model', 'meta', 'workdir', 'obs_file', 'epsilon']}
+    #fixed_params = {k: v for k, v in kwinputs.items() if k not in ['model', 'meta', 'workdir', 'obs_file', 'epsilon']}
     
     # Process each node in the model (these are only the fitted parameters)
     for node_name, node in model.nodes.items():
@@ -295,7 +299,7 @@ def prepare_inputs(*inputs, **kwinputs):
             param_index += 1
             
             # Get parameter specification (default to uniform if not specified)
-            spec = node.meta.get('param_spec', {'dist': 'uniform', 'min': 0.0, 'max': 1.0})
+            spec = model.fitted_params[node_name]
             
             # Transform back to original range
             if spec['dist'] == 'uniform':
@@ -309,6 +313,7 @@ def prepare_inputs(*inputs, **kwinputs):
     
     # Add fixed parameters to param_values
     param_values.update(fixed_params)
+    param_values.update(other_params)
 
     # Add all parameters to kwinputs for the simulator
     for param_name, param_value in param_values.items():
@@ -392,7 +397,6 @@ if __name__ == "__main__":
     
     # Process fixed parameters first
     fixed_params = {}
-    print(options.fixed_param)
     if hasattr(options, 'fixed_param') and options.fixed_param:
         for name, value in options.fixed_param:
             try:
@@ -409,29 +413,30 @@ if __name__ == "__main__":
                         "and/or --fixed-param to specify fixed parameters.")
     
     # Process user-specified parameters for BOLFI fitting
-    param_specs = {}
+    fitted_params = {}
     if hasattr(options, 'param') and options.param:
         for name, min_val, max_val, dist in options.param:
             if name in fixed_params:
                 raise ValueError(f"Parameter {name} cannot be both fixed (--fixed-param) and fitted (--param).")
-                
-            param_specs[name] = {
+
+            fitted_params[name] = {
                 'min': float(min_val),
                 'max': float(max_val),
                 'dist': dist.lower()
             }
             
             # Validate distribution type
-            if param_specs[name]['dist'] not in ['uniform', 'loguniform']:
+            if fitted_params[name]['dist'] not in ['uniform', 'loguniform']:
                 raise ValueError(f"Invalid distribution type for parameter {name}. Must be 'uniform' or 'loguniform'.")
     
     # Add all user-specified parameters to the model (only those being fitted by BOLFI)
-    for param_name, spec in param_specs.items():
+    m.fitted_params = {}
+    for param_name, spec in fitted_params.items():
         # All parameters are defined as uniform in [0,1] space internally
         elfi.Prior('uniform', 0.0, 1.0, model=m, name=param_name)
         
         # Store parameter specifications as node data for later use
-        m[param_name].meta['param_spec'] = spec
+        m.fitted_params[param_name] = spec
         
         # Log the parameter being fitted
         print(f"Fitting parameter: {param_name} with {spec['dist']} prior in range [{spec['min']}, {spec['max']}]")
@@ -443,7 +448,7 @@ if __name__ == "__main__":
     if run_mode == "sim":
         print("Simulating data...")
 
-        # Define base command parameters with values from fixed_params and param_specs
+        # Define base command parameters with values from fixed_params and fitted_params
         base_params = []
         
         # Add fixed parameters to the command
@@ -451,7 +456,7 @@ if __name__ == "__main__":
             base_params.append(f'--{param_name} {param_value}')
             
         # Add parameters being fitted to the command (they will be formatted later)
-        for param_name in param_specs.keys():
+        for param_name in fitted_params.keys():
             base_params.append(f'--{param_name} {{{param_name}}}')
             
         # Add other required parameters that should always be passed
@@ -463,7 +468,7 @@ if __name__ == "__main__":
         
         # Add other parameters that are not being fitted
         for param_name, param_value in other_params.items():
-            if param_name not in fixed_params and param_name not in param_specs:
+            if param_name not in fixed_params and param_name not in fitted_params:
                 base_params.append(f'--{param_name} {param_value}')
             
         # Construct the final command
@@ -481,37 +486,30 @@ if __name__ == "__main__":
         os.makedirs(save_path, exist_ok=True)      
 
         # Determine which parameters are being fitted
-        fitted_params = []
         bounds = {}
         
         # Get all parameters that are ELFI Priors (i.e., being fitted)
-        for node_name, node in m.nodes.items():
-            if isinstance(node, elfi.Prior) and node_name not in ['d', 'log_d', 'Y']:
-                fitted_params.append(node_name)
-                # All parameters are in [0,1] space
-                bounds[node_name] = (0.0, 1.0)
+        for node_name, node in fitted_params.items():
+            print(f"node_name, node: {node_name}, {node}")
+            bounds[node_name] = (0.0, 1.0)
         
+        print(bounds)
+
         # Create simulator with all required parameters
-        sim_params = {
-            'seed': seed,
-            'n_gen': n_gen,
-            'max_distances': max_distances,
+        other_other_params = {
             'workdir': workdir,
             'obs_file': obs_file,
             'epsilon': epsilon,
-            'model': m,  # Pass the model to prepare_inputs
-            **fixed_params  # Add all fixed parameters
         }
-        
-        # Add all fitted parameters to sim_params
-        for param_name in fitted_params:
-            sim_params[param_name] = m[param_name]
-        
+
+        # add all non model parameters together
+        other_params.update(other_other_params)
+                
         # Create the simulator with all parameters
-        elfi.Simulator(WF_sim_vec, **sim_params, name='sim', model=m, observed=obs)
+        elfi.Simulator(WF_sim_vec, fixed_params, other_params, name='sim', model=m, observed=obs)
         
         # Create array pool with all fitted parameters
-        arraypool_fields = ['Y', 'd', 'log_d'] + fitted_params
+        arraypool_fields = ['Y', 'd', 'log_d'] + [x for x in fitted_params.keys()]
         arraypool = elfi.ArrayPool(arraypool_fields, name="BOLFI_pool", prefix=save_path)
 
         m['sim'].uses_meta = True
@@ -552,7 +550,6 @@ if __name__ == "__main__":
         for param_name, (low, high) in bounds.items():
             # Get parameter specification to determine if we should use log or linear scale for proposals
             node = m[param_name]
-            spec = node.meta.get('param_spec', {'dist': 'uniform'})
             
             # Scale proposals accordingly
             sigma_proposals[param_name] = (high - low) * covar_scaling
@@ -610,9 +607,7 @@ if __name__ == "__main__":
             # Get bounds from the model's parameter specifications
             bounds = {}
             for param_name, node in m.parameter_names.items():
-                if param_name in m.parameter_names and hasattr(m[param_name], 'meta') and 'param_spec' in m[param_name].meta:
-                    spec = m[param_name].meta['param_spec']
-                    bounds[param_name] = (spec['min'], spec['max'])
+                bounds[param_name] = (0.0, 1.0)
             
             if not bounds:
                 raise ValueError("No parameter specifications found in the model. Cannot determine bounds.")
