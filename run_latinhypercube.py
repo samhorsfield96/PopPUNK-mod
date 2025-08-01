@@ -87,7 +87,7 @@ if __name__ == "__main__":
     HGT_rate = [np.log(float(x) + log_constant) for x in options.HGT_rate.split(",")]
 
 
-    sampler = qmc.LatinHypercube(d=11, optimization="random-cd")
+    sampler = qmc.LatinHypercube(d=10, optimization="random-cd")
 
     # deal with negative numbers for prop_positive
     if prop_positive[0] != 0.0:
@@ -104,10 +104,10 @@ if __name__ == "__main__":
     samples = sampler.random(n=n_samples)
     
     # scale all variables, ensuring dependencies
-    s_core_mu = qmc.scale(samples[:, 0].reshape(-1, 1), core_mu[0], core_mu[1])
-    s_rate_genes1 = qmc.scale(samples[:, 1].reshape(-1, 1), rate_genes1[0], rate_genes1[1])
-    s_prop_genes2 = qmc.scale(samples[:, 2].reshape(-1, 1), prop_genes2[0], prop_genes2[1])
-    s_prop_positive = qmc.scale(samples[:, 3].reshape(-1, 1), prop_positive[0], prop_positive[1])
+    #s_core_mu = qmc.scale(samples[:, 0].reshape(-1, 1), core_mu[0], core_mu[1])
+    s_rate_genes1 = qmc.scale(samples[:, 0].reshape(-1, 1), rate_genes1[0], rate_genes1[1])
+    s_prop_genes2 = qmc.scale(samples[:, 1].reshape(-1, 1), prop_genes2[0], prop_genes2[1])
+    s_prop_positive = qmc.scale(samples[:, 2].reshape(-1, 1), prop_positive[0], prop_positive[1])
 
     # set to zero if no fast genes, just set to very high value
     s_rate_genes2 = np.zeros(n_samples).reshape(-1, 1)
@@ -117,6 +117,9 @@ if __name__ == "__main__":
     # s_rate_genes2[rate_genes2_active] = s_rate_genes1[rate_genes2_active] + (rate_genes2[1] - s_rate_genes1[rate_genes2_active]) * subset_rate_genes2.reshape(-1, 1)
     s_rate_genes2[rate_genes2_active] = rate_genes2[1]
 
+    s_core_mu = np.zeros(n_samples).reshape(s_prop_positive.shape)
+    s_core_mu[:] = core_mu[1]
+
     s_pos_lambda = np.zeros(n_samples).reshape(-1, 1)
     s_neg_lambda = np.zeros(n_samples).reshape(-1, 1)
 
@@ -124,17 +127,17 @@ if __name__ == "__main__":
     pos_active = pos_active.reshape(-1)
     neg_active = (s_prop_positive > 0) & (s_prop_positive < 1.0)
     neg_active = neg_active.reshape(-1)
-    subset_pos_lambda = samples[pos_active, 4]
-    subset_neg_lambda = samples[neg_active, 5]
+    subset_pos_lambda = samples[pos_active, 3]
+    subset_neg_lambda = samples[neg_active, 4]
 
     s_pos_lambda[pos_active] = qmc.scale(subset_pos_lambda.reshape(-1, 1), pos_lambda[0], pos_lambda[1])
     s_neg_lambda[neg_active] = qmc.scale(subset_neg_lambda.reshape(-1, 1), neg_lambda[0], neg_lambda[1])
 
-    s_pan_genes = qmc.scale(samples[:, 6].reshape(-1, 1), pan_genes[0], pan_genes[1])
-    s_core_genes = qmc.scale(samples[:, 7].reshape(-1, 1), core_genes[0], core_genes[1])
-    s_avg_gene_freq = qmc.scale(samples[:, 8].reshape(-1, 1), avg_gene_freq[0], avg_gene_freq[1])
-    s_HR_rate = qmc.scale(samples[:, 9].reshape(-1, 1), HR_rate[0], HR_rate[1])
-    s_HGT_rate= qmc.scale(samples[:, 10].reshape(-1, 1), HGT_rate[0], HGT_rate[1])
+    s_pan_genes = qmc.scale(samples[:, 5].reshape(-1, 1), pan_genes[0], pan_genes[1])
+    s_core_genes = qmc.scale(samples[:, 6].reshape(-1, 1), core_genes[0], core_genes[1])
+    s_avg_gene_freq = qmc.scale(samples[:, 7].reshape(-1, 1), avg_gene_freq[0], avg_gene_freq[1])
+    s_HR_rate = qmc.scale(samples[:, 8].reshape(-1, 1), HR_rate[0], HR_rate[1])
+    s_HGT_rate= qmc.scale(samples[:, 9].reshape(-1, 1), HGT_rate[0], HGT_rate[1])
 
     #scaled_sample = qmc.scale(sample, l_bounds, u_bounds
     
