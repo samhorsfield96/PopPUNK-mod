@@ -267,9 +267,6 @@ def prepare_inputs(*inputs, **kwinputs):
     # get all model parameters for sampling
     fixed_params, other_params, model_priors_index = inputs[0], inputs[1], inputs[2]
     model_priors = list(inputs[3:])
-
-    print(model_priors_index)
-    print(model_priors)
     
     # Get parameter values in the order they were defined in the model
     param_values = {}
@@ -279,7 +276,6 @@ def prepare_inputs(*inputs, **kwinputs):
     for index, (node_name, spec) in enumerate(model_priors_index):
         # get normalised value of prior
         norm_val = model_priors[index]
-        print(norm_val)
                 
         # Transform back to original range
         if spec['dist'] == 'uniform':
@@ -289,15 +285,11 @@ def prepare_inputs(*inputs, **kwinputs):
             # Log scaling for loguniform distribution
             real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
         
-        print(real_val)
-        
         param_values[node_name] = real_val
     
     # Add fixed parameters to param_values
     param_values.update(fixed_params)
     param_values.update(other_params)
-
-    print(param_values)
 
     # Add all parameters to kwinputs for the simulator
     for param_name, param_value in param_values.items():
