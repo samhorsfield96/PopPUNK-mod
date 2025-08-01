@@ -1,15 +1,10 @@
 library(ggplot2)
+
 library(dplyr)
 
 #df <- read.csv("results/predictions_negative_exp_3param_canberra_ngen200_hypparam_check_moderate_no_logit_BOLFI_parsed.txt", sep = "\t")
 df <- read.csv("results/predictions_negative_exp_3param_canberra_ngen200_hypparam_check_moderate_no_logit_more_params_BOLFI_parsed.txt", sep = "\t")
 
-
-df$core <- as.numeric(sub(".*core_(\\d+)_.*", "\\1", df$Name))
-df$pan <- as.numeric(sub(".*pan_(\\d+)_.*", "\\1", df$Name))
-df$freq <- as.numeric(sub(".*freq_([0-9.]+)_.*", "\\1", df$Name))
-df$mu <- as.numeric(sub(".*mu_([0-9.]+)_.*", "\\1", df$Name))
-df$prop <- as.numeric(sub(".*prop_([0-9.]+)_.*", "\\1", df$Name))
 df$speed <- as.numeric(sub(".*speed_(\\d+)_.*", "\\1", df$Name))
 df$initev <- as.numeric(sub(".*initev_(\\d+)_.*", "\\1", df$Name))
 df$nevid <- as.numeric(sub(".*nevid_(\\d+)_.*", "\\1", df$Name))
@@ -510,5 +505,3 @@ prop_df$Name <- factor(prop_df$Name, levels = prop_df$Name)
     ggsave("by_prop_cred_interval_size.png", width = 14, height = 6)
   }
 }
-
-
