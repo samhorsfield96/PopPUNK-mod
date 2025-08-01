@@ -611,48 +611,23 @@ if __name__ == "__main__":
             m = elfi.load_model(name="pansim_model", prefix=model_path)
             print("Successfully loaded ELFI model")
             
-            # Define bounds based on which parameters are being fitted
-            if HR_rate is not None and HGT_rate is not None:
-                bounds = {
-                    'rate_genes1': (0.0, 1.0),
-                    'prop_genes2': (0.0, 1.0)
-                }
-            elif HR_rate is not None and HGT_rate is None:
-                bounds = {
-                    'rate_genes1': (0.0, 1.0),
-                    'prop_genes2': (0.0, 1.0),
-                    'HGT_rate': (0.0, 1.0)
-                }
-            elif HR_rate is None and HGT_rate is not None:
-                bounds = {
-                    'rate_genes1': (0.0, 1.0),
-                    'prop_genes2': (0.0, 1.0),
-                    'HR_rate': (0.0, 1.0)
-                }
-            else:
-                # Default bounds if neither condition is met
-                bounds = {
-                    'rate_genes1': (0.0, 1.0),
-                    'prop_genes2': (0.0, 1.0),
-                    'HR_rate': (0.0, 1.0),
-                    'HGT_rate': (0.0, 1.0)
-                }
+            # Get bounds from the model's parameter specifications
+            bounds = {}
+            for param_name, node in m.parameter_names.items():
+                if param_name in m.parameter_names and hasattr(m[param_name], 'meta') and 'param_spec' in m[param_name].meta:
+                    spec = m[param_name].meta['param_spec']
+                    bounds[param_name] = (spec['min'], spec['max'])
+            
+            if not bounds:
+                raise ValueError("No parameter specifications found in the model. Cannot determine bounds.")
                 
-            print(f"Using bounds: {bounds}")
+            print(f"Using parameter bounds from model: {bounds}")
             
         except Exception as e:
             print(f"Error loading model: {str(e)}")
             if 'arraypool' in locals():
                 arraypool.close()
             raise
-        else:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
         
         kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
         #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
