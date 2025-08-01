@@ -296,11 +296,13 @@ def prepare_inputs(*inputs, **kwinputs):
         kwinputs[param_name] = param_value
     
     # Prepare a unique filename for parallel settings
-    meta = kwinputs.get('meta', {})
-    if 'workdir' in kwinputs and kwinputs['workdir'] is not None:
-        filename = f"{kwinputs['workdir']}/{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
+    meta = kwinputs['meta']
+
+    # Prepare a unique filename for parallel settings
+    if kwinputs['workdir'] != None:
+        filename = kwinputs['workdir'] + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
     else:
-        filename = f"{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
+        filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
 
     # Add the filenames to kwinputs
     kwinputs['outpref'] = filename
@@ -324,8 +326,7 @@ def process_result(completed_process, *inputs, **kwinputs):
 
         divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
     except FileNotFoundError:
-        print(f"{output_filename} not found.\ncompleted_process: {completed_process}\nInput arguments: {kwinputs}")
-        divergence = 1.0
+        print(f"{output_filename} not found.\ncompleted_process: {completed_process}")
         raise FileNotFoundError
 
     # This will be passed to ELFI as the result of the command
@@ -443,7 +444,6 @@ if __name__ == "__main__":
         # Add other required parameters that should always be passed
         other_params = {
             'seed': seed,
-            'outpref': outpref,
             'max_distances': max_distances,
         }
         
@@ -451,7 +451,10 @@ if __name__ == "__main__":
         for param_name, param_value in other_params.items():
             if param_name not in fixed_params and param_name not in fitted_params:
                 base_params.append(f'--{param_name} {param_value}')
-            
+        
+        # add outpref as variable to be filled in
+        base_params.append('--outpref {outpref}')
+
         # Construct the final command
         command = pansim_exe + ' ' + ' '.join(base_params)
 
