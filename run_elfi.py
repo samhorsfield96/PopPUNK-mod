@@ -222,6 +222,14 @@ def get_options():
                 default=None,
                 help='Specify workdir to save intermediate files. If unset, will write to working directory.')
     
+    # Add parameter specification arguments
+    IO.add_argument('--param',
+                action='append',
+                nargs=4,
+                metavar=('NAME', 'MIN', 'MAX', 'DIST'),
+                help='Specify a parameter to fit. Can be used multiple times. '
+                     'NAME: parameter name, MIN/MAX: bounds, DIST: prior type (uniform or loguniform)')
+    
 
     return parser.parse_args()
 
@@ -271,35 +279,53 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file = inputs
+    """Prepare inputs for the simulator, handling both fixed and fitted parameters.
     
-    # add to kwinputs
-    kwinputs['avg_gene_freq'] = avg_gene_freq
-    kwinputs['core_mu'] = core_mu
-    kwinputs['rate_genes1'] = from_unit_to_loguniform(rate_genes1, epsilon, max_mu)
-    # rate_genes2 is always faster make it so all genes in pangenome mutate once on average per generation
-    kwinputs['rate_genes2'] = rate_genes2 * prop_genes2
-    kwinputs['prop_genes2'] = from_unit_to_loguniform(prop_genes2, epsilon, 1.0)
-    kwinputs['seed'] = seed
-    kwinputs['pop_size'] = pop_size
-    kwinputs['core_size'] = core_size
-    kwinputs['pan_genes'] = pan_genes
-    kwinputs['core_genes'] = core_genes
-    kwinputs['n_gen'] = n_gen
-    kwinputs['max_distances'] = max_distances
-    kwinputs['HR_rate'] = from_unit_to_loguniform(HR_rate, epsilon, recomb_max)
-    kwinputs['HGT_rate'] = from_unit_to_loguniform(HGT_rate, epsilon, recomb_max)
-    kwinputs['obs_file'] = obs_file
-    kwinputs['noise_scale'] = noise_scale
-
-    meta = kwinputs['meta']
-
+    This function processes the normalized parameter values [0,1] and transforms them
+    back to their original ranges based on the parameter specifications.
+    """
+    # Get the model from keyword arguments
+    model = kwinputs.get('model')
+    if model is None:
+        raise ValueError("Model instance not found in keyword arguments")
+    
+    # Get parameter values in the order they were defined in the model
+    param_values = {}
+    param_index = 0
+    
+    # Process each node in the model
+    for node_name, node in model.nodes.items():
+        if isinstance(node, elfi.Prior) and node_name not in ['d', 'log_d', 'Y']:
+            # Get the normalized parameter value [0,1]
+            if param_index >= len(inputs):
+                raise ValueError(f"Not enough input values for parameter {node_name}")
+                
+            norm_val = inputs[param_index][0] if isinstance(inputs[param_index], (list, np.ndarray)) else inputs[param_index]
+            param_index += 1
+            
+            # Get parameter specification (default to uniform if not specified)
+            spec = node.meta.get('param_spec', {'dist': 'uniform', 'min': 0.0, 'max': 1.0})
+            
+            # Transform back to original range
+            if spec['dist'] == 'uniform':
+                # Linear scaling for uniform distribution
+                real_val = spec['min'] + norm_val * (spec['max'] - spec['min'])
+            else:  # loguniform
+                # Log scaling for loguniform distribution
+                real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
+            
+            param_values[node_name] = real_val
+    
+    # Add all parameters to kwinputs for the simulator
+    for param_name, param_value in param_values.items():
+        kwinputs[param_name] = param_value
+    
     # Prepare a unique filename for parallel settings
-    if workdir != None:
-        filename = workdir + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
-        #filename = workdir + f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
+    meta = kwinputs.get('meta', {})
+    if 'workdir' in kwinputs and kwinputs['workdir'] is not None:
+        filename = f"{kwinputs['workdir']}/{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
     else:
-        filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
+        filename = f"{meta.get('model_name', 'model')}_{meta.get('batch_index', 0)}_{meta.get('submission_index', 0)}"
         #filename = f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
 
     # Add the filenames to kwinputs
@@ -390,26 +416,40 @@ if __name__ == "__main__":
     # set up model
     input_dim = 0
     m = elfi.ElfiModel(name='pansim_model')
-
-    # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
+    
+    # Require explicit parameter specification via --param
+    if not hasattr(options, 'param') or not options.param:
+        raise ValueError("No parameters specified for BOLFI modeling. Use --param to specify each parameter to fit.")
+    
+    # Process user-specified parameters
+    param_specs = {}
+    for name, min_val, max_val, dist in options.param:
+        param_specs[name] = {
+            'min': float(min_val),
+            'max': float(max_val),
+            'dist': dist.lower()
+        }
+        
+        # Validate distribution type
+        if param_specs[name]['dist'] not in ['uniform', 'loguniform']:
+            raise ValueError(f"Invalid distribution type for parameter {name}. Must be 'uniform' or 'loguniform'.")
+    
+    # Add all user-specified parameters to the model
+    for param_name, spec in param_specs.items():
+        # All parameters are defined as uniform in [0,1] space internally
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name=param_name)
+        
+        # Store parameter specifications as node data for later use
+        m[param_name].meta['param_spec'] = spec
+        
+        # Log the parameter being fitted
+        print(f"Fitting parameter: {param_name} with {spec['dist']} prior in range [{spec['min']}, {spec['max']}]")
+    
+    # Set max mutation rate to each gene being gained/lost once per generation
     max_mu = ((pan_genes - core_genes) / n_gen) * 10
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
     
-    # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
+    # Set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
     rate_genes2 = (pan_genes - core_genes) * 10
-
-    # set as arbitarily high value, 10 events per core genome mutation, or adjust to fit in normalised space
-    recomb_max = options.recomb_max
-    if HGT_rate == None:
-        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HGT_rate')
-    else:
-        HGT_rate = to_normalised_log_uniform(HGT_rate, 0.0, recomb_max, epsilon)
-    
-    if HR_rate == None:
-        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HR_rate')
-    else:
-        HR_rate = to_normalised_log_uniform(HR_rate, 0.0, recomb_max, epsilon)
 
     # fit negative_exponential curve
     popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
@@ -470,56 +510,106 @@ if __name__ == "__main__":
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)      
 
-        if HR_rate != None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-            }
-
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
-        elif HR_rate != None and HGT_rate == None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
-
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
-        elif HR_rate == None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
-        else:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
+        # Determine which parameters are being fitted
+        fitted_params = []
+        bounds = {}
+        
+        # Get all parameters that are ELFI Priors (i.e., being fitted)
+        for node_name, node in m.nodes.items():
+            if isinstance(node, elfi.Prior) and node_name not in ['d', 'log_d', 'Y']:
+                fitted_params.append(node_name)
+                # All parameters are in [0,1] space
+                bounds[node_name] = (0.0, 1.0)
+        
+        # Create simulator with all required parameters
+        # Create simulator with all required parameters
+        # All parameters must be specified via --param, so we'll get them from the model
+        sim_params = {
+            'avg_gene_freq': avg_gene_freq,
+            'core_mu': core_mu,
+            'seed': seed,
+            'pop_size': pop_size,
+            'core_size': core_size,
+            'pan_genes': pan_genes,
+            'core_genes': core_genes,
+            'n_gen': n_gen,
+            'max_distances': max_distances,
+            'workdir': workdir,
+            'obs_file': obs_file,
+            'max_mu': max_mu,
+            'recomb_max': recomb_max,
+            'epsilon': epsilon,
+            'noise_scale': noise_scale,
+            'model': m  # Pass the model to prepare_inputs
+        }
+        
+        # Add all fitted parameters to sim_params
+        for param_name in fitted_params:
+            sim_params[param_name] = m[param_name]
+        
+        # Create the simulator with all parameters
+        elfi.Simulator(WF_sim_vec, **sim_params, name='sim', model=m, observed=obs)
+        
+        # Create array pool with all fitted parameters
+        arraypool_fields = ['Y', 'd', 'log_d'] + fitted_params
+        arraypool = elfi.ArrayPool(arraypool_fields, name="BOLFI_pool", prefix=save_path)
 
         m['sim'].uses_meta = True
 
-        # use euclidean between
+        # Use euclidean distance between observed and simulated data
         elfi.Distance('euclidean', m['sim'], model=m, name='d')
-        elfi.Operation(np.log, m['d'], model=m, name='log_d')     
+        elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
+        # Set up the Gaussian Process model
         kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
-        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
-        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
-
+        # Alternative kernel: kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        
+        # Create target model with all parameters being fitted
+        target_model = elfi.GPyRegression(
+            parameter_names=list(bounds.keys()),
+            bounds=bounds,
+            kernel=kernel
+        )
+        
+        # Initialize BOLFI
+        mod = elfi.BOLFI(
+            m['log_d'],
+            batch_size=1,
+            initial_evidence=initial_evidence,
+            update_interval=update_interval,
+            acq_noise_var=acq_noise_var,
+            seed=seed,
+            bounds=bounds,
+            pool=arraypool,
+            target_model=target_model
+        )
+        
+        # Fit the model
         post = mod.fit(n_evidence=n_evidence, threshold=threshold)
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
+        
+        # Set up MCMC sampling
+        sigma_proposals = {}
+        for param_name, (low, high) in bounds.items():
+            # Get parameter specification to determine if we should use log or linear scale for proposals
+            node = m[param_name]
+            spec = node.meta.get('param_spec', {'dist': 'uniform'})
+            
+            if spec['dist'] == 'loguniform':
+                # For loguniform parameters, use a log-scaled proposal
+                sigma_proposals[param_name] = np.log10(high) - np.log10(low) * covar_scaling
+            else:
+                # For uniform parameters, use a linear proposal
+                sigma_proposals[param_name] = (high - low) * covar_scaling
+        
+        # Run MCMC sampling
+        result = mod.sample(
+            N_samples,
+            algorithm="metropolis",
+            n_evidence=n_evidence,
+            n_chains=chains,
+            threshold=threshold,
+            sigma_proposals=sigma_proposals
+        )
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
