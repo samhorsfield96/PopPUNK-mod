@@ -1,12 +1,36 @@
 import numpy as np
+import pandas as pd
 import argparse
 import matplotlib.pyplot as plt
 rng = np.random.default_rng()
 import subprocess
-from run_elfi import read_distfile
 import sys
-from run_elfi import asymptotic_curve2, negative_exponential, negative_exponential2
-from scipy.optimize import curve_fit
+from run_elfi import negative_exponential, fit_negative_exponential
+
+def read_distfile(filename):
+    # read first line, determine if csv
+    with open(filename, "r") as f:
+        first_line = f.readline()
+        if "," in first_line:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
+        else:
+            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+
+    if len(obs.columns) == 2:
+        obs.rename(columns={obs.columns[0]: "Core",
+                           obs.columns[1]: "Accessory"}, inplace=True)
+    elif len(obs.columns) == 4:
+        # rename columns
+        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
+                           obs.columns[3]: "Accessory"}, inplace=True)
+    else:
+        print("Incorrect number of columns in distfile. Should be 2 or 4.")
+        sys.exit(1)
+
+    obs['Core'] = pd.to_numeric(obs['Core'])
+    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
+
+    return obs
 
 def get_options():
     description = 'Run simulator of gene gain model'
@@ -15,33 +39,45 @@ def get_options():
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--core_size',
-                    type=int,
+                    type=float,
                     default=1200000,
                     help='Number of positions in core genome. Default = 1200000 ')
     IO.add_argument('--pan_genes',
-                    type=int,
+                    type=float,
                     default=6000,
                     help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
     IO.add_argument('--core_genes',
-                    type=int,
+                    type=float,
                     default=2000,
                     help='Number of core genes in pangenome only. Default = 2000')
     IO.add_argument('--core_mu',
                     type=float,
                     default=0.05,
                     help='Maximum pairwise distance for core genome. Default = 0.05 ')
-    IO.add_argument('--pan_mu',
+    IO.add_argument('--rate_genes1',
                     type=float,
-                    default=0.05,
-                    help='Maximum pairwise distance for accessory genome. Default = 0.05 ')
-    IO.add_argument('--proportion_fast',
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 1. Must be >= 0.0. Default = 10.0 ')
+    IO.add_argument('--rate_genes2',
                     type=float,
-                    default=0.5,
-                    help='Proportion of pangenome that is evolves quickly. Default = 0.5')
-    IO.add_argument('--speed_fast',
+                    default=10.0,
+                    help='Average number of accessory pangenome that mutates per generation in gene compartment 2. Must be >= 0.0. Default = 10.0')
+    IO.add_argument('--prop_genes2',
                     type=float,
                     default=2.0,
-                    help='Fold-speed increase of pangenome that is evolves quickly over that which evolves slowly. Default = 2.0')
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0')
+    IO.add_argument('--prop_positive',
+                    type=float,
+                    default=-1.0,
+                    help='Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0. If negative, neutral selection is simulated.')
+    IO.add_argument('--pos_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of positively selected genes. Must be > 0.0')
+    IO.add_argument('--neg_lambda',
+                    type=float,
+                    default=0.1,
+                    help='Lambda value for exponential distribution of negatively selected genes. Must be > 0.0')
     IO.add_argument('--pop_size',
                     type=int,
                     default=1000,
@@ -92,9 +128,9 @@ def get_options():
 
 if __name__ == "__main__":
     # core_mu = 0.05
-    # pan_mu = 0.05
-    # proportion_fast = 0.5
-    # speed_fast = 2.0
+    # rate_genes1 = 0.05
+    # rate_genes2 = 0.5
+    # prop_genes2 = 2.0
     # core_size = 1200000
     # pan_genes = 6000
     # avg_gene_freq = 0.5
@@ -108,12 +144,15 @@ if __name__ == "__main__":
 
     options = get_options()
     core_mu = options.core_mu
-    pan_mu = options.pan_mu
-    proportion_fast = options.proportion_fast
-    speed_fast = options.speed_fast
-    core_size = options.core_size
-    pan_genes = options.pan_genes
-    core_genes = options.core_genes
+    rate_genes1 = options.rate_genes1
+    rate_genes2 = options.rate_genes2
+    prop_genes2 = options.prop_genes2
+    prop_positive = options.prop_positive
+    pos_lambda = options.pos_lambda
+    neg_lambda = options.neg_lambda
+    core_size = int(options.core_size)
+    pan_genes = int(options.pan_genes)
+    core_genes = int(options.core_genes)
     avg_gene_freq = options.avg_gene_freq
     n_gen = options.n_gen
     pop_size = options.pop_size
@@ -127,10 +166,9 @@ if __name__ == "__main__":
     competition = options.competition
 
     if competition:
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
     else:
-        command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --pan_mu {pan_mu} --proportion_fast {proportion_fast} --speed_fast {speed_fast} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'.format(avg_gene_freq=avg_gene_freq, pan_mu=pan_mu, proportion_fast=proportion_fast, speed_fast=speed_fast, core_mu=core_mu, seed=seed, pop_size=pop_size, core_size=core_size, core_genes=core_genes, pan_genes=pan_genes, n_gen=n_gen, max_distances=max_distances, HR_rate=HR_rate, HGT_rate=HGT_rate, outpref=outpref, threads=threads)
-
+        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
 
     print("Simulating...")
     try:
@@ -150,21 +188,11 @@ if __name__ == "__main__":
 
     ax.scatter(x, y, s=10, alpha=0.3)
 
-    popt1, pco1v = curve_fit(negative_exponential, x, y, p0=[1.0, 1.0, 0.0], bounds=([0.0, 0.0, 0.0], [1.0, np.inf, 1.0]))
-
-    #popt2, pcov2 = curve_fit(negative_exponential2, x, y, p0=[1.0, 0.0])
-
-    #popt3, pcov3 = curve_fit(asymptotic_curve2, x, y, p0=[1.0, 1.0, 0.0])
+    popt1, pco1v = fit_negative_exponential(x, y)
 
     x_fit = np.linspace(0, x.max(), 100)
     y_fit = negative_exponential(x_fit, *popt1)
     ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
-
-    # y_fit = negative_exponential2(x_fit, *popt2)
-    # ax.plot(x_fit, y_fit, label=f"Negative exponential 2 param", color='blue')
-
-    # y_fit = asymptotic_curve2(x_fit, *popt3)
-    # ax.plot(x_fit, y_fit, label=f"Asmptotic 3 param", color='green')
 
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
