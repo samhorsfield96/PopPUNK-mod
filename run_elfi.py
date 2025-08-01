@@ -94,54 +94,6 @@ def get_options():
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--core_mu',
-                    type=float,
-                    default=None,
-                    help='Number of core mutations per generation. Will infer using JC adjustment if not set.')
-    IO.add_argument('--core_size',
-                    type=int,
-                    default=1200000,
-                    help='Number of positions in core genome. Default = 1200000 ')
-    IO.add_argument('--pan_genes',
-                    type=int,
-                    default=6000,
-                    help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
-    IO.add_argument('--core_genes',
-                    type=int,
-                    default=2000,
-                    help='Number of core genes in pangenome only. Default = 2000')
-    IO.add_argument('--pop_size',
-                    type=int,
-                    default=1000,
-                    help='Population size for Wright-Fisher model. Default = 1000 ')
-    IO.add_argument('--n_gen',
-                    type=int,
-                    default=200,
-                    help='Number of generations for Wright-Fisher model. Default = 200 ')
-    IO.add_argument('--avg_gene_freq',
-                    type=float,
-                    default=0.5,
-                    help='Average gene frequency in accessory genome.'
-                         'Default = "0.5" ')
-    IO.add_argument('--HR_rate',
-                    type=float,
-                    default=None,
-                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
-                         'If unspecified, will fit parameter. ')
-    IO.add_argument('--HGT_rate',
-                    type=float,
-                    default=None,
-                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
-                         'If unspecified, will fit parameter. ')
-    IO.add_argument('--recomb_max',
-                    type=float,
-                    default=10.0,
-                    help='Maximum HGT and HR rate for parameterisation, as number of transfer events transferred per core genome mutation.'
-                         'Default = 10.0. ')
-    IO.add_argument('--competition',
-                    action='store_true',
-                    default=False,
-                    help='Run simulator with competition.')
     IO.add_argument('--epsilon',
                     type=float,
                     default=1e-5,
@@ -223,13 +175,14 @@ def get_options():
                 help='Specify workdir to save intermediate files. If unset, will write to working directory.')
     
     # Add parameter specification arguments
-    IO.add_argument('--param',
-                action='append',
-                nargs=4,
-                metavar=('NAME', 'MIN', 'MAX', 'DIST'),
-                help='Specify a parameter to fit. Can be used multiple times. '
-                     'NAME: parameter name, MIN/MAX: bounds, DIST: prior type (uniform or loguniform)')
+    parser.add_argument('--param', nargs=4, action='append',
+                        metavar=('NAME', 'MIN', 'MAX', 'DIST'),
+                        help='Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"')
     
+    # Fixed parameters (not fitted by BOLFI)
+    parser.add_argument('--fixed-param', nargs=2, action='append',
+                      metavar=('NAME', 'VALUE'),
+                      help='Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.')
 
     return parser.parse_args()
 
@@ -359,9 +312,6 @@ if __name__ == "__main__":
     options = get_options()
     threads = options.threads
     obs_file = options.distfile
-    core_size = options.core_size
-    pan_genes = options.pan_genes
-    core_genes = options.core_genes
     N_samples = options.samples
     seed = options.seed
     outpref = options.outpref
@@ -371,8 +321,6 @@ if __name__ == "__main__":
     n_evidence = options.n_evidence
     avg_gene_freq = options.avg_gene_freq
     cluster = options.cluster
-    n_gen = options.n_gen
-    pop_size = options.pop_size
     load = options.load
     run_mode = options.run_mode
     max_distances = options.max_distances
@@ -380,9 +328,6 @@ if __name__ == "__main__":
     chains = options.chains
     workdir = options.workdir
     threshold = options.threshold
-    HR_rate = options.HR_rate
-    HGT_rate = options.HGT_rate
-    competition = options.competition
     covar_scaling = options.covar_scaling
     epsilon = options.epsilon
     noise_scale = options.noise_scale
@@ -417,24 +362,39 @@ if __name__ == "__main__":
     input_dim = 0
     m = elfi.ElfiModel(name='pansim_model')
     
-    # Require explicit parameter specification via --param
-    if not hasattr(options, 'param') or not options.param:
-        raise ValueError("No parameters specified for BOLFI modeling. Use --param to specify each parameter to fit.")
+    # Process fixed parameters first
+    fixed_params = {}
+    if hasattr(options, 'fixed_param') and options.fixed_param:
+        for name, value in options.fixed_param:
+            try:
+                fixed_params[name] = float(value)
+                print(f"Using fixed parameter: {name} = {value}")
+            except ValueError:
+                raise ValueError(f"Invalid value for fixed parameter {name}: {value}. Must be a number.")
     
-    # Process user-specified parameters
+    # Check if we have at least one parameter to fit or fix
+    if not hasattr(options, 'param') and not fixed_params:
+        raise ValueError("No parameters specified. Use --param to specify parameters to fit "
+                        "and/or --fixed-param to specify fixed parameters.")
+    
+    # Process user-specified parameters for BOLFI fitting
     param_specs = {}
-    for name, min_val, max_val, dist in options.param:
-        param_specs[name] = {
-            'min': float(min_val),
-            'max': float(max_val),
-            'dist': dist.lower()
-        }
-        
-        # Validate distribution type
-        if param_specs[name]['dist'] not in ['uniform', 'loguniform']:
-            raise ValueError(f"Invalid distribution type for parameter {name}. Must be 'uniform' or 'loguniform'.")
+    if hasattr(options, 'param') and options.param:
+        for name, min_val, max_val, dist in options.param:
+            if name in fixed_params:
+                raise ValueError(f"Parameter {name} cannot be both fixed (--fixed-param) and fitted (--param).")
+                
+            param_specs[name] = {
+                'min': float(min_val),
+                'max': float(max_val),
+                'dist': dist.lower()
+            }
+            
+            # Validate distribution type
+            if param_specs[name]['dist'] not in ['uniform', 'loguniform']:
+                raise ValueError(f"Invalid distribution type for parameter {name}. Must be 'uniform' or 'loguniform'.")
     
-    # Add all user-specified parameters to the model
+    # Add all user-specified parameters to the model (only those being fitted by BOLFI)
     for param_name, spec in param_specs.items():
         # All parameters are defined as uniform in [0,1] space internally
         elfi.Prior('uniform', 0.0, 1.0, model=m, name=param_name)
@@ -522,8 +482,6 @@ if __name__ == "__main__":
                 bounds[node_name] = (0.0, 1.0)
         
         # Create simulator with all required parameters
-        # Create simulator with all required parameters
-        # All parameters must be specified via --param, so we'll get them from the model
         sim_params = {
             'avg_gene_freq': avg_gene_freq,
             'core_mu': core_mu,
@@ -540,7 +498,8 @@ if __name__ == "__main__":
             'recomb_max': recomb_max,
             'epsilon': epsilon,
             'noise_scale': noise_scale,
-            'model': m  # Pass the model to prepare_inputs
+            'model': m,  # Pass the model to prepare_inputs
+            **fixed_params  # Add all fixed parameters
         }
         
         # Add all fitted parameters to sim_params
