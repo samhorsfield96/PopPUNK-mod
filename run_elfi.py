@@ -658,9 +658,14 @@ if __name__ == "__main__":
     summary_rows = []
 
     for i, pname in enumerate(param_names):
-        min_val, max_val = fitted_params[pname]['min'], fitted_params[pname]['max']
-        X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
-        df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+        fitted_params[name]['dist'] not in ['uniform', 'loguniform']
+        min_val, max_val, dist = fitted_params[pname]['min'], fitted_params[pname]['max']fitted_params[name]['dist']
+        if dist == "loguniform":
+            X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
+            df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+        else:
+            X_real[:, i] = min_val + X_real[:, i] * (max_val - min_val)
+            df_post[pname] = min_val + df_post[pname] * (max_val - min_val)
 
         # Compute posterior summaries
         mean = np.mean(df_post[pname])
