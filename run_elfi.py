@@ -658,8 +658,7 @@ if __name__ == "__main__":
     summary_rows = []
 
     for i, pname in enumerate(param_names):
-        fitted_params[name]['dist'] not in ['uniform', 'loguniform']
-        min_val, max_val, dist = fitted_params[pname]['min'], fitted_params[pname]['max'], fitted_params[name]['dist']
+        min_val, max_val, dist = fitted_params[pname]['min'], fitted_params[pname]['max'], fitted_params[pname]['dist']
         if dist == "loguniform":
             X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
             df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
