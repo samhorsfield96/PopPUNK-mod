@@ -129,7 +129,6 @@ def get_options():
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-
     IO.add_argument('--samples',
                     type=int,
                     default=100000,
@@ -175,6 +174,10 @@ def get_options():
                     type=float,
                     default=0.1,
                     help='Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1')
+    IO.add_argument('--kernel',
+                    default='RBF',
+                    choices=['RBF', 'Matern32'],
+                    help='Which kernel to use for the Gaussian process. Choices are "RBF" or "Matern32".')
     IO.add_argument('--load',
                     default=None,
                     help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
@@ -503,8 +506,10 @@ if __name__ == "__main__":
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
         # Set up the Gaussian Process model
-        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        # Alternative kernel: kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        if args.kernel == "Matern32":
+            kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        elif args.kernel == "RBF":
+            kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         
         # Create target model with all parameters being fitted
         target_model = elfi.GPyRegression(
@@ -604,8 +609,12 @@ if __name__ == "__main__":
                 arraypool.close()
             raise
         
-        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        # set kernel
+        if args.kernel == "Matern32":
+            kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        elif args.kernel == "RBF":
+            kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+
         target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
