@@ -506,9 +506,9 @@ if __name__ == "__main__":
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
         # Set up the Gaussian Process model
-        if args.kernel == "Matern32":
+        if options.kernel == "Matern32":
             kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        elif args.kernel == "RBF":
+        elif options.kernel == "RBF":
             kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
         
         # Create target model with all parameters being fitted
@@ -610,9 +610,9 @@ if __name__ == "__main__":
             raise
         
         # set kernel
-        if args.kernel == "Matern32":
+        if options.kernel == "Matern32":
             kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        elif args.kernel == "RBF":
+        elif options.kernel == "RBF":
             kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
 
         target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
