@@ -93,17 +93,21 @@ def generate_samples(grid_params, kde):
 
     return z
 
-def create_KDE_dist(df, grid_params, eps=1e-12):
+def create_KDE_dist(df, grid_params, gamma, eps):
     kde = get_kde(df)
     z = generate_samples(grid_params, kde)
-    #print(f"z: {z}")
+
+    # reweight distribution
+    z = np.power(z, gamma)
+
+    # normalise
     z = z.ravel()
     z += eps
     z /= z.sum()
 
     return z
 
-def scale_KDE(df1, df2, eps=1e-12):
+def scale_KDE(df1, df2, gamma, eps):
     scaler = MinMaxScaler()
     scaler.fit(np.vstack([df1, df2]))
     # print(f"np.vstack([df1, df2]) {np.vstack([df1, df2])}")
@@ -129,40 +133,41 @@ def scale_KDE(df1, df2, eps=1e-12):
     grid_params = get_grid(0, 1, 100)
 
     # get KDE samples
-    z1 = create_KDE_dist(df1, grid_params, eps)
-    z2 = create_KDE_dist(df2, grid_params, eps)
+    z1 = create_KDE_dist(df1, grid_params, gamma, eps)
+    z2 = create_KDE_dist(df2, grid_params, gamma, eps)
 
-    # Rescale contours
-    # scatter_alpha = 1
-    # z1_square = z1.reshape(grid_params[0].shape).T
-    # plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
-    # levels = np.linspace(z1_square.min(), z1_square.max(), 100)
-    # plt.contour(grid_params[0], grid_params[1], z1_square, levels=levels[1:], cmap='plasma')
-    # plt.scatter(df1[:,0].flat, df1[:,1].flat, s=1, alpha=scatter_alpha)
-    # plt.savefig('z1_contours.png')
-    # plt.close()
+    return z1, z2, grid_params
 
-    # z2_square = z2.reshape(grid_params[0].shape).T
-    # plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
-    # levels = np.linspace(z2_square.min(), z2_square.max(), 100)
-    # plt.contour(grid_params[0], grid_params[1], z2_square, levels=levels[1:], cmap='plasma')
-    # plt.scatter(df2[:,0].flat, df2[:,1].flat, s=1, alpha=scatter_alpha)
-    # plt.savefig('z2_contours.png')
-    # plt.close()
-
-    return z1, z2
-
-def KDE_KL_divergence(df1, df2, eps=1e-12):
-    z1, z2 = scale_KDE(df1, df2, eps)
+def KDE_KL_divergence(df1, df2, gamma=1.0, eps=1e-12):
+    z1, z2 = scale_KDE(df1, df2, gamma, eps)
 
     # calculate KL divergence
     KL_divergence = np.sum(rel_entr(z1, z2))
     return KL_divergence
 
-def KDE_JS_divergence(df1, df2, eps=1e-12, log=False):
+def KDE_JS_divergence(df1, df2, gamma=1.0, eps=1e-12, log=False, outplot=None):
     if log:
         df1, df2 = np.log(df1 + eps), np.log(df2 + eps)
-    z1, z2 = scale_KDE(df1, df2, eps)
+    z1, z2, grid_params = scale_KDE(df1, df2, gamma, eps)
+
+    # plot contours
+    if outplot != None:
+        scatter_alpha = 1
+        z1_square = z1.reshape(grid_params[0].shape).T
+        plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
+        levels = np.linspace(z1_square.min(), z1_square.max(), 100)
+        plt.contour(grid_params[0], grid_params[1], z1_square, levels=levels[1:], cmap='plasma')
+        plt.scatter(df1[:,0].flat, df1[:,1].flat, s=1, alpha=scatter_alpha)
+        plt.savefig(outplot + '_z1_contours.png')
+        plt.close()
+
+        z2_square = z2.reshape(grid_params[0].shape).T
+        plt.figure(figsize=(11, 8), dpi= 160, facecolor='w', edgecolor='k')
+        levels = np.linspace(z2_square.min(), z2_square.max(), 100)
+        plt.contour(grid_params[0], grid_params[1], z2_square, levels=levels[1:], cmap='plasma')
+        plt.scatter(df2[:,0].flat, df2[:,1].flat, s=1, alpha=scatter_alpha)
+        plt.savefig(outplot + '_z2_contours.png')
+        plt.close()
 
     # calculate KL divergence
     js_distance = jensenshannon(z1, z2, axis=0)
@@ -176,25 +181,24 @@ def main():
     df1 = np.loadtxt(infile1, delimiter='\t', dtype='float64')
     df2 = np.loadtxt(infile2, delimiter='\t', dtype='float64')
 
-
-    js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=True)
-    print(f"js_distance_logged: {js_distance}")
-    print(f"log_js_distance_logged: {np.log(js_distance)}")
+    # js_distance = KDE_JS_divergence(df1, df2, gamma=0.5, eps=1e-12, log=True)
+    # print(f"js_distance_logged: {js_distance}")
+    # print(f"log_js_distance_logged: {np.log(js_distance)}")
     #euc_dist = euclidean(np.array([0.0]), np.array([js_distance]))
     #print(f"js_euc_distance: {js_distance}")
 
-    js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=False)
-    print(f"js_distance: {js_distance}")
-    print(f"log_js_distance: {np.log(js_distance)}")
+    # js_distance = KDE_JS_divergence(df1, df2, gamma=0.5, eps=1e-12, log=False)
+    # print(f"js_distance: {js_distance}")
+    # print(f"js_distance: {np.log(js_distance)}")
 
-    js_distance = KDE_JS_divergence(df1, df2, 0.0, log=False)
+    js_distance = KDE_JS_divergence(df1, df2, gamma=1.0, eps=0.0, log=False, outplot=infile2)
     print(f"js_distance_no_eps: {js_distance}")
-    print(f"log_js_distance_no_eps: {np.log(js_distance)}")
+    #print(f"log_js_distance_no_eps: {np.log(js_distance)}")
 
     #KL_distance = np.sum(rel_entr(z1, z2))
-    KL_distance = KDE_KL_divergence(df1, df2)
-    print(f"KL_distance: {KL_distance}")
-    print(f"log_KL_distance: {np.log(KL_distance)}")
+    # KL_distance = KDE_KL_divergence(df1, df2)
+    # print(f"KL_distance: {KL_distance}")
+    # print(f"log_KL_distance: {np.log(KL_distance)}")
     #euc_dist = euclidean(np.array([0.0]), np.array([KL_distance]))
     #print(f"KL_euc_dist: {euc_dist}")
 

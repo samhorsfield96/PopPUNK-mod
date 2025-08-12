@@ -178,6 +178,10 @@ def get_options():
                     default='RBF',
                     choices=['RBF', 'Matern32'],
                     help='Which kernel to use for the Gaussian process. Choices are "RBF" or "Matern32".')
+    IO.add_argument('--gamma',
+                    type=float,
+                    default=0.25,
+                    help='Power to raise KDE values to for smoothing during data-simulator comparison. Default = 0.25')
     IO.add_argument('--load',
                     default=None,
                     help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
@@ -268,8 +272,11 @@ def prepare_inputs(*inputs, **kwinputs):
     """
 
     # get all model parameters for sampling
-    fixed_params, other_params, model_priors_index = inputs[0], inputs[1], inputs[2]
-    model_priors = list(inputs[3:])
+    gamma, fixed_params, other_params, model_priors_index = inputs[0], inputs[1], inputs[2], inputs[3]
+    model_priors = list(inputs[4:])
+
+    # set gamma for JS distance
+    kwinputs['gamma'] = gamma
     
     # Get parameter values in the order they were defined in the model
     param_values = {}
@@ -327,7 +334,7 @@ def process_result(completed_process, *inputs, **kwinputs):
         # read observations file
         obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
-        divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
+        divergence = KDE_JS_divergence(obs, simulations, gamma=kwinputs['gamma'], eps=0, log=False)
     except FileNotFoundError:
         print(f"{output_filename} not found.\ncompleted_process: {completed_process}")
         raise FileNotFoundError
@@ -355,6 +362,7 @@ if __name__ == "__main__":
     workdir = options.workdir
     threshold = options.threshold
     covar_scaling = options.covar_scaling
+    gamma = options.gamma
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -493,7 +501,7 @@ if __name__ == "__main__":
         other_params.update(other_other_params)
                 
         # Create the simulator with all parameters
-        elfi.Simulator(WF_sim_vec, fixed_params, other_params, model_priors_index, *model_priors, name='sim', model=m, observed=obs)
+        elfi.Simulator(WF_sim_vec, gamma, fixed_params, other_params, model_priors_index, *model_priors, name='sim', model=m, observed=obs)
         
         # Create array pool with all fitted parameters
         arraypool_fields = ['Y', 'd', 'log_d'] + [x for x in fitted_params.keys()]
