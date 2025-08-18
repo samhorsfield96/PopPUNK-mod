@@ -191,7 +191,7 @@ def main():
     # print(f"js_distance: {js_distance}")
     # print(f"js_distance: {np.log(js_distance)}")
 
-    js_distance = KDE_JS_divergence(df1, df2, gamma=1.0, eps=0.0, log=False, outplot=infile2)
+    js_distance = KDE_JS_divergence(df1, df2, gamma=0.25, eps=0.0, log=False, outplot=infile2)
     print(f"js_distance_no_eps: {js_distance}")
     #print(f"log_js_distance_no_eps: {np.log(js_distance)}")
 
