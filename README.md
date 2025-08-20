@@ -88,6 +88,93 @@ Input/Output options:
 
 PopPUNK-mod requires a target distribution to fit to, as well as at least one parameter to fit. All other parameters can be fixed.
 
+`--param` arguments are those to be fitted, whilst `--fixed-param` are those to be fixed. Those not specified will take default parameters in Pansim. We advise setting all parameters to ensure reproducibility. Names used must be identical to arguments in Pansim.
+
 ```
-python poppunk_mod.py --pansim_exe /path/to/pansim --outpref predictions
+python poppunk_mod.py --pansim_exe /path/to/pansim --outpref predictions --param rate_genes1 0.01 1.0 loguniform --param prop_genes2 0.0 1.0 uniform --fixed-param pan_genes 2000 --fixed-param pop_size 1000
+```
+
+In the above example, two fitted and two fixed parameters are specified. 
+
+For the fitted parameters, syntax follows the `--param NAME MIN MAX DIST`:
+- NAME: rate_genes1, MIN: 0.01, MAX: 1.0, DIST: loguniform
+- NAME: prop_genes2, MIN: 0.0, MAX: 1.0, DIST: uniform
+
+where `NAME` matches an argument in Pansim, `MIN`/`MAX` define the parameter value search range, and `DIST` defines the prior distribution to use, one of `uniform` or `loguniform`.
+
+For the fixed parameters, syntax follows the `--param NAME VALUE`:
+- NAME: pan_genes, VALUE: 2000
+- NAME: pop_size, VALUE: 1000
+
+where `NAME` matches an argument in Pansim and `VALUE` defines the fixed parameter value.
+
+### Outputs
+
+PopPUNK-mod generates a number of outputs:
+- directory named `<outpref>`: contains simulation samples from run, can be loaded again using `--load`.
+- `<outpref>_parameter_estimates_summary.csv`: csv containing parameter mean, median and 95% credible interval values.
+- `<outpref>_ELFI_summary.txt`: csv containing normalised parameter mean, median and 95% credible interval values.
+- `<outpref>_gp_evidence.csv`: csv containing parameter values and associated discrepancy values from BOLFI sampling.
+- `<outpref>_mcmc_posterior_samples.csv`: csv containing MCMC sampling values.
+- `<outpref>_pairs.png`: plot of paired parameter posterior distributions.
+- `<outpref>_BOLFI_discrepancy.png`: plot of discrepancy values from BOLFI sampling.
+- `<outpref>_BOLFI_traces.png`: plot of MCMC chains.
+- `<outpref>_contours.png`: plot of target pairwise core vs. accessory distance distributions with density contours.
+- `<outpref>_curve_fit.png`: plot of target pairwise core vs. accessory distance distributions with negative exponential curve fit.
+- `<outpref>_marginals.png`: marginalised parameter posterior distributions.
+
+
+### Command-line options
+
+```
+usage: python poppunk_mod.py [-h] --pansim_exe PANSIM_EXE [--param NAME MIN MAX DIST] [--fixed-param NAME VALUE] [--max_distances MAX_DISTANCES] [--seed SEED] [--run_mode {sim,sample}] --distfile DISTFILE [--load LOAD]
+                             [--outpref OUTPREF] [--workdir WORKDIR] [--samples SAMPLES] [--init_evidence INIT_EVIDENCE] [--threshold THRESHOLD] [--n_evidence N_EVIDENCE] [--update-int UPDATE_INT]
+                             [--acq-noise-var ACQ_NOISE_VAR] [--chains CHAINS] [--covar-scaling COVAR_SCALING] [--kernel {RBF,Matern32}] [--gamma GAMMA] [--threads THREADS] [--cluster]
+
+Fit model to PopPUNK data using Approximate Baysesian Computation
+
+options:
+  -h, --help            show this help message and exit
+
+Pansim options:
+  --pansim_exe PANSIM_EXE
+                        Path to pansim executable.
+  --param NAME MIN MAX DIST
+                        Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"
+  --fixed-param NAME VALUE
+                        Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.
+  --max_distances MAX_DISTANCES
+                        Number of distances to sample with Pansim. Default = 100000
+  --seed SEED           Seed for random number generation. Default = 254.
+
+Input/Output options:
+  --run_mode {sim,sample}
+                        Which run mode to specify. Choices are "sim" or "sample".
+  --distfile DISTFILE   PopPUNK distance file to fit to.
+  --load LOAD           Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode
+  --outpref OUTPREF     Output prefix. Default = "PopPUNK-mod"
+  --workdir WORKDIR     Specify workdir to save intermediate files. If unset, will write to working directory.
+
+ABC options:
+  --samples SAMPLES     No. samples for posterior estimation. Default = 100000
+  --init_evidence INIT_EVIDENCE
+                        Number of initialization points sampled straight from the priors before starting to optimize the acquisition of points. Default = 50
+  --threshold THRESHOLD
+                        The threshold (bandwidth) for posterior Default = None
+  --n_evidence N_EVIDENCE
+                        Evidence points requested (including init-evidence). Default = 600
+  --update-int UPDATE_INT
+                        Defines how often the GP hyperparameters are optimized. Default = 1
+  --acq-noise-var ACQ_NOISE_VAR
+                        Defines the diagonal covariance of noise added to the acquired points. Default = 0.01
+  --chains CHAINS       Number of chains for sampler. Default = 4
+  --covar-scaling COVAR_SCALING
+                        Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1
+  --kernel {RBF,Matern32}
+                        Which kernel to use for the Gaussian process. Choices are "RBF" or "Matern32".
+  --gamma GAMMA         Power to raise KDE values to for smoothing during data-simulator comparison. Default = 0.25
+
+Misc. options:
+  --threads THREADS     Number of threads. Default = 1
+  --cluster             Parallelise using ipyparallel if using cluster. Default = False
 ```
