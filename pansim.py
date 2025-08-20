@@ -33,9 +33,9 @@ def read_distfile(filename):
     return obs
 
 def get_options():
-    description = 'Run simulator of gene gain model'
+    description = 'Wrapper around Pansim.'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_elfi_simulator.py')
+                                     prog='python pansim.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--core_size',
@@ -126,21 +126,6 @@ def get_options():
     return parser.parse_args()
 
 if __name__ == "__main__":
-    # core_mu = 0.05
-    # rate_genes1 = 0.05
-    # rate_genes2 = 0.5
-    # prop_genes2 = 2.0
-    # core_size = 1200000
-    # pan_genes = 6000
-    # avg_gene_freq = 0.5
-    # n_gen = 10
-    # pop_size = 1000
-    # max_distances = 100000
-    # threads = 8
-    # outpref = "test"
-    # pansim_exe = "/home/shorsfield/software/Pansim/pansim/target/release/pansim"
-    # seed = 254
-
     options = get_options()
     core_mu = options.core_mu
     rate_genes1 = options.rate_genes1
@@ -214,6 +199,6 @@ if __name__ == "__main__":
     ax.set_xlabel("Core distance")
     ax.set_ylabel("Accessory distance")
 
-    fig.savefig(outpref + "_sim" + ".png")
+    fig.savefig(outpref + ".png")
 
 
