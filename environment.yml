@@ -1,4 +1,4 @@
-name: /hps/software/users/jlees/shorsfield/micromamba/envs/pp_mod_dev
+name: pp_mod
 channels:
   - conda-forge
   - bioconda
