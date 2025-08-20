@@ -1,162 +1,93 @@
 # PopPUNK-mod
-PopPUNK modelling: simulates core and accessory genome divergence and calculates Hamming and Jaccard distances, fitting to PopPUNK models.
+PopPUNK-mod is used for fitting models of pangenome dynamics to PopPUNK pairwise core vs. accessory distance distributions.
 
-### Dependencies
-- tqdm
-- scipy
-- numpy
-- matplotlib
-- scikit-learn
-- pandas
-- elfi
-- numba
+PopPUNK-mod uses Approximate Bayesian Computation (ABC) using [BOLFI](https://jmlr.org/papers/v17/15-017.html), part of the [ELFI](https://www.jmlr.org/papers/volume19/17-374/17-374.pdf) package
 
-### Usage for simulator
+## Installation
+
+First install all dependencies. This is easiest using [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html).
 
 ```
-usage: python run_sim.py [-h] [--core-size CORE_SIZE]
-                              [--core-var CORE_VAR]
-                              [--base-freq BASE_FREQ]
-                              [--base-mu BASE_MU]
-                              [--start-gene-freq START_GENE_FREQ]
-                              [--avg-gene-freq AVG_GENE_FREQ]
-                              [--num-core NUM_CORE] [--num-pan NUM_PAN]
-                              [--core-mu CORE_MU] [--acc-mu ACC_MU]
-                              [--core-sites CORE_SITES]
-                              [--acc-sites ACC_SITES]
-                              [--core-gamma-shape CORE_GAMMA_SHAPE]
-                              [--core-gamma-scale CORE_GAMMA_SCALE]
-                              [--acc-gamma-shape ACC_GAMMA_SHAPE]
-                              [--acc-gamma-scale ACC_GAMMA_SCALE]
-                              [--core-sites-man CORE_SITES_MAN]
-                              [--acc-sites-man ACC_SITES_MAN]
-                              [--num-sim NUM_SIM] [--adjust]
-                              [--outpref OUTPREF] [--threads THREADS]
-
-Calculate relationship between Hamming/Jaccard distances and core/accessory divergence
-
-optional arguments:
-  -h, --help            show this help message and exit
-
-Input/Output options:
-  --core-size CORE_SIZE
-                        Size of core genome alignment (in bases). Default =
-                        1140000
-  --core-var CORE_VAR   Number of variant sites in core. Default = 106196
-  --base-freq BASE_FREQ
-                        Base frequencies in starting core genome in order
-                        "A,C,G,T". Default = "0.25,0.25,0.25,0.25"
-  --base-mu BASE_MU     Mutation rates from all other bases to each base, in
-                        order "A,C,G,T". Default = "0.25,0.25,0.25,0.25"
-  --start-gene-freq START_GENE_FREQ
-                        Gene frequencies in starting accessory genome in order
-                        "0,1". Default = "0.5,0.5"
-  --avg-gene-freq AVG_GENE_FREQ
-                        Average gene frequency in accessory genome. Default =
-                        "0.5"
-  --num-core NUM_CORE   Number of core genes. Default = 1194
-  --num-pan NUM_PAN     Number of genes in pangenome. Default = 5442
-  --core-mu CORE_MU     Range of core genome mutation rate values (mutations
-                        per site per genome) in form start,stop,step. Default
-                        = "0,2,0.2"
-  --acc-mu ACC_MU       Range of accessory gene gain/loss rates (change per
-                        gene per genome) in form start,stop,step. Default =
-                        "0,2,0.2"
-  --core-sites CORE_SITES
-                        Number of different core site mutation rates. Default
-                        = 3
-  --acc-sites ACC_SITES
-                        Number of different accessory site mutation rates.
-                        Default = 3
-  --core-gamma-shape CORE_GAMMA_SHAPE
-                        Shape parameter for core per-site substitution rates.
-                        Default = 20.0
-  --core-gamma-scale CORE_GAMMA_SCALE
-                        Scale parameter for core per-site substitution rates.
-                        Default = 1.0
-  --acc-gamma-shape ACC_GAMMA_SHAPE
-                        Shape parameter for accessory per-site substitution
-                        rates. Default = 20.0
-  --acc-gamma-scale ACC_GAMMA_SCALE
-                        Scale parameter for accessory per-site substitution
-                        rates. Default = 1.0
-  --core-sites-man CORE_SITES_MAN
-                        Manual core per-site mutation rates. Must sum to 1.
-                        Default = None
-  --acc-sites-man ACC_SITES_MAN
-                        Manual accessory per-site mutation rates. Must sum to
-                        1. Default = None
-  --num-sim NUM_SIM     Number of simulations to run. Default = 1
-  --adjust              Adjust core and accessory distances for invariant
-                        sites. Default = False
-  --outpref OUTPREF     Output prefix. Default = "./"
-  --threads THREADS     Number of threads. Default = 1
+micromamba env create -f environment.yml
+micromamba activate pp_mod
 ```
 
-### Usage for ELFI model fit
+This will create and activate the pp_mod environment. Then, clone this repository:
 
 ```
-usage: python run_ELFI.py [-h] [--core-size CORE_SIZE]
-                          [--pan-size PAN_SIZE] 
-                          [--max-acc-vs-core MAX_ACC_VS_CORE] 
-                          [--num-steps NUM_STEPS] 
-                          [--base-mu BASE_MU] 
-                          [--avg-gene-freq AVG_GENE_FREQ]
-                          [--batch-size BATCH_SIZE] 
-                          [--samples SAMPLES] 
-                          [--qnt QNT] 
-                          [--init-evidence INIT_EVIDENCE] 
-                          [--update-int UPDATE_INT] 
-                          [--acq-noise-var ACQ_NOISE_VAR] 
-                          [--n-evidence N_EVIDENCE]
-                          [--data-dir DATA_DIR] 
-                          [--data-pref DATA_PREF] 
-                          [--seed SEED] 
-                          [--summary {quantile,mean}] 
-                          [--mode {ABC,BOLFI}] 
-                          [--complexity {simple,intermediate}] 
-                          [--outpref OUTPREF]
-                          [--threads THREADS] 
-                          [--cluster]
+git clone https://github.com/samhorsfield96/PopPUNK-mod.git && cd PopPUNK-mod
+```
 
-Fit model to PopPUNK data using Approximate Baysesian computation
+Finally, install [Pansim](https://github.com/bacpop/Pansim), a fast pangenome dynamics simulator used by PopPUNK-mod. Installation instructions can be found on the Pansim G[Github](https://github.com/bacpop/Pansim).
+
+## Running Pansim
+
+You can run a wrapper around Pansim using `pansim.py`, ensuring you point to the Pansim executable:
+
+```
+python pansim.py --pansim_exe /path/to/pansim --outpref simulations
+```
+
+### Outputs
+
+This will generate:
+- All outputs generated by Pansim (see [repository](https://github.com/bacpop/Pansim))
+- `<outpref>_sim.png`; a graph showing the distances, along with a asymototic curve fit
+
+### Command-line options
+
+```
+usage: python pansim.py [-h] [--core_size CORE_SIZE] [--pan_genes PAN_GENES] [--core_genes CORE_GENES] [--core_mu CORE_MU] [--rate_genes1 RATE_GENES1]     [--rate_genes2 RATE_GENES2]
+                                    [--prop_genes2 PROP_GENES2] [--prop_positive PROP_POSITIVE] [--pos_lambda POS_LAMBDA] [--neg_lambda NEG_LAMBDA] [--pop_size POP_SIZE] [--n_gen N_GEN]
+                                    [--avg_gene_freq AVG_GENE_FREQ] [--HR_rate HR_RATE] [--HGT_rate HGT_RATE] [--competition_strength COMPETITION_STRENGTH] [--max_distances MAX_DISTANCES]
+                                    [--outpref OUTPREF] [--seed SEED] [--threads THREADS] --pansim_exe PANSIM_EXE
+
+Wrapper around Pansim.
 
 options:
   -h, --help            show this help message and exit
 
 Input/Output options:
-  --core-size CORE_SIZE
-                        Number of positions in core genome. Default = 1000
-  --pan-size PAN_SIZE   Number of positions in pangenome. Default = 1000
-  --max-acc-vs-core MAX_ACC_VS_CORE
-                        Maximum ratio between accessory and core genome evolution. Default = 1000
-  --num-steps NUM_STEPS
-                        Number of steps to take in increasing divergence. Default = 50
-  --base-mu BASE_MU     Mutation rates from all other bases to each base, in order "A,C,G,T". Default = "0.25,0.25,0.25,0.25"
-  --avg-gene-freq AVG_GENE_FREQ
+  --core_size CORE_SIZE
+                        Number of positions in core genome. Default = 1200000
+  --pan_genes PAN_GENES
+                        Number of genes in pangenome, including core and accessory genes. Default = 6000
+  --core_genes CORE_GENES
+                        Number of core genes in pangenome only. Default = 2000
+  --core_mu CORE_MU     Maximum pairwise distance for core genome. Default = 0.05
+  --rate_genes1 RATE_GENES1
+                        Average number of accessory pangenome that mutates per generation in gene compartment 1. Must be >= 0.0. Default = 10.0
+  --rate_genes2 RATE_GENES2
+                        Average number of accessory pangenome that mutates per generation in gene compartment 2. Must be >= 0.0. Default = 10.0
+  --prop_genes2 PROP_GENES2
+                        Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0
+  --prop_positive PROP_POSITIVE
+                        Proportion of pangenome made up of compartment 2 genes. Must be 0.0 <= X <= 0.5. Default = 2.0. If negative, neutral selection is simulated.
+  --pos_lambda POS_LAMBDA
+                        Lambda value for exponential distribution of positively selected genes. Must be > 0.0
+  --neg_lambda NEG_LAMBDA
+                        Lambda value for exponential distribution of negatively selected genes. Must be > 0.0
+  --pop_size POP_SIZE   Population size for Wright-Fisher model. Default = 1000
+  --n_gen N_GEN         Number of generations for Wright-Fisher model. Default = 100
+  --avg_gene_freq AVG_GENE_FREQ
                         Average gene frequency in accessory genome. Default = "0.5"
-  --batch-size BATCH_SIZE
-                        Batch size for processing. Default = 10000
-  --samples SAMPLES     No. samples for posterior estimation. Default = 1000
-  --qnt QNT             Quantile of the samples with smallest discrepancies is accepted. Default = 0.01
-  --init-evidence INIT_EVIDENCE
-                        Number of initialization points sampled straight from the priors before starting to optimize the acquisition of points. Default = 5000
-  --update-int UPDATE_INT
-                        Defines how often the GP hyperparameters are optimized. Default = 10
-  --acq-noise-var ACQ_NOISE_VAR
-                        Defines the diagonal covariance of noise added to the acquired points. Default = 0.1
-  --n-evidence N_EVIDENCE
-                        Evidence points requested (including init-evidence). Default = 5000
-  --data-dir DATA_DIR   Directory containing popPUNK distance files.
-  --data-pref DATA_PREF
-                        Prefix of popPUNK distance file(s).
+  --HR_rate HR_RATE     Homologous recombination rate, as number of core sites transferred per core genome mutation.Default=0.0
+  --HGT_rate HGT_RATE   HGT rate, as number of accessory sites transferred per core genome mutation.Default=0.0
+  --competition_strength COMPETITION_STRENGTH
+                        Run simulator with competition.
+  --max_distances MAX_DISTANCES
+                        Number of distances to sample with Pansim. Default = 100000
+  --outpref OUTPREF     Output prefix. Default = "sim"
   --seed SEED           Seed for random number generation. Default = 254.
-  --summary {quantile,mean}
-                        Mode for summary statistics, either "mean" or "quantile". Default = "quantile".
-  --mode {ABC,BOLFI}    Mode for running model fit, either "ABC" or "BOLFI". Default = "ABC".
-  --complexity {simple,intermediate}
-                        Model complexity. If simple, predict only a/pi and gene gain rate. If intermediate, predict prior two and fast gene site mu.Default = "simple".
-  --outpref OUTPREF     Output prefix. Default = "./"
   --threads THREADS     Number of threads. Default = 1
-  --cluster             Parallelise using ipyparallel if using cluster. Default = False
+  --pansim_exe PANSIM_EXE
+                        Path to pansim executable.
+```
+
+## Running PopPUNK-mod
+
+PopPUNK-mod requires a target distribution to fit to, as well as at least one parameter to fit. All other parameters can be fixed.
+
+```
+python poppunk_mod.py --pansim_exe /path/to/pansim --outpref predictions
 ```
