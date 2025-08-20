@@ -120,102 +120,109 @@ def to_normalised_log_uniform(x_real, low, high, eps=1e-12):
     return (np.log(x_safe) - log_low) / (log_high - log_low)
 
 def get_options():
-    description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
+    description = 'Fit model to PopPUNK data using Approximate Baysesian Computation'
+    
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_ELFI.py')
+                                     prog='python poppunk_mod.py')
+
+    # Add parameter specification arguments
+    Pansim = parser.add_argument_group('Pansim options')
+    Pansim.add_argument('--pansim_exe',
+                    required=True,
+                    help='Path to pansim executable.')
+    Pansim.add_argument('--param', nargs=4, action='append',
+                        metavar=('NAME', 'MIN', 'MAX', 'DIST'),
+                        help='Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"')
+    
+    # Fixed parameters (not fitted by BOLFI)
+    Pansim.add_argument('--fixed-param', nargs=2, action='append',
+                      metavar=('NAME', 'VALUE'),
+                      help='Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.')
+    Pansim.add_argument('--max_distances',
+                    type=int,
+                    default=100000,
+                    help='Number of distances to sample with Pansim. Default = 100000')
+    Pansim.add_argument('--seed',
+                    type=int,
+                    default=254,
+                    help='Seed for random number generation. Default = 254. ')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--run_mode',
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--samples',
+    IO.add_argument('--distfile',
+                    required=True,
+                    help='PopPUNK distance file to fit to.')
+    IO.add_argument('--load',
+                    default=None,
+                    help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
+    IO.add_argument('--outpref',
+                    default="PopPUNK-mod",
+                    help='Output prefix. Default = "PopPUNK-mod"')
+    IO.add_argument('--workdir',
+                default=None,
+                help='Specify workdir to save intermediate files. If unset, will write to working directory.')
+
+    ABC = parser.add_argument_group('ABC options')
+    ABC.add_argument('--samples',
                     type=int,
                     default=100000,
                     help='No. samples for posterior estimation. Default = 100000 ')
-    IO.add_argument('--init_evidence',
+    ABC.add_argument('--init_evidence',
                     type=int,
                     default=150,
                     help='Number of initialization points sampled straight from the priors before starting to '
                          'optimize the acquisition of points. Default = 50 ')
-    IO.add_argument('--threshold',
+    ABC.add_argument('--threshold',
                     type=float,
                     default=None,
                     help='The threshold (bandwidth) for posterior  '
                          'Default = None ')
-    IO.add_argument('--n_evidence',
+    ABC.add_argument('--n_evidence',
                     type=int,
                     default=600,
                     help='Evidence points requested (including init-evidence). '
                          'Default = 600 ')
-    IO.add_argument('--update-int',
+    ABC.add_argument('--update-int',
                     type=int,
                     default=1,
                     help='Defines how often the GP hyperparameters are optimized. '
                             'Default = 1 ')
-    IO.add_argument('--acq-noise-var',
+    ABC.add_argument('--acq-noise-var',
                     type=float,
                     default=0.01,
                     help='Defines the diagonal covariance of noise added to the acquired points. '
                             'Default = 0.01 ')
-    IO.add_argument('--chains',
+    ABC.add_argument('--chains',
                     type=int,
                     default=4,
                     help='Number of chains for sampler. '
                             'Default = 4 ')
-    IO.add_argument('--distfile',
-                    required=True,
-                    help='popPUNK distance file to fit to. ')
-    IO.add_argument('--max_distances',
-                    type=int,
-                    default=100000,
-                    help='Number of distances to sample with Pansim. Default = 100000')
-    IO.add_argument('--covar-scaling',
+    ABC.add_argument('--covar-scaling',
                     type=float,
                     default=0.1,
                     help='Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1')
-    IO.add_argument('--kernel',
+    ABC.add_argument('--kernel',
                     default='RBF',
                     choices=['RBF', 'Matern32'],
                     help='Which kernel to use for the Gaussian process. Choices are "RBF" or "Matern32".')
-    IO.add_argument('--gamma',
+    ABC.add_argument('--gamma',
                     type=float,
                     default=0.25,
                     help='Power to raise KDE values to for smoothing during data-simulator comparison. Default = 0.25')
-    IO.add_argument('--load',
-                    default=None,
-                    help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
-    IO.add_argument('--seed',
-                    type=int,
-                    default=254,
-                    help='Seed for random number generation. Default = 254. ')
-    IO.add_argument('--outpref',
-                    default="PopPUNK-mod",
-                    help='Output prefix. Default = "PopPUNK-mod"')
-    IO.add_argument('--pansim_exe',
-                    required=True,
-                    help='Path to pansim executable.')
-    IO.add_argument('--threads',
+
+    Misc = parser.add_argument_group('Misc. options')
+
+    Misc.add_argument('--threads',
                     type=int,
                     default=1,
                     help='Number of threads. Default = 1')
-    IO.add_argument('--cluster',
+    Misc.add_argument('--cluster',
                     action='store_true',
                     default=False,
                     help='Parallelise using ipyparallel if using cluster. Default = False')
-    IO.add_argument('--workdir',
-                default=None,
-                help='Specify workdir to save intermediate files. If unset, will write to working directory.')
-    
-    # Add parameter specification arguments
-    parser.add_argument('--param', nargs=4, action='append',
-                        metavar=('NAME', 'MIN', 'MAX', 'DIST'),
-                        help='Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"')
-    
-    # Fixed parameters (not fitted by BOLFI)
-    parser.add_argument('--fixed-param', nargs=2, action='append',
-                      metavar=('NAME', 'VALUE'),
-                      help='Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.')
 
     return parser.parse_args()
 
