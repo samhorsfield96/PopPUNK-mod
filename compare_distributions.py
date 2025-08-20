@@ -10,9 +10,9 @@ import pandas as pd
 from run_elfi import wasserstein_distance, js_distance, rmse, asymptotic_curve
 
 def get_options():
-    description = 'Run simulator of gene gain model'
+    description = 'Calculates an assortment of statistics between two 2-dimensional distributions.'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_elfi_simulator.py')
+                                     prog='python compare_distributions.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--file1',

@@ -11,9 +11,9 @@ from scipy.stats import qmc
 #"python run_latinhypercube.py --pan_genes 5000,50000 --core_genes 0,5000 --core_mu 0,0.1 --rate_genes1 0,100 --rate_genes2 0,100 --prop_genes2 0.0001,1.0 --prop_positive 0.001,1.0 --pos_lambda 0.00001,0.1 --pos_lambda 0.00001,0.1 --neg_lambda 0.00001,0.1 --avg_gene_freq 0.01,0.99 --HR_rate 0.0,10.0 --HGT_rate 0.0,10.0 --n_samples 10 --outpref sim_params"
 
 def get_options():
-    description = 'Run simulator of gene gain model'
+    description = 'Run latin hypercube search over parameter space for gridsearch'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_elfi_simulator.py')
+                                     prog='python run_latinhypercube.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--pan_genes',

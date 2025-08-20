@@ -10,7 +10,7 @@ from scipy.stats import ks_2samp
 def get_options():
     description = 'Generate KS distribution for an input file. If two files provided, calculates distance.'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python KDE_distance.py')
+                                     prog='python KS_distance.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--infile1',

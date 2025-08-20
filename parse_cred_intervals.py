@@ -4,9 +4,9 @@ import numpy as np
 import os
 
 def get_options():
-    description = 'Run simulator of gene gain model'
+    description = 'Parses credible interval output from BOLFI'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python run_elfi_simulator.py')
+                                     prog='python parse_cred_intervals.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--infile',

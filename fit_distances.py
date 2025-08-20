@@ -12,7 +12,7 @@ import matplotlib.patheffects as pe
 import argparse
 
 def get_options():
-    description = 'Fit model to PopPUNK data using Approximate Baysesian computation'
+    description = 'Fit non-linear regression model to PopPUNK data using Approximate Baysesian computation'
     parser = argparse.ArgumentParser(description=description,
                                      prog='python fit_distances.py')
 

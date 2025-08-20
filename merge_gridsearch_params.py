@@ -2,9 +2,9 @@ import argparse
 from pathlib import Path
 
 def get_options():
-    description = 'Compare parameters from a gridsearch of Pansim runs'
+    description = 'Merges gridsearch runs into single file'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python compare_gridsearch.py')
+                                     prog='python merge_gridsearch_params.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--indir',

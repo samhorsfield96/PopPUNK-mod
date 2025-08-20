@@ -75,9 +75,9 @@ def load_checkpoint(model, checkpoint_path, scaler):
     return start_epoch
 
 def get_options():
-    description = 'Tests importance of classifiers from Pansim gridsearch'
+    description = 'Fits neural network to features from gridsearch'
     parser = argparse.ArgumentParser(description=description,
-                                     prog='python test_classifiers.py')
+                                     prog='python fit_nn.py')
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--mode',
