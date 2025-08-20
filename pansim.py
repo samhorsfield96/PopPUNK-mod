@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 rng = np.random.default_rng()
 import subprocess
 import sys
-from run_elfi import negative_exponential, fit_negative_exponential
+from poppunk_mod import negative_exponential, fit_negative_exponential
 
 def read_distfile(filename):
     # read first line, determine if csv
