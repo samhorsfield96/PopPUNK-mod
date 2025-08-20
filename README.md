@@ -1,7 +1,7 @@
 # PopPUNK-mod
 PopPUNK-mod is used for fitting models of pangenome dynamics to PopPUNK pairwise core vs. accessory distance distributions.
 
-PopPUNK-mod uses Approximate Bayesian Computation (ABC) using [BOLFI](https://jmlr.org/papers/v17/15-017.html), part of the [ELFI](https://www.jmlr.org/papers/volume19/17-374/17-374.pdf) package
+PopPUNK-mod uses Approximate Bayesian Computation (ABC) using [BOLFI](https://jmlr.org/papers/v17/15-017.html), part of the [ELFI](https://www.jmlr.org/papers/volume19/17-374/17-374.pdf) package.
 
 ## Installation
 
@@ -18,7 +18,7 @@ This will create and activate the pp_mod environment. Then, clone this repositor
 git clone https://github.com/samhorsfield96/PopPUNK-mod.git && cd PopPUNK-mod
 ```
 
-Finally, install [Pansim](https://github.com/bacpop/Pansim), a fast pangenome dynamics simulator used by PopPUNK-mod. Installation instructions can be found on the Pansim G[Github](https://github.com/bacpop/Pansim).
+Finally, install [Pansim](https://github.com/bacpop/Pansim), a fast pangenome dynamics simulator used by PopPUNK-mod. Installation instructions can be found on the Pansim [Github](https://github.com/bacpop/Pansim).
 
 ## Running Pansim
 
