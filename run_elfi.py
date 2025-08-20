@@ -29,6 +29,41 @@ def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.gith
 def fit_negative_exponential(x, y, p0=[1.0, 0.0, 1.0], bounds=([0.0, 0.0, 0.0], [1.0, 1.0, np.inf])):
     return curve_fit(negative_exponential, x, y, p0=p0, bounds=bounds)
 
+def plot_negative_exponential(obs_df, outpref):
+    # fit negative_exponential curve
+    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
+    b0, b1, b2 = popt
+    # get 1 std deviation error of parameters
+    b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
+
+    mean_acc = np.mean(obs_df[:,1])
+
+    # plot fit
+    fig, ax = plt.subplots()
+    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
+    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
+    y_fit = negative_exponential(x_fit, *popt)
+    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
+    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
+
+    # Calculate the initial rate at x=0
+    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
+
+    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
+             fontsize=10, color="green")
+
+    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
+    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
+
+    fig.savefig(outpref + "_curve_fit.png")
+    plt.close()
+
+    plot_scatter(obs_df, outpref, x_fit, y_fit)
+
 def safe_neg_inv(d):
     return -1 / np.log(np.clip(d, 1e-12, None))
 
@@ -94,71 +129,13 @@ def get_options():
                     default='sim',
                     choices=['sim', 'sample'],
                     help='Which run mode to specify. Choices are "sim" or "sample".')
-    IO.add_argument('--core_mu',
-                    type=float,
-                    default=None,
-                    help='Number of core mutations per generation. Will infer using JC adjustment if not set.')
-    IO.add_argument('--core_size',
-                    type=int,
-                    default=1200000,
-                    help='Number of positions in core genome. Default = 1200000 ')
-    IO.add_argument('--pan_genes',
-                    type=int,
-                    default=6000,
-                    help='Number of genes in pangenome, including core and accessory genes. Default = 6000 ')
-    IO.add_argument('--core_genes',
-                    type=int,
-                    default=2000,
-                    help='Number of core genes in pangenome only. Default = 2000')
-    IO.add_argument('--pop_size',
-                    type=int,
-                    default=1000,
-                    help='Population size for Wright-Fisher model. Default = 1000 ')
-    IO.add_argument('--n_gen',
-                    type=int,
-                    default=200,
-                    help='Number of generations for Wright-Fisher model. Default = 200 ')
-    IO.add_argument('--avg_gene_freq',
-                    type=float,
-                    default=0.5,
-                    help='Average gene frequency in accessory genome.'
-                         'Default = "0.5" ')
-    IO.add_argument('--HR_rate',
-                    type=float,
-                    default=None,
-                    help='Homologous recombination rate, as number of core sites transferred per core genome mutation.'
-                         'If unspecified, will fit parameter. ')
-    IO.add_argument('--HGT_rate',
-                    type=float,
-                    default=None,
-                    help='HGT rate, as number of accessory sites transferred per core genome mutation.'
-                         'If unspecified, will fit parameter. ')
-    IO.add_argument('--recomb_max',
-                    type=float,
-                    default=10.0,
-                    help='Maximum HGT and HR rate for parameterisation, as number of transfer events transferred per core genome mutation.'
-                         'Default = 10.0. ')
-    IO.add_argument('--competition',
-                    action='store_true',
-                    default=False,
-                    help='Run simulator with competition.')
-    IO.add_argument('--epsilon',
-                    type=float,
-                    default=1e-5,
-                    help='The minimum value for transformations to log-uniform space.  '
-                         'Default = 1e-5 ')
-    IO.add_argument('--noise-scale',
-                    type=float,
-                    default=1e-4,
-                    help='The minimum value for transformations to log-uniform space.  '
-                         'Default = 1e-4 ')
     IO.add_argument('--samples',
                     type=int,
                     default=100000,
                     help='No. samples for posterior estimation. Default = 100000 ')
     IO.add_argument('--init_evidence',
                     type=int,
-                    default=50,
+                    default=150,
                     help='Number of initialization points sampled straight from the priors before starting to '
                          'optimize the acquisition of points. Default = 50 ')
     IO.add_argument('--threshold',
@@ -168,9 +145,9 @@ def get_options():
                          'Default = None ')
     IO.add_argument('--n_evidence',
                     type=int,
-                    default=200,
+                    default=600,
                     help='Evidence points requested (including init-evidence). '
-                         'Default = 200 ')
+                         'Default = 600 ')
     IO.add_argument('--update-int',
                     type=int,
                     default=1,
@@ -197,6 +174,14 @@ def get_options():
                     type=float,
                     default=0.1,
                     help='Scaling of difference between lower and upper bounds of each parameter to be used for MCMC covariance. Default = 0.1')
+    IO.add_argument('--kernel',
+                    default='RBF',
+                    choices=['RBF', 'Matern32'],
+                    help='Which kernel to use for the Gaussian process. Choices are "RBF" or "Matern32".')
+    IO.add_argument('--gamma',
+                    type=float,
+                    default=0.25,
+                    help='Power to raise KDE values to for smoothing during data-simulator comparison. Default = 0.25')
     IO.add_argument('--load',
                     default=None,
                     help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
@@ -222,6 +207,15 @@ def get_options():
                 default=None,
                 help='Specify workdir to save intermediate files. If unset, will write to working directory.')
     
+    # Add parameter specification arguments
+    parser.add_argument('--param', nargs=4, action='append',
+                        metavar=('NAME', 'MIN', 'MAX', 'DIST'),
+                        help='Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"')
+    
+    # Fixed parameters (not fitted by BOLFI)
+    parser.add_argument('--fixed-param', nargs=2, action='append',
+                      metavar=('NAME', 'VALUE'),
+                      help='Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.')
 
     return parser.parse_args()
 
@@ -271,36 +265,54 @@ def wasserstein_distance(sim, obs):
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
-    avg_gene_freq, rate_genes1, rate_genes2, prop_genes2, core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file = inputs
+    """Prepare inputs for the simulator, handling both fixed and fitted parameters.
     
-    # add to kwinputs
-    kwinputs['avg_gene_freq'] = avg_gene_freq
-    kwinputs['core_mu'] = core_mu
-    kwinputs['rate_genes1'] = from_unit_to_loguniform(rate_genes1, epsilon, max_mu)
-    # rate_genes2 is always faster make it so all genes in pangenome mutate once on average per generation
-    kwinputs['rate_genes2'] = rate_genes2 * prop_genes2
-    kwinputs['prop_genes2'] = from_unit_to_loguniform(prop_genes2, epsilon, 1.0)
-    kwinputs['seed'] = seed
-    kwinputs['pop_size'] = pop_size
-    kwinputs['core_size'] = core_size
-    kwinputs['pan_genes'] = pan_genes
-    kwinputs['core_genes'] = core_genes
-    kwinputs['n_gen'] = n_gen
-    kwinputs['max_distances'] = max_distances
-    kwinputs['HR_rate'] = from_unit_to_loguniform(HR_rate, epsilon, recomb_max)
-    kwinputs['HGT_rate'] = from_unit_to_loguniform(HGT_rate, epsilon, recomb_max)
-    kwinputs['obs_file'] = obs_file
-    kwinputs['noise_scale'] = noise_scale
+    This function processes the normalized parameter values [0,1] and transforms them
+    back to their original ranges based on the parameter specifications.
+    """
 
+    # get all model parameters for sampling
+    gamma, fixed_params, other_params, model_priors_index = inputs[0], inputs[1], inputs[2], inputs[3]
+    model_priors = list(inputs[4:])
+
+    # set gamma for JS distance
+    kwinputs['gamma'] = gamma
+    
+    # Get parameter values in the order they were defined in the model
+    param_values = {}
+    param_index = 0
+    
+    # Process each node in the model (these are only the fitted parameters)
+    for index, (node_name, spec) in enumerate(model_priors_index):
+        # get normalised value of prior
+        norm_val = model_priors[index]
+                
+        # Transform back to original range
+        if spec['dist'] == 'uniform':
+            # Linear scaling for uniform distribution
+            real_val = spec['min'] + norm_val * (spec['max'] - spec['min'])
+        else:  # loguniform
+            # Log scaling for loguniform distribution
+            real_val = from_unit_to_loguniform(norm_val, spec['min'], spec['max'])
+        
+        param_values[node_name] = real_val
+    
+    # Add fixed parameters to param_values
+    param_values.update(fixed_params)
+    param_values.update(other_params)
+
+    # Add all parameters to kwinputs for the simulator
+    for param_name, param_value in param_values.items():
+        kwinputs[param_name] = param_value
+    
+    # Prepare a unique filename for parallel settings
     meta = kwinputs['meta']
 
     # Prepare a unique filename for parallel settings
-    if workdir != None:
-        filename = workdir + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
-        #filename = workdir + f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
+    if kwinputs['workdir'] != None:
+        filename = kwinputs['workdir'] + '/{model_name}_{batch_index}_{submission_index}'.format(**meta)
     else:
         filename = '{model_name}_{batch_index}_{submission_index}'.format(**meta)
-        #filename = f'/{rate_genes1}_{prop_genes2}_{HGT_rate}'
 
     # Add the filenames to kwinputs
     kwinputs['outpref'] = filename
@@ -311,20 +323,21 @@ def prepare_inputs(*inputs, **kwinputs):
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['outpref'] + ".tsv"
-    noise_scale = kwinputs['noise_scale']
 
     # Read the simulations from the file.
-    simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
-    # Clean up the files after reading the data in
-    os.remove(output_filename)
+    try:
+        simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
+        
+        # Clean up the files after reading the data in
+        os.remove(output_filename)
 
-    # read observations file
-    obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
+        # read observations file
+        obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
-    divergence = KDE_JS_divergence(obs, simulations, eps=1e-12, log=True)
-
-    # add some noise to the acquisition points
-    #divergence += np.random.normal(0, noise_scale, size=1)
+        divergence = KDE_JS_divergence(obs, simulations, gamma=kwinputs['gamma'], eps=0, log=False)
+    except FileNotFoundError:
+        print(f"{output_filename} not found.\ncompleted_process: {completed_process}")
+        raise FileNotFoundError
 
     # This will be passed to ELFI as the result of the command
     return divergence
@@ -333,9 +346,6 @@ if __name__ == "__main__":
     options = get_options()
     threads = options.threads
     obs_file = options.distfile
-    core_size = options.core_size
-    pan_genes = options.pan_genes
-    core_genes = options.core_genes
     N_samples = options.samples
     seed = options.seed
     outpref = options.outpref
@@ -343,10 +353,7 @@ if __name__ == "__main__":
     update_interval = options.update_int
     acq_noise_var = options.acq_noise_var
     n_evidence = options.n_evidence
-    avg_gene_freq = options.avg_gene_freq
     cluster = options.cluster
-    n_gen = options.n_gen
-    pop_size = options.pop_size
     load = options.load
     run_mode = options.run_mode
     max_distances = options.max_distances
@@ -354,13 +361,8 @@ if __name__ == "__main__":
     chains = options.chains
     workdir = options.workdir
     threshold = options.threshold
-    HR_rate = options.HR_rate
-    HGT_rate = options.HGT_rate
-    competition = options.competition
     covar_scaling = options.covar_scaling
-    epsilon = options.epsilon
-    noise_scale = options.noise_scale
-    core_mu = options.core_mu
+    gamma = options.gamma
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -377,87 +379,95 @@ if __name__ == "__main__":
             elfi.set_client('native')
 
     # read in real files
-    #obs = read_distfile(obs_file)
     obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
 
-    # detemine highest core hamming distance, convert to real space using Jukes-Cantor
-    if core_mu == None:
-        max_hamming_core = float(np.max(obs_df[:,0]))
-        max_real_core = (-3/4) * np.log(1 - (4/3 * max_hamming_core))
-        core_mu = max_real_core
-        print("core_mu set to: {}".format(core_mu))
+    # plot contours and curve fit
+    plot_negative_exponential(obs_df, outpref)
 
     # set up model
     input_dim = 0
     m = elfi.ElfiModel(name='pansim_model')
-
-    # set max mutation rate to each gene being gained/lost once per generation, whole pangenome mutating for a single individual across the simulation
-    max_mu = ((pan_genes - core_genes) / n_gen) * 10
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='rate_genes1')
-    elfi.Prior('uniform', 0.0, 1.0, model=m, name='prop_genes2')
     
-    # set rate_genes2 as total genome that can mutate, update with prop_genes2 to ensure each individual mutates 10x on average per generation (ensures saturation)
-    rate_genes2 = (pan_genes - core_genes) * 10
-
-    # set as arbitarily high value, 10 events per core genome mutation, or adjust to fit in normalised space
-    recomb_max = options.recomb_max
-    if HGT_rate == None:
-        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HGT_rate')
-    else:
-        HGT_rate = to_normalised_log_uniform(HGT_rate, 0.0, recomb_max, epsilon)
+    # Process fixed parameters first
+    fixed_params = {}
+    if hasattr(options, 'fixed_param') and options.fixed_param:
+        for name, value in options.fixed_param:
+            try:
+                # remove quotation marks if string used
+                value_parsed = value.replace('"', '')
+                fixed_params[name] = float(value_parsed)
+                print(f"Using fixed parameter: {name} = {str(fixed_params[name])}")
+            except ValueError:
+                raise ValueError(f"Invalid value for fixed parameter {name}: {value}. Must be a number.")
     
-    if HR_rate == None:
-        elfi.Prior('uniform', 0.0, 1.0, model=m, name='HR_rate')
-    else:
-        HR_rate = to_normalised_log_uniform(HR_rate, 0.0, recomb_max, epsilon)
+    # Check if we have at least one parameter to fit or fix
+    if not hasattr(options, 'param') and not fixed_params:
+        raise ValueError("No parameters specified. Use --param to specify parameters to fit "
+                        "and/or --fixed-param to specify fixed parameters.")
+    
+    # Process user-specified parameters for BOLFI fitting
+    fitted_params = {}
+    if hasattr(options, 'param') and options.param:
+        for name, min_val, max_val, dist in options.param:
+            if name in fixed_params:
+                raise ValueError(f"Parameter {name} cannot be both fixed (--fixed-param) and fitted (--param).")
 
-    # fit negative_exponential curve
-    popt, pcov = fit_negative_exponential(obs_df[:,0], obs_df[:,1])
-    b0, b1, b2 = popt
-    # get 1 std deviation error of parameters
-    b0_err, b1_err, b2_err = np.sqrt(np.diag(pcov))
-
-    mean_acc = np.mean(obs_df[:,1])
-
-    # plot fit
-    fig, ax = plt.subplots()
-    ax.scatter(obs_df[:,0], obs_df[:,1], s=10, alpha=0.3)
-    x_fit = np.linspace(0, obs_df[:,0].max(), 100)
-    y_fit = negative_exponential(x_fit, *popt)
-    ax.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
-
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
-    x_annotate = 0.5 * xlim[1]  # 50% of the x-axis range
-    y_annotate = 0.1 * ylim[1]  # 10% of the y-axis range
-
-    # Calculate the initial rate at x=0
-    print("Negative exponential 3 param, b0: {}, b1: {}, b2: {}".format(b0, b1, b2))
-
-    ax.annotate("b0: {}, b1: {},\nb2: {}".format(round(b0, 3), round(b1, 3), round(b2, 3)), xy=(0, 0), xytext=(x_annotate, y_annotate),
-             fontsize=10, color="green")
-
-    ax.set_xlabel('Core distance (' + r'$\pi$' + ')')
-    ax.set_ylabel('Accessory distance (' + r'$a$' + ')')
-
-    fig.savefig(outpref + "_curve_fit.png")
-    plt.close()
-
-    plot_scatter(obs_df, outpref, x_fit, y_fit)
+            fitted_params[name] = {
+                'min': float(min_val),
+                'max': float(max_val),
+                'dist': dist.lower()
+            }
+            
+            # Validate distribution type
+            if fitted_params[name]['dist'] not in ['uniform', 'loguniform']:
+                raise ValueError(f"Invalid distribution type for parameter {name}. Must be 'uniform' or 'loguniform'.")
+    
+    # Add all user-specified parameters to the model (only those being fitted by BOLFI)
+    m.fitted_params = {}
+    for param_name, spec in fitted_params.items():
+        # All parameters are defined as uniform in [0,1] space internally
+        elfi.Prior('uniform', 0.0, 1.0, model=m, name=param_name)
+        
+        # Store parameter specifications as node data for later use
+        m.fitted_params[param_name] = spec
+        
+        # Log the parameter being fitted
+        print(f"Fitting parameter: {param_name} with {spec['dist']} prior in range [{spec['min']}, {spec['max']}]")
 
     # save observed parameters
-    #obs = np.array([b0, b1, b2, b0_err / (b0 + 1e-12), b1_err / (b1 + 1e-12), b2_err / (b2 + 1e-12)])
-    #obs = np.array([b0, b1, b2])
     obs = np.array([0.0])
 
     # simulate and fit
     if run_mode == "sim":
         print("Simulating data...")
 
-        if competition:
-            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate} --competition'
-        else:
-            command = pansim_exe + ' --avg_gene_freq {avg_gene_freq} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --pan_genes {pan_genes} --core_genes {core_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
+        # Define base command parameters with values from fixed_params and fitted_params
+        base_params = []
+        
+        # Add fixed parameters to the command
+        for param_name, param_value in fixed_params.items():
+            base_params.append(f'--{param_name} {param_value}')
+            
+        # Add parameters being fitted to the command (they will be formatted later)
+        for param_name in fitted_params.keys():
+            base_params.append(f'--{param_name} {{{param_name}}}')
+            
+        # Add other required parameters that should always be passed
+        other_params = {
+            'seed': seed,
+            'max_distances': max_distances,
+        }
+        
+        # Add other parameters that are not being fitted
+        for param_name, param_value in other_params.items():
+            if param_name not in fixed_params and param_name not in fitted_params:
+                base_params.append(f'--{param_name} {param_value}')
+        
+        # add outpref as variable to be filled in
+        base_params.append('--outpref {outpref}')
+
+        # Construct the final command
+        command = pansim_exe + ' ' + ' '.join(base_params)
 
         WF_sim = elfi.tools.external_operation(command,
                                         prepare_inputs=prepare_inputs,
@@ -470,56 +480,86 @@ if __name__ == "__main__":
         save_path = outpref
         os.makedirs(save_path, exist_ok=True)      
 
-        if HR_rate != None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-            }
+        # Determine which parameters are being fitted
+        bounds = {}
+        
+        # Get all parameters that are ELFI Priors (i.e., being fitted)
+        model_priors = []
+        model_priors_index = []
+        for node_name, node_info in fitted_params.items():
+            bounds[node_name] = (0.0, 1.0)
+            model_priors_index.append((node_name, node_info))
+            model_priors.append(m[node_name])
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2'], name="BOLFI_pool", prefix=save_path)
-        elif HR_rate != None and HGT_rate == None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
+        # Create simulator with all required parameters
+        other_other_params = {
+            'workdir': workdir,
+            'obs_file': obs_file,
+        }
 
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, HR_rate, m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
-        elif HR_rate == None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], HGT_rate, max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2','HR_rate'], name="BOLFI_pool", prefix=save_path)
-        else:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
-            elfi.Simulator(WF_sim_vec, avg_gene_freq, m['rate_genes1'], rate_genes2, m['prop_genes2'], core_mu, seed, pop_size, core_size, pan_genes, core_genes, n_gen, max_distances, workdir, obs_file, m['HR_rate'], m['HGT_rate'], max_mu, recomb_max, epsilon, noise_scale, obs_file, name='sim', model=m, observed=obs)
-            arraypool = elfi.ArrayPool(['Y', 'd', 'log_d', 'rate_genes1', 'prop_genes2', 'HR_rate', 'HGT_rate'], name="BOLFI_pool", prefix=save_path)
+        # add all non model parameters together
+        other_params.update(other_other_params)
+                
+        # Create the simulator with all parameters
+        elfi.Simulator(WF_sim_vec, gamma, fixed_params, other_params, model_priors_index, *model_priors, name='sim', model=m, observed=obs)
+        
+        # Create array pool with all fitted parameters
+        arraypool_fields = ['Y', 'd', 'log_d'] + [x for x in fitted_params.keys()]
+        arraypool = elfi.ArrayPool(arraypool_fields, name="BOLFI_pool", prefix=save_path)
 
         m['sim'].uses_meta = True
 
-        # use euclidean between
+        # Use euclidean distance between observed and simulated data
         elfi.Distance('euclidean', m['sim'], model=m, name='d')
-        elfi.Operation(np.log, m['d'], model=m, name='log_d')     
+        elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
-        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
-        target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
-        mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
-                            acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
-
+        # Set up the Gaussian Process model
+        if options.kernel == "Matern32":
+            kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        elif options.kernel == "RBF":
+            kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        
+        # Create target model with all parameters being fitted
+        target_model = elfi.GPyRegression(
+            parameter_names=list(bounds.keys()),
+            bounds=bounds,
+            kernel=kernel
+        )
+        
+        # Initialize BOLFI
+        mod = elfi.BOLFI(
+            m['log_d'],
+            batch_size=1,
+            initial_evidence=initial_evidence,
+            update_interval=update_interval,
+            acq_noise_var=acq_noise_var,
+            seed=seed,
+            bounds=bounds,
+            pool=arraypool,
+            target_model=target_model
+        )
+        
+        # Fit the model
         post = mod.fit(n_evidence=n_evidence, threshold=threshold)
-        result = mod.sample(N_samples, algorithm="metropolis", n_evidence=n_evidence, n_chains=chains, threshold=threshold, sigma_proposals={key: (value[1] - value[0]) * covar_scaling for key, value in bounds.items()})
+        
+        # Set up MCMC sampling
+        sigma_proposals = {}
+        for param_name, (low, high) in bounds.items():
+            # Get parameter specification to determine if we should use log or linear scale for proposals
+            node = m[param_name]
+            
+            # Scale proposals accordingly
+            sigma_proposals[param_name] = (high - low) * covar_scaling
+        
+        # Run MCMC sampling
+        result = mod.sample(
+            N_samples,
+            algorithm="metropolis",
+            n_evidence=n_evidence,
+            n_chains=chains,
+            threshold=threshold,
+            sigma_proposals=sigma_proposals
+        )
 
         mod.plot_discrepancy()
         plt.savefig(outpref + "_BOLFI_discrepancy.png")
@@ -540,52 +580,49 @@ if __name__ == "__main__":
         print('Model saved to ', save_path + "/BOLFI_model")
 
     else:
-        print("Loading models in {}".format(load))
-        if load == None:
-            print('Previously saved ELFI output required for "sample" mode. Please specify "--load."')
+        print("Loading models from: {}".format(load))
+        if load is None:
+            print('Error: Previously saved ELFI output required for "sample" mode. Please specify "--load".')
             sys.exit(1)
 
-        # parse filename
-        load_pref = load.rsplit('/', 1)[0]
-        load_name = load.rsplit('/', 1)[-1]
-
-        arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
-        print(arraypool[0])
-        print('This pool has', len(arraypool), 'batches')
-
-        m = elfi.load_model(name="pansim_model", prefix=load_pref + "/BOLFI_model")
-
-        if HR_rate != None and HGT_rate != None:
-                bounds = {
-                    'rate_genes1' : (0.0, 1.0),
-                    #'rate_genes2' : (epsilon, max_mu),
-                    'prop_genes2' : (0.0, 1.0)
-                }
-        elif HR_rate != None and HGT_rate == None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
-        elif HR_rate == None and HGT_rate != None:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-            }
-        else:
-            bounds = {
-                'rate_genes1' : (0.0, 1.0),
-                #'rate_genes2' : (epsilon, max_mu),
-                'prop_genes2' : (0.0, 1.0),
-                'HR_rate' : (0.0, 1.0),
-                'HGT_rate' : (0.0, 1.0),
-            }
+        try:
+            # Parse the load path
+            load_pref = os.path.dirname(load) if '/' in load else '.'
+            load_name = os.path.basename(load)
+            model_path = os.path.join(load_pref, "BOLFI_model")
+            
+            # Load the array pool
+            print(f"Loading array pool from {load_pref}")
+            arraypool = elfi.ArrayPool.open(name="BOLFI_pool", prefix=load_pref)
+            print(f'Successfully loaded array pool with {len(arraypool)} batches')
+            
+            # Load the ELFI model
+            print(f"Loading ELFI model from {model_path}")
+            m = elfi.load_model(name="pansim_model", prefix=model_path)
+            print("Successfully loaded ELFI model")
+            
+            # Get bounds from the model's parameter specifications
+            bounds = {}
+            for param_name, node in m.parameter_names.items():
+                bounds[param_name] = (0.0, 1.0)
+            
+            if not bounds:
+                raise ValueError("No parameter specifications found in the model. Cannot determine bounds.")
+                
+            print(f"Using parameter bounds from model: {bounds}")
+            
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            if 'arraypool' in locals():
+                arraypool.close()
+            raise
         
-        kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
-        #kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+        # set kernel
+        if options.kernel == "Matern32":
+            kernel = GPy.kern.Matern32(input_dim=len(bounds), ARD=True)
+        elif options.kernel == "RBF":
+            kernel = GPy.kern.RBF(input_dim=len(bounds), ARD=True)
+
         target_model = elfi.GPyRegression(parameter_names=[x for x in bounds.keys()], bounds=bounds, kernel=kernel)
         mod = elfi.BOLFI(m['log_d'], batch_size=1, initial_evidence=initial_evidence, update_interval=update_interval,
                             acq_noise_var=acq_noise_var, seed=seed, bounds=bounds, pool=arraypool, target_model=target_model)
@@ -626,13 +663,6 @@ if __name__ == "__main__":
     # generate output
     # Define real-world log-uniform min/max for each parameter
     param_names = mod.model.parameter_names
-    param_bounds = {
-        'rate_genes1': (epsilon, max_mu),
-        'prop_genes2': (epsilon, 1.0),
-        'HR_rate': (epsilon, recomb_max),
-        'HGT_rate': (epsilon, recomb_max),
-        # Add all your parameter bounds here
-    }
 
     # Extract normalized samples
     X = mod.target_model.X  # shape: (n_samples, n_params)
@@ -645,24 +675,27 @@ if __name__ == "__main__":
     summary_rows = []
 
     for i, pname in enumerate(param_names):
-        if pname in param_bounds:
-            min_val, max_val = param_bounds[pname]
+        min_val, max_val, dist = fitted_params[pname]['min'], fitted_params[pname]['max'], fitted_params[pname]['dist']
+        if dist == "loguniform":
             X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
             df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
+        else:
+            X_real[:, i] = min_val + X_real[:, i] * (max_val - min_val)
+            df_post[pname] = min_val + df_post[pname] * (max_val - min_val)
 
-            # Compute posterior summaries
-            mean = np.mean(df_post[pname])
-            ci_2_5 = np.percentile(df_post[pname], 2.5)
-            ci_97_5 = np.percentile(df_post[pname], 97.5)
-            median = np.median(df_post[pname])
+        # Compute posterior summaries
+        mean = np.mean(df_post[pname])
+        ci_2_5 = np.percentile(df_post[pname], 2.5)
+        ci_97_5 = np.percentile(df_post[pname], 97.5)
+        median = np.median(df_post[pname])
 
-            summary_rows.append({
-                'parameter': pname,
-                'mean': mean,
-                'median': median,
-                'CI_2.5%': ci_2_5,
-                'CI_97.5%': ci_97_5
-            })
+        summary_rows.append({
+            'parameter': pname,
+            'mean': mean,
+            'median': median,
+            'CI_2.5%': ci_2_5,
+            'CI_97.5%': ci_97_5
+        })
 
     # Store in DataFrame and save
     df_evidence_scaled = pd.DataFrame(X_real, columns=param_names)

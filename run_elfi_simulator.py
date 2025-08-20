@@ -101,9 +101,8 @@ def get_options():
                     default=0.0,
                     help='HGT rate, as number of accessory sites transferred per core genome mutation.'
                          'Default=0.0 ')
-    IO.add_argument('--competition',
-                    action='store_true',
-                    default=False,
+    IO.add_argument('--competition_strength',
+                    default=0.0,
                     help='Run simulator with competition.')
     IO.add_argument('--max_distances',
                     type=int,
@@ -163,12 +162,9 @@ if __name__ == "__main__":
     seed = options.seed
     HR_rate = options.HR_rate
     HGT_rate = options.HGT_rate
-    competition = options.competition
+    competition_strength = options.competition_strength
 
-    if competition:
-        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
-    else:
-        command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
+    command = pansim_exe + f' --avg_gene_freq {avg_gene_freq} --prop_positive {prop_positive} --pos_lambda {pos_lambda} --neg_lambda {neg_lambda} --rate_genes1 {rate_genes1} --rate_genes2 {rate_genes2} --prop_genes2 {prop_genes2} --core_mu {core_mu} --seed {seed} --pop_size {pop_size} --core_size {core_size} --core_genes {core_genes} --pan_genes {pan_genes} --n_gen {n_gen} --max_distances {max_distances} --outpref {outpref} --threads {threads} --competition_strength {competition_strength} --HR_rate {HR_rate} --HGT_rate {HGT_rate}'
 
     print("Simulating...")
     try:

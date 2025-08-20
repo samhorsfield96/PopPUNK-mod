@@ -38,7 +38,7 @@ def read_file(file):
 def get_distance(file_tuple):
     df1 = read_file(file_tuple[0])
     df2 = read_file(file_tuple[1])
-    js_distance = KDE_JS_divergence(df1, df2, 1e-12, log=True)
+    js_distance = KDE_JS_divergence(df1, df2, gamma=0.25, eps=0.0, log=False)
     min_core = np.min(df2[:, 0])
     max_core = np.max(df2[:, 0])
     min_acc = np.min(df2[:, 1])
