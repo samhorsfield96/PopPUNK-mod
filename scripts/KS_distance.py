@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
 
 def get_options():
-    description = 'Generate KS distribution for an input file. If two files provided, calculates distance.'
+    description = 'Generate Kolmogorov-Smirnov (KS) distribution for an input file. If two files provided, calculates distance.'
     parser = argparse.ArgumentParser(description=description,
                                      prog='python KS_distance.py')
 
