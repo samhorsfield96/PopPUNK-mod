@@ -264,11 +264,11 @@ def js_distance(sim, col, obs):
     
     return js
 
-def wasserstein_distance(sim, obs):
-    sim_array = np.column_stack(sim)
-    obs_array = np.column_stack(obs)
+# def wasserstein_distance(sim, obs):
+#     sim_array = np.column_stack(sim)
+#     obs_array = np.column_stack(obs)
 
-    return wasserstein_distance_nd(obs_array, sim_array)
+#     return wasserstein_distance_nd(obs_array, sim_array)
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
