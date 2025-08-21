@@ -98,7 +98,7 @@ def plot_scatter(X, out_prefix, x_fit, y_fit):
 
     # Plot on correct scale
     plt.scatter(X[:,0]*scale[0].flat, X[:,1]*scale[1].flat, s=1, alpha=scatter_alpha)
-    plt.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
+    #plt.plot(x_fit, y_fit, label=f"Negative exponential 3 param", color='red')
 
     plt.xlabel('Core distance (' + r'$\pi$' + ')')
     plt.ylabel('Accessory distance (' + r'$a$' + ')')
