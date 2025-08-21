@@ -116,8 +116,6 @@ PopPUNK-mod generates a number of outputs:
 - `<outpref>_ELFI_summary.txt`: csv containing normalised parameter mean, median and 95% credible interval values.
 - `<outpref>_gp_evidence.csv`: csv containing parameter values and associated discrepancy values from BOLFI sampling.
 - `<outpref>_mcmc_posterior_samples.csv`: csv containing MCMC sampling values for posterior after burn-in.
-- `<outpref>_mcmc_traces_raw.csv`: csv containing chains for MCMC without conversion to original values.
-- `<outpref>_mcmc_traces.csv`: csv containing chains for MCMC.
 - `<outpref>_pairs.png`: plot of paired parameter posterior distributions.
 - `<outpref>_BOLFI_discrepancy.png`: plot of discrepancy values from BOLFI sampling.
 - `<outpref>_BOLFI_traces.png`: plot of MCMC chains.

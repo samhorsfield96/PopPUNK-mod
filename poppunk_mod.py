@@ -675,22 +675,6 @@ if __name__ == "__main__":
     X = mod.target_model.X  # shape: (n_samples, n_params)
     Y = mod.target_model.Y.flatten()
 
-    # Get MCMC chains
-    # Raw trace (normalized space), shape: (n_total_samples, n_params)
-    trace = result.trace
-
-    # Number of chains and samples per chain
-    n_chains = result.n_chains
-    n_per_chain = trace.shape[0] // n_chains
-
-    # Build DataFrame with chain + iteration indices
-    df_trace = pd.DataFrame(trace, columns=param_names)
-    df_trace["chain"] = np.repeat(np.arange(n_chains), n_per_chain)
-    df_trace["iter"] = np.tile(np.arange(n_per_chain), n_chains)
-
-    # write raw values without conversion
-    df_trace.to_csv(outpref + '_mcmc_traces_raw.csv', index=False)
-
     # Transform normalized samples back to real-world scale
     X_real = np.zeros_like(X)
     df_post = pd.DataFrame(result.samples)
@@ -702,11 +686,9 @@ if __name__ == "__main__":
         if dist == "loguniform":
             X_real[:, i] = from_unit_to_loguniform(X[:, i], min_val, max_val)
             df_post[pname] = from_unit_to_loguniform(df_post[pname], min_val, max_val)
-            df_trace[pname] = from_unit_to_loguniform(df_trace[pname], min_val, max_val)
         else:
             X_real[:, i] = min_val + X_real[:, i] * (max_val - min_val)
             df_post[pname] = min_val + df_post[pname] * (max_val - min_val)
-            df_trace[pname] = min_val + df_trace[pname] * (max_val - min_val)
 
         # Compute posterior summaries
         mean = np.mean(df_post[pname])
@@ -727,7 +709,6 @@ if __name__ == "__main__":
     df_evidence_scaled['discrepancy'] = Y
     df_evidence_scaled.to_csv(outpref + '_gp_evidence.csv', index=False)        
     df_post.to_csv(outpref + '_mcmc_posterior_samples.csv', index=False)
-    df_trace.to_csv(outpref + '_mcmc_traces.csv', index=False)
     df_summary = pd.DataFrame(summary_rows)
     df_summary.to_csv(outpref + '_parameter_estimates_summary.csv', index=False)
 
