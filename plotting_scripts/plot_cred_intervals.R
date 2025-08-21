@@ -1,507 +1,239 @@
 library(ggplot2)
-
 library(dplyr)
+library(ggsci)
 
-#df <- read.csv("results/predictions_negative_exp_3param_canberra_ngen200_hypparam_check_moderate_no_logit_BOLFI_parsed.txt", sep = "\t")
-df <- read.csv("results/predictions_negative_exp_3param_canberra_ngen200_hypparam_check_moderate_no_logit_more_params_BOLFI_parsed.txt", sep = "\t")
+search_string <- function(filename, string){
+  search_rg <- paste0(".*", string, "_(-?[0-9.]+(?:[eE][-+]?[0-9]+)?)(?:_|\\.|$).*")
+  label = if (grepl(string, filename)) {
+    as.numeric(sub(search_rg, "\\1", filename))
+  } else {
+    0
+  }
+  return(label)
+}
 
-df$speed <- as.numeric(sub(".*speed_(\\d+)_.*", "\\1", df$Name))
-df$initev <- as.numeric(sub(".*initev_(\\d+)_.*", "\\1", df$Name))
-df$nevid <- as.numeric(sub(".*nevid_(\\d+)_.*", "\\1", df$Name))
-df$updint <- as.numeric(sub(".*updint_(\\d+)_.*", "\\1", df$Name))
-df$acqnoise <- as.numeric(sub(".*acqnoise_([0-9.]+)_.*", "\\1", df$Name))
-df$thresh <- as.numeric(sub(".*thresh_([0-9.]+)_.*", "\\1", df$Name))
+parse_filename <- function(filename) {
+  list(
+    prop_positive = search_string(filename, "prop_positive"),
+    HR_rate = search_string(filename, "HR_rate"),
+    HGT_rate = search_string(filename, "HGT_rate"),
+    rate_genes1 = search_string(filename, "r1"),
+    rate_genes2 = search_string(filename, "r2"),
+    prop_genes2 = search_string(filename, "prop2"),
+    core_mu = search_string(filename, "core_mu"),
+    competition = search_string(filename, "competition"),
+    pos_lambda = search_string(filename, "pos_lambda"),
+    neg_lambda = search_string(filename, "neg_lambda")
+  )
+}
 
-# split dfs
-pan_mu_df <- subset(df, Param == "pan_mu")
-prop_df <- subset(df, Param == "proportion")
+parse_results <- function(df_paths)
+{
+  df_all <- data.frame(Est_parameter = c(), Mean = c(), Median = c(), UCI = c(), LCI = c(), prop_positive = c(), HR_rate = c(), HGT_rate = c(), rate_genes1 = c(), prop_genes2 = c(), competition = c())
+  params_all <- data.frame(prop_positive = c(), HR_rate = c(), HGT_rate = c(), rate_genes1 = c(), prop_genes2 = c(), competition = c(), baseline = c())
+  
+  j <- 1
+  for (j in 1:length(df_paths))
+  {
+    filename <- df_paths[j]
+    df <- read.table(filename, sep = ",", comment.char = "", header=TRUE)
+    colnames(df) <- c("Est_parameter", "Mean", "Median", "LCI", "UCI")
+    
+    # add metadata
+    parsed_values <- parse_filename(filename)
+    for (name in names(parsed_values)) {
+      df[[name]] <- parsed_values[[name]]
+    }
+    
+    df_all <- rbind(df_all, df)
+  }
+  
+  return(df_all)
+}
 
-pan_mu_df <- pan_mu_df %>%
-  arrange(mu) 
-pan_mu_df$Name <- factor(pan_mu_df$Name, levels = pan_mu_df$Name)
-prop_df <- prop_df %>%
-  arrange(prop)
-prop_df$Name <- factor(prop_df$Name, levels = prop_df$Name)
+df_paths <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/credible_intervals/RBF_KDE_smoothing_0.25/*.csv")
+outpref <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/credible_intervals"
+df_all <- parse_results(df_paths)
+df_all$rate_genes1 <- factor(df_all$rate_genes1)
+df_all$prop_genes2 <- factor(df_all$prop_genes2)
+df_all$core_mu <- factor(df_all$core_mu)
 
 # summary graphs
 {
-  p <- ggplot(pan_mu_df, aes(y = Name)) +
+  df_subset <- subset(df_all, Est_parameter == "rate_genes1" & core_mu == 1e-5)
+  df_subset$real_value <- as.numeric(as.character(df_subset$rate_genes1))
+  df_subset$in_range <-  ifelse((df_subset$real_value >= df_subset$ LCI & df_subset$real_value <= df_subset$UCI),
+                             "Within range", "Out of range")
+  p <- ggplot(df_subset, aes(y = rate_genes1)) +
     # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbarh(aes(xmin = Cred_2.5, xmax = Cred_97.5), height = 0.2) +
+    geom_errorbarh(aes(xmin = LCI, xmax = UCI), height = 0.2) +
     # Point for Mean
-    geom_point(aes(x = Mean), color = "black", size = 3) +
+    geom_point(aes(x = Median), color = "black", size = 3) +
     # Conditional point for mu or prop with color based on range inclusion
     geom_point(
-      aes(
-        x = ifelse(Param == "pan_mu", mu, prop),
-        color = ifelse((Param == "pan_mu" & mu >= Cred_2.5 & mu <= Cred_97.5) |
-                         (Param == "proportion" & prop >= Cred_2.5 & prop <= Cred_97.5), 
+      aes(x = real_value, color = ifelse((real_value >= LCI & real_value <= UCI),
                        "Within range", "Out of range")
       ),
       size = 3
     ) +
     # Define custom colors for the conditional points
     scale_color_manual(values = c("Within range" = "green", "Out of range" = "red")) +
+    scale_x_log10() +
     # Labels and theme
-    labs(x = "Pan mu", y = "Simulation Name", color = "") +
-    theme_light() +
-    facet_grid()
-  p
-  
-  ggsave("pan_mu_comparison.png")
-  
-  p <- ggplot(prop_df, aes(y = Name)) +
-    # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbarh(aes(xmin = Cred_2.5, xmax = Cred_97.5), height = 0.2) +
-    # Point for Mean
-    geom_point(aes(x = Mean), color = "black", size = 3) +
-    # Conditional point for mu or prop with color based on range inclusion
-    geom_point(
-      aes(
-        x = ifelse(Param == "pan_mu", mu, prop),
-        color = ifelse((Param == "pan_mu" & mu >= Cred_2.5 & mu <= Cred_97.5) |
-                         (Param == "proportion" & prop >= Cred_2.5 & prop <= Cred_97.5), 
-                       "Within range", "Out of range")
-      ),
-      size = 3
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red")) +
-    # Labels and theme
-    labs(x = "Prop fast:slow genes", y = "Simulation Name", color = "") +
+    facet_grid(prop_genes2 ~ .) +
+    labs(x = "Gene turnover rate 1", y = "Real value", color = "") +
     theme_light()
   p
-  ggsave("prop_comparison.png")
-}
-
-
-# param comp graphs
-{
-  p <- ggplot(pan_mu_df, aes(x = factor(acqnoise))) +
+  
+  df_overall <- df_subset
+  ggsave(paste(outpref, "gene_rate1.png", sep = "/"))
+  
+  df_subset <- subset(df_all, Est_parameter == "prop_genes2" & core_mu == 1e-5)
+  df_subset$real_value <- as.numeric(as.character(df_subset$prop_genes2))
+  df_subset$in_range <-  ifelse((df_subset$real_value >= df_subset$ LCI & df_subset$real_value <= df_subset$UCI),
+                                "Within range", "Out of range")
+  p <- ggplot(df_subset, aes(y = prop_genes2)) +
     # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbar(aes(ymin = Cred_2.5, ymax = Cred_97.5), width = 0.2) +
+    geom_errorbarh(aes(xmin = LCI, xmax = UCI), height = 0.2) +
     # Point for Mean
-    geom_point(aes(y = Mean), color = "black", size = 3) +
+    geom_point(aes(x = Median), color = "black", size = 3) +
     # Conditional point for mu or prop with color based on range inclusion
     geom_point(
-      aes(
-        y = ifelse(Param == "pan_mu", mu, prop),
-        color = ifelse((Param == "pan_mu" & mu >= Cred_2.5 & mu <= Cred_97.5) |
-                         (Param == "proportion" & prop >= Cred_2.5 & prop <= Cred_97.5), 
-                       "Within range", "Out of range")
+      aes(x = real_value, color = ifelse((real_value >= LCI & real_value <= UCI),
+                                         "Within range", "Out of range")
       ),
       size = 3
     ) +
     # Define custom colors for the conditional points
     scale_color_manual(values = c("Within range" = "green", "Out of range" = "red")) +
     # Labels and theme
-    labs(y = "Pan mu", x = "Acquisition Noise", color = "") +
-    theme_light() +
-    facet_grid(mu~prop)
-  p
-  
-  ggsave("pan_mu_comparison_acqnoise.png")
-  
-  p <- ggplot(prop_df, aes(x = factor(acqnoise))) +
-    # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbar(aes(ymin = Cred_2.5, ymax = Cred_97.5), width = 0.2) +
-    # Point for Mean
-    geom_point(aes(y = Mean), color = "black", size = 3) +
-    # Conditional point for mu or prop with color based on range inclusion
-    geom_point(
-      aes(
-        y = ifelse(Param == "pan_mu", mu, prop),
-        color = ifelse((Param == "pan_mu" & mu >= Cred_2.5 & mu <= Cred_97.5) |
-                         (Param == "proportion" & prop >= Cred_2.5 & prop <= Cred_97.5), 
-                       "Within range", "Out of range")
-      ),
-      size = 3
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red")) +
-    # Labels and theme
-    labs(y = "Prop fast:slow genes", x = "Acquisition Noise", color = "") +
-    theme_light() +
-    facet_grid(mu~prop)
-  p
-  
-  p <- ggplot(, aes(y = Name)) +
-    # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbarh(aes(xmin = Cred_2.5, xmax = Cred_97.5), height = 0.2) +
-    # Point for Mean
-    geom_point(aes(x = Mean), color = "black", size = 3) +
-    # Conditional point for mu or prop with color based on range inclusion
-    geom_point(
-      aes(
-        x = ifelse(Param == "pan_mu", mu, prop),
-        color = ifelse((Param == "pan_mu" & mu >= Cred_2.5 & mu <= Cred_97.5) |
-                         (Param == "proportion" & prop >= Cred_2.5 & prop <= Cred_97.5), 
-                       "Within range", "Out of range")
-      ),
-      size = 3
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red")) +
-    # Labels and theme
-    labs(x = "Prop fast:slow genes", y = "Simulation Name", color = "") +
+    facet_grid(rate_genes1 ~ .) +
+    labs(x = "Proportion of fast genes", y = "Real value", color = "") +
     theme_light()
   p
-  ggsave("prop_comparison_acqnoise.png")
+  
+  ggsave(paste(outpref, "prop2_genes.png", sep = "/"))
+  df_overall <- rbind(df_overall, df_subset)
+  df_overall$range_size <- df_overall$UCI - df_overall$LCI
 }
 
-# for presentation
+# bar charts
 {
-  sub_df <- subset(df, acqnoise == 0.01)
-  sub_df$Mean <- round(sub_df$Mean, digits = 2)
-  sub_df$Cred_2.5 <- round(sub_df$Cred_2.5, digits = 2)
-  sub_df$Cred_97.5 <- round(sub_df$Cred_97.5, digits = 2)
-  
-  # convert 0.0 to 1.0
-  sub_df$prop[sub_df$prop == 0.0] <- 1.0
-  
-  sub_df$Value = ifelse((sub_df$Param == "pan_mu"),
-                        sub_df$mu, sub_df$prop)
-  # for dodging
-  sub_df$NonValue = ifelse((sub_df$Param == "pan_mu"),
-                           sub_df$prop, sub_df$mu)
-  
-  sub_df$Param[sub_df$Param == "pan_mu"] <- "Mutation Rate"
-  sub_df$Param[sub_df$Param == "proportion"] <- "Proportion Fast:Slow Genes"
-  
-  sub_df$in_range <- ifelse((sub_df$Param == "Mutation Rate" & sub_df$mu >= sub_df$Cred_2.5 & sub_df$mu <= sub_df$Cred_97.5) |
-           (sub_df$Param == "Proportion Fast:Slow Genes" & sub_df$prop >= sub_df$Cred_2.5 & sub_df$prop <= sub_df$Cred_97.5), 
-         "Within range", "Out of range")
-  
-  # Set the dodge width
-  dodge_width <- 0.5
-  
-  p <- ggplot(sub_df, aes(x = factor(Value), group = NonValue)) +
-    # Horizontal range for Cred_2.5 to Cred_97.5 with dodge
-    geom_errorbar(
-      aes(ymin = Cred_2.5, ymax = Cred_97.5), 
-      width = 0.2, 
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Point for Mean with dodge
-    geom_point(
-      aes(y = Mean), 
-      color = "black", 
-      size = 3, 
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Conditional point for mu or prop with color based on range inclusion with dodge
-    geom_point(
-      aes(
-        y = ifelse(Param == "Mutation Rate", mu, prop),
-        color = in_range
-      ),
-      size = 3,
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red"),
-                       limits=c("Within range", "Out of range"), drop = F) +
-    # Labels and theme
-    labs(y = "Parameter Estimate", x = "Known Parameter Value", color = "") +
-    theme_light() +
-    facet_wrap(.~Param, scales = "free_x") +
-    theme(axis.text.x = element_text(size = 14), axis.text.y = element_text(size = 12), axis.title=element_text(size=16,face="bold"), strip.text.x = element_text(size = 12), legend.title=element_text(size=14,face="bold"), legend.text=element_text(size=12), legend.position = "none")
-  p
-  
-  ggsave("acqnoise_0.01_simulation_comparisons.png")
-}
-
-# for presentation, large param comparison
-{
-  sub_df <- df
-  sub_df$Mean <- round(sub_df$Mean, digits = 2)
-  sub_df$Cred_2.5 <- round(sub_df$Cred_2.5, digits = 2)
-  sub_df$Cred_97.5 <- round(sub_df$Cred_97.5, digits = 2)
-  
-  # convert 0.0 to 1.0
-  sub_df$prop[sub_df$prop == 0.0] <- 1.0
-  
-  sub_df$Value = ifelse((sub_df$Param == "pan_mu"),
-                        sub_df$mu, sub_df$prop)
-  # for dodging
-  sub_df$NonValue = ifelse((sub_df$Param == "pan_mu"),
-                           sub_df$prop, sub_df$mu)
-  
-  sub_df$Param[sub_df$Param == "pan_mu"] <- "Mutation Rate"
-  sub_df$Param[sub_df$Param == "proportion"] <- "Proportion Fast:Slow Genes"
-  
-  sub_df$in_range <- ifelse((sub_df$Param == "Mutation Rate" & sub_df$mu >= sub_df$Cred_2.5 & sub_df$mu <= sub_df$Cred_97.5) |
-                              (sub_df$Param == "Proportion Fast:Slow Genes" & sub_df$prop >= sub_df$Cred_2.5 & sub_df$prop <= sub_df$Cred_97.5), 
-                            "Within range", "Out of range")
-  
-  
-  sub_df$prop_factor <- as.factor(sub_df$prop)
-  sub_df$facet_group <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), sep = "\n")
-  sub_df$mu_factor <- paste("Mu: ", sub_df$mu, sep = "")
-  sub_df$facet_group_mu <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), paste("Mu: ", sub_df$mu, sep = ""), sep = "\n")
-  sub_df$facet_group_prop <- paste(paste("Core: ", sub_df$core, sep = ""), paste("Pan: ", sub_df$pan, sep = ""), paste("Freq: ", sub_df$freq, sep = ""), paste("Prop: ", sub_df$prop, sep = ""), sep = "\n")
-  
-  sub_df$range_size <- sub_df$Cred_97.5 - sub_df$Cred_2.5
-  
-  
-  # split up results
-  pan_mu_df <- subset(sub_df, Param == "Mutation Rate")
-  prop_df <- subset(sub_df, Param == "Proportion Fast:Slow Genes")
-  
-  
-  # should be 14 per group, if not rerun
-  prop_df %>% 
-    group_by(facet_group) %>%
-    summarise(no_rows = length(facet_group))
-  
-  # Set the dodge width
-  dodge_width <- 0.5
-  
-  p <- ggplot(prop_df, aes(y = prop_factor)) +
-    # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbarh(aes(xmin = Cred_2.5, xmax = Cred_97.5), height = 0.2) +
-    # Point for Mean
-    geom_point(aes(x = Mean), color = "black", size = 3) +
-    # Conditional point for mu or prop with color based on range inclusion with dodge
-    geom_point(
-      aes(
-        x = ifelse(Param == "Mutation Rate", mu, prop),
-        color = in_range
-      ),
-      size = 3,
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red"),
-                       limits=c("Within range", "Out of range"), drop = F) +
-    # Labels and theme
-    labs(x = "Estimated Proportion Fast:Slow Genes", y = "Actual Proportion Fast:Slow Genes", color = "Actual Value") +
-    theme_light() +
-    facet_grid(facet_group~mu_factor) +
-    theme(strip.text = element_text(color = "white", size = 12),
-          strip.text.y.right = element_text(angle = 0),
-          axis.title=element_text(size=14,face="bold"),
-          axis.text=element_text(size=10),
-          legend.title=element_text(size=12, face="bold"), 
-          legend.text=element_text(size=12)) +
-    scale_x_continuous(limits = c(0, 1))
-  p
-  
-  ggsave("prop_gridsearch.png", width = 10, height = 12)
-  
-  p <- ggplot(prop_df, aes(y = prop_factor)) +
-    geom_point(
-      aes(
-        x = range_size,
-        color = in_range
-      ),
-      size = 3,
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red"),
-                       limits=c("Within range", "Out of range"), drop = F) +
-    # Labels and theme
-    labs(x = "Credible Interval Size", y = "Actual Proportion Fast:Slow Genes", color = "Actual Value") +
-    theme_light() +
-    facet_grid(facet_group~mu_factor) +
-    theme(strip.text = element_text(color = "white", size = 12),
-          strip.text.y.right = element_text(angle = 0),
-          axis.title=element_text(size=14,face="bold"),
-          axis.text=element_text(size=10),
-          legend.title=element_text(size=12, face="bold"), 
-          legend.text=element_text(size=12)) +
-    scale_x_continuous(limits = c(0, 1))
-  p
-  
-  ggsave("prop_cred_interval_gridsearch.png", width = 10, height = 12)
-  
-  p <- ggplot(pan_mu_df, aes(y = prop_factor)) +
-    # Horizontal range for Cred_2.5 to Cred_97.5
-    geom_errorbarh(aes(xmin = Cred_2.5, xmax = Cred_97.5), height = 0.2) +
-    # Point for Mean
-    geom_point(aes(x = Mean), color = "black", size = 3) +
-    # Conditional point for mu or prop with color based on range inclusion with dodge
-    geom_point(
-      aes(
-        x = ifelse(Param == "Mutation Rate", mu, prop),
-        color = in_range
-      ),
-      size = 3,
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red"),
-                       limits=c("Within range", "Out of range"), drop = F) +
-    # Labels and theme
-    labs(x = "Estimated Mu", y = "Actual Proportion Fast:Slow Genes", color = "Actual Value") +
-    theme_light() +
-    facet_grid(facet_group~mu_factor) +
-    theme(strip.text = element_text(color = "white", size = 12),
-          strip.text.y.right = element_text(angle = 0),
-          axis.title=element_text(size=14,face="bold"),
-          axis.text=element_text(size=10),
-          legend.title=element_text(size=12, face="bold"), 
-          legend.text=element_text(size=12)) +
-    scale_x_continuous(limits = c(0, 1))
-  p
-  ggsave("pan_mu_gridsearch.png", width = 10, height = 12)
-  
-  p <- ggplot(pan_mu_df, aes(y = prop_factor)) +
-    geom_point(
-      aes(
-        x = range_size,
-        color = in_range
-      ),
-      size = 3,
-      position = position_dodge(width = dodge_width)
-    ) +
-    # Define custom colors for the conditional points
-    scale_color_manual(values = c("Within range" = "green", "Out of range" = "red"),
-                       limits=c("Within range", "Out of range"), drop = F) +
-    # Labels and theme
-    labs(x = "Credible Interval Size", y = "Actual Proportion Fast:Slow Genes", color = "Actual Value") +
-    theme_light() +
-    facet_grid(facet_group~mu_factor) +
-    theme(strip.text = element_text(color = "white", size = 12),
-          strip.text.y.right = element_text(angle = 0),
-          axis.title=element_text(size=14,face="bold"),
-          axis.text=element_text(size=10),
-          legend.title=element_text(size=12, face="bold"), 
-          legend.text=element_text(size=12)) +
-    scale_x_continuous(limits = c(0, 1))
-  p
-  
-  ggsave("pan_mu_cred_interval_gridsearch.png", width = 10, height = 12)
-  
   # get sensitivity
   # overall
   {
-    df1 <- prop_df %>% 
-      group_by(core, pan, freq, facet_group, Param) %>%
+    grouped_df <- df_overall %>% 
+      group_by(Est_parameter) %>%
       summarize(
         Perc_correct = mean(in_range == "Within range"), 
         range_size = mean(range_size)
       )
-    df2 <- pan_mu_df %>% 
-      group_by(core, pan, freq, facet_group, Param) %>%
-      summarize(
-        Perc_correct = mean(in_range == "Within range"),
-        range_size = mean(range_size)
-      )
-    df3 <- rbind(df1, df2)
-    
-    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
-      geom_col() + facet_grid(Param~., scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+
+    p <- ggplot(grouped_df, aes(x = Est_parameter, y = Perc_correct, fill = Est_parameter)) + 
+      geom_col() +
+      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter") + ylab("Average Sensitivity") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("overall_sensitivity.png", width = 9, height = 6)
+    ggsave(paste(outpref,"overall_sensitivity.png", sep="/"), width = 9, height = 6)
     
-    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
-      geom_col() + facet_grid(Param~., scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+    p <- ggplot(grouped_df, aes(x = Est_parameter, y = range_size, fill = Est_parameter)) + 
+      geom_col()  + xlab("Parameter") + ylab("Average Credible Interval Size") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("overall_cred_interval_size.png", width = 9, height = 6)
+    ggsave(paste(outpref,"overall_cred_interval_size.png", sep="/"), width = 9, height = 6)
   }
   
-  # by mu
+  # by rate genes 1
   {
-    df1 <- prop_df %>% 
-      group_by(core, pan, freq, facet_group, Param, mu) %>%
+    grouped_df <- df_overall %>% 
+      group_by(rate_genes1) %>%
       summarize(
         Perc_correct = mean(in_range == "Within range"), 
         range_size = mean(range_size)
       )
-    df2 <- pan_mu_df %>% 
-      group_by(core, pan, freq, facet_group, Param, mu) %>%
-      summarize(
-        Perc_correct = mean(in_range == "Within range"),
-        range_size = mean(range_size)
-      )
-    df3 <- rbind(df1, df2)
     
-    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
-      geom_col() + facet_grid(Param~mu, scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+    p <- ggplot(grouped_df, aes(x = rate_genes1, y = Perc_correct, fill = rate_genes1)) + 
+      geom_col() +
+      scale_y_continuous(limits = c(0, 1)) + xlab("Gene turnover rate 1") + ylab("Average Sensitivity") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("by_mu_sensitivity.png", width = 14, height = 6)
+    ggsave(paste(outpref,"rate_genes1_sensitivity.png", sep="/"), width = 9, height = 6)
     
-    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
-      geom_col() + facet_grid(Param~mu, scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+    p <- ggplot(grouped_df, aes(x = rate_genes1, y = range_size, fill = rate_genes1)) + 
+      geom_col()+ xlab("Gene turnover rate 1") + ylab("Average Credible Interval Size") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("by_mu_cred_interval_size.png", width = 14, height = 6)
+    ggsave(paste(outpref,"rate_genes1_cred_interval_size.png", sep="/"), width = 9, height = 6)
   }
   
-  # by prop
+  # by prop 2
   {
-    df1 <- prop_df %>% 
-      group_by(core, pan, freq, facet_group, Param, prop) %>%
+    grouped_df <- df_overall %>% 
+      group_by(prop_genes2) %>%
       summarize(
-        Perc_correct = mean(in_range == "Within range"),
-        range_size = mean(range_size)
-      )
-    df2 <- pan_mu_df %>% 
-      group_by(core, pan, freq, facet_group, Param, prop) %>%
-      summarize(
-        Perc_correct = mean(in_range == "Within range"),
+        Perc_correct = mean(in_range == "Within range"), 
         range_size = mean(range_size)
       )
     
-    df3 <- rbind(df1, df2)
-    
-    p <- ggplot(df3, aes(x = facet_group, y = Perc_correct)) + 
-      geom_col() + facet_grid(prop~Param, scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Sensitivity") + 
+    p <- ggplot(grouped_df, aes(x = prop_genes2, y = Perc_correct, fill = prop_genes2)) + 
+      geom_col() +
+      scale_y_continuous(limits = c(0, 1)) + xlab("Proportion of fast genes") + ylab("Average Sensitivity") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("by_prop_sensitivity.png", width = 14, height = 6)
+    ggsave(paste(outpref,"prop_genes2_sensitivity.png", sep="/"), width = 9, height = 6)
     
-    p <- ggplot(df3, aes(x = facet_group, y = range_size)) + 
-      geom_col() + facet_grid(prop~Param, scales = "free_x") + 
-      scale_y_continuous(limits = c(0, 1)) + xlab("Parameter set") + ylab("Average Credible Interval Size") + 
+    p <- ggplot(grouped_df, aes(x = prop_genes2, y = range_size, fill = prop_genes2)) + 
+      geom_col() + xlab("Proportion of fast genes") + ylab("Average Credible Interval Size") + 
       theme_light() + 
+      scale_fill_npg() +
       theme(strip.text = element_text(color = "white", size = 12),
             #strip.text.y.right = element_text(angle = 0),
             axis.title=element_text(size=14,face="bold"),
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
-            legend.text=element_text(size=12))
+            legend.text=element_text(size=12),
+            legend.position = "None")
     p
-    ggsave("by_prop_cred_interval_size.png", width = 14, height = 6)
+    ggsave(paste(outpref,"prop_genes2_cred_interval_size.png", sep="/"), width = 9, height = 6)
   }
 }
