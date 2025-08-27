@@ -53,13 +53,20 @@ def main():
         summary = Entrez.esummary(db=args.db, id=uid, report="full")
         docsum = Entrez.read(summary)
         doc = docsum['DocumentSummarySet']['DocumentSummary'][0]
+        #print(doc)
 
         # Get GenBank FTP path
-        ftp_path = doc['FtpPath_GenBank']
+        ftp_path_genbank, ftp_path_refseq = doc['FtpPath_GenBank'], doc['FtpPath_RefSeq']
+
+        ftp_path = ftp_path_genbank
         if not ftp_path:
             print(f"No GenBank path found for {acc}")
-            missing_accessions.append(acc)
-            continue
+            ftp_path = ftp_path_refseq
+
+            if not ftp_path:
+                print(f"No RefSeq path found for {acc}")
+                missing_accessions.append(acc)
+                continue
 
         # Construct FASTA file URL
         basename = os.path.basename(ftp_path)
