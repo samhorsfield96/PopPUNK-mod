@@ -39,10 +39,15 @@ def main():
     
     accessions = [x.rstrip() for x in accessions]
 
+    missing_accessions = []
     for acc in accessions:
         # Search assembly database
-        search = Entrez.esearch(db="assembly", term=acc)
-        uid = Entrez.read(search)["IdList"][0]
+        search = Entrez.esearch(db=args.db, term=acc)
+        try:
+            uid = Entrez.read(search)["IdList"][0]
+        except IndexError:
+            missing_accessions.append(acc)
+            continue
 
         # Fetch summary
         summary = Entrez.esummary(db=args.db, id=uid, report="full")
@@ -53,6 +58,7 @@ def main():
         ftp_path = doc['FtpPath_GenBank']
         if not ftp_path:
             print(f"No GenBank path found for {acc}")
+            missing_accessions.append(acc)
             continue
 
         # Construct FASTA file URL
@@ -63,6 +69,12 @@ def main():
         outpath = os.path.join(args.outdir, f"{basename}.fna.gz")
         print(f"Downloading {fasta_url} -> {outpath}")
         urllib.request.urlretrieve(fasta_url, outpath)
+
+    print(f"Missing accessions: {len(missing_accessions)}")
+    outpath = os.path.join(args.outdir, "missing_accessions.txt")
+    with open(outpath, "w") as f:
+        for acc in missing_accessions:
+            f.write(acc + "\n")
 
 if __name__ == "__main__":
     main()
