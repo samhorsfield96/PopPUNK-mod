@@ -22,6 +22,15 @@ try:  # sklearn >= 0.22
 except ImportError:
     from sklearn.neighbors.kde import KernelDensity
 
+weights = np.array([1.0, 0.33, 0.33, 0.33])
+
+# weighted distance for use in BOLFI. Assign JS divergence with highest weight
+def weighted_canberra(sim, obs):
+    diff = np.abs(sim - obs)
+    denom = np.abs(sim) + np.abs(obs)
+    distance = np.sum(weights * (diff / denom))
+    return np.array([distance], dtype=np.float64)
+
 # fit asymptotic curve using exponential decay
 # b0 is asymptote, b1 is y-intercept, b2 is rate of decay
 def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
@@ -565,8 +574,8 @@ if __name__ == "__main__":
 
         m['sim'].uses_meta = True
 
-        # Use canberra distance between observed and simulated data
-        elfi.Distance('canberra', m['sim'], model=m, name='d')
+        # Use weighted canberra distance between observed and simulated data
+        elfi.Distance(weighted_canberra, m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
         # Set up the Gaussian Process model
