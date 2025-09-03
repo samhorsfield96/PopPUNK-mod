@@ -7,6 +7,7 @@ import pandas as pd
 import elfi
 import GPy
 import os
+from pathlib import Path
 import sys
 import matplotlib.pyplot as plt
 import pickle
@@ -133,7 +134,15 @@ def get_options():
     Pansim.add_argument('--param', nargs=4, action='append',
                         metavar=('NAME', 'MIN', 'MAX', 'DIST'),
                         help='Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"')
-    
+    Pansim.add_argument('--core-threshold',
+                    type=float,
+                    default=0.95,
+                    help='Core genome threshold for summary statistic. Default = 0.95')
+    Pansim.add_argument('--rare-threshold',
+                    type=float,
+                    default=0.05,
+                    help='Rare genome threshold for summary statistic. Default = 0.05')
+
     # Fixed parameters (not fitted by BOLFI)
     Pansim.add_argument('--fixed-param', nargs=2, action='append',
                       metavar=('NAME', 'VALUE'),
@@ -155,6 +164,11 @@ def get_options():
     IO.add_argument('--distfile',
                     required=True,
                     help='PopPUNK distance file to fit to.')
+    IO.add_argument('--gene-counts',
+                    #required=True,
+                    default="1000,10,95",
+                    type=str,
+                    help='Counts of genes in pangenome, in format <core>,<intermediate>,<rare>. Numbers should align with provided --fixed-param or --fitted-param. Example: 1000,250,600.')
     IO.add_argument('--load',
                     default=None,
                     help='Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode ')
@@ -264,6 +278,14 @@ def js_distance(sim, col, obs):
     
     return js
 
+def calculate_gene_freqs(X, core_threshold, rare_threshold):
+    num_genes = len(X)
+    freq_core = (X >= core_threshold).sum() / num_genes
+    freq_rare = (X < rare_threshold).sum() / num_genes
+    freq_intermediate = np.count_nonzero((rare_threshold <= X) & (X < core_threshold)) / num_genes
+
+    return freq_core, freq_intermediate, freq_rare
+
 # def wasserstein_distance(sim, obs):
 #     sim_array = np.column_stack(sim)
 #     obs_array = np.column_stack(obs)
@@ -330,14 +352,23 @@ def prepare_inputs(*inputs, **kwinputs):
 # Function to process the result of the simulation
 def process_result(completed_process, *inputs, **kwinputs):
     output_filename = kwinputs['outpref'] + ".tsv"
+    output_filename_freqs = kwinputs['outpref'] + "_freqs.txt"
+
+    core_threshold = kwinputs['core_threshold']
+    rare_threshold = kwinputs['rare_threshold']
 
     # Read the simulations from the file.
     try:
         simulations = np.loadtxt(output_filename, delimiter='\t', dtype='float64')
+        simulations_freqs = np.loadtxt(output_filename_freqs, delimiter='\t', dtype='float64')
         
         # Clean up the files after reading the data in
         os.remove(output_filename)
+        os.remove(output_filename_freqs)
 
+        # get gene proportions
+        freq_core, freq_intermediate, freq_rare = calculate_gene_freqs(simulations_freqs, core_threshold, rare_threshold)
+  
         # read observations file
         obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
 
@@ -346,8 +377,11 @@ def process_result(completed_process, *inputs, **kwinputs):
         print(f"{output_filename} not found.\ncompleted_process: {completed_process}")
         raise FileNotFoundError
 
+    # generate result
+    result = np.array([divergence, freq_core, freq_intermediate, freq_rare])
+
     # This will be passed to ELFI as the result of the command
-    return divergence
+    return result
 
 if __name__ == "__main__":
     options = get_options()
@@ -370,6 +404,19 @@ if __name__ == "__main__":
     threshold = options.threshold
     covar_scaling = options.covar_scaling
     gamma = options.gamma
+    core_threshold = options.core_threshold
+    rare_threshold = options.rare_threshold
+
+    # split gene_counts
+    gene_counts = Path(options.gene_counts) # for fitting to simulations
+    if not gene_counts.is_file():
+        gene_counts = [int(x) for x in options.gene_counts.split(",")] # for fitting to real data
+        total_pangenome = sum(gene_counts)
+        gene_proportions = tuple([x / total_pangenome for x in gene_counts])
+        freq_core, freq_intermediate, freq_rare = gene_proportions
+    else:
+        gene_counts = np.loadtxt(gene_counts, delimiter='\t', dtype='float64')
+        freq_core, freq_intermediate, freq_rare = calculate_gene_freqs(gene_counts, core_threshold, rare_threshold)
 
     #set multiprocessing client
     os.environ['NUMEXPR_NUM_THREADS'] = str(threads)
@@ -401,7 +448,7 @@ if __name__ == "__main__":
         for name, value in options.fixed_param:
             try:
                 # remove quotation marks if string used
-                value_parsed = value.replace('"', '')
+                value_parsed = value.strip('"').strip("'")
                 fixed_params[name] = float(value_parsed)
                 print(f"Using fixed parameter: {name} = {str(fixed_params[name])}")
             except ValueError:
@@ -420,8 +467,8 @@ if __name__ == "__main__":
                 raise ValueError(f"Parameter {name} cannot be both fixed (--fixed-param) and fitted (--param).")
 
             fitted_params[name] = {
-                'min': float(min_val),
-                'max': float(max_val),
+                'min': float(min_val.strip('"').strip("'")),
+                'max': float(max_val.strip('"').strip("'")),
                 'dist': dist.lower()
             }
             
@@ -442,7 +489,7 @@ if __name__ == "__main__":
         print(f"Fitting parameter: {param_name} with {spec['dist']} prior in range [{spec['min']}, {spec['max']}]")
 
     # save observed parameters
-    obs = np.array([0.0])
+    obs = np.array([0.0, freq_core, freq_intermediate, freq_rare])
 
     # simulate and fit
     if run_mode == "sim":
@@ -502,6 +549,8 @@ if __name__ == "__main__":
         other_other_params = {
             'workdir': workdir,
             'obs_file': obs_file,
+            'core_threshold': core_threshold,
+            'rare_threshold': rare_threshold,
         }
 
         # add all non model parameters together
@@ -516,8 +565,8 @@ if __name__ == "__main__":
 
         m['sim'].uses_meta = True
 
-        # Use euclidean distance between observed and simulated data
-        elfi.Distance('euclidean', m['sim'], model=m, name='d')
+        # Use canberra distance between observed and simulated data
+        elfi.Distance('canberra', m['sim'], model=m, name='d')
         elfi.Operation(np.log, m['d'], model=m, name='log_d')
         
         # Set up the Gaussian Process model
