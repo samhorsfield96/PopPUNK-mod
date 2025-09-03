@@ -127,9 +127,11 @@ PopPUNK-mod generates a number of outputs:
 ### Command-line options
 
 ```
-usage: python poppunk_mod.py [-h] --pansim_exe PANSIM_EXE [--param NAME MIN MAX DIST] [--fixed-param NAME VALUE] [--max_distances MAX_DISTANCES] [--seed SEED] [--run_mode {sim,sample}] --distfile DISTFILE [--load LOAD]
-                             [--outpref OUTPREF] [--workdir WORKDIR] [--samples SAMPLES] [--init_evidence INIT_EVIDENCE] [--threshold THRESHOLD] [--n_evidence N_EVIDENCE] [--update-int UPDATE_INT]
-                             [--acq-noise-var ACQ_NOISE_VAR] [--chains CHAINS] [--covar-scaling COVAR_SCALING] [--kernel {RBF,Matern32}] [--gamma GAMMA] [--threads THREADS] [--cluster]
+usage: python poppunk_mod.py [-h] --pansim_exe PANSIM_EXE [--param NAME MIN MAX DIST] [--core-threshold CORE_THRESHOLD] [--rare-threshold RARE_THRESHOLD] [--fixed-param NAME VALUE]
+                             [--max_distances MAX_DISTANCES] [--seed SEED] [--run_mode {sim,sample}] --distfile DISTFILE [--gene-counts GENE_COUNTS] [--load LOAD] [--outpref OUTPREF]
+                             [--workdir WORKDIR] [--samples SAMPLES] [--init_evidence INIT_EVIDENCE] [--threshold THRESHOLD] [--n_evidence N_EVIDENCE] [--update-int UPDATE_INT]
+                             [--acq-noise-var ACQ_NOISE_VAR] [--chains CHAINS] [--covar-scaling COVAR_SCALING] [--kernel {RBF,Matern32}] [--gamma GAMMA] [--threads THREADS]
+                             [--cluster]
 
 Fit model to PopPUNK data using Approximate Baysesian Computation
 
@@ -141,6 +143,10 @@ Pansim options:
                         Path to pansim executable.
   --param NAME MIN MAX DIST
                         Parameter to fit with BOLFI. Can be specified multiple times. DIST must be "uniform" or "loguniform"
+  --core-threshold CORE_THRESHOLD
+                        Core genome threshold for summary statistic. Default = 0.95
+  --rare-threshold RARE_THRESHOLD
+                        Rare genome threshold for summary statistic. Default = 0.05
   --fixed-param NAME VALUE
                         Parameter with fixed value (not fitted by BOLFI). Can be specified multiple times.
   --max_distances MAX_DISTANCES
@@ -151,6 +157,9 @@ Input/Output options:
   --run_mode {sim,sample}
                         Which run mode to specify. Choices are "sim" or "sample".
   --distfile DISTFILE   PopPUNK distance file to fit to.
+  --gene-counts GENE_COUNTS
+                        Counts of genes in pangenome, in format <core>,<intermediate>,<rare>. Numbers should align with provided --fixed-param or --fitted-param. Example:
+                        1000,250,600.
   --load LOAD           Directory of previous ELFI model and pooled array, matching --outpref of previous run. Required if running "sample" mode
   --outpref OUTPREF     Output prefix. Default = "PopPUNK-mod"
   --workdir WORKDIR     Specify workdir to save intermediate files. If unset, will write to working directory.
