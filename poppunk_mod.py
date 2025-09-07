@@ -289,9 +289,9 @@ def js_distance(sim, col, obs):
     return js
 
 def calculate_gene_freqs(X, core_threshold, rare_threshold):
-    num_genes = len(X)
+    num_genes = (X > 0).sum()
     freq_core = (X >= core_threshold).sum() / num_genes
-    freq_rare = (X < rare_threshold).sum() / num_genes
+    freq_rare = np.count_nonzero((0 < X) & (X < rare_threshold)) / num_genes
     freq_intermediate = np.count_nonzero((rare_threshold <= X) & (X < core_threshold)) / num_genes
 
     return freq_core, freq_intermediate, freq_rare
