@@ -13,6 +13,9 @@ def get_options():
     parser.add_argument('--core', help='Core gene frequency threshold (default = 0.95)',
                                     type=float,
                                     default=0.95)
+    parser.add_argument('--rare', help='Rare gene frequency threshold (default = 0.05)',
+                                    type=float,
+                                    default=0.05)
     parser.add_argument('--min-freq', help='Minimum gene frequency to be counted. Can be integer (absolute count) or decimal (frequency). (default = 0.0)',
                                     type=float,
                                     default=0.0)
@@ -65,7 +68,10 @@ def main():
     else:
         min_threshold = num_genomes * args.min_freq
     core_threshold = num_genomes * args.core
+    rare_threshold = num_genomes * args.rare
     num_core = 0
+    num_rare = 0
+    num_intermediate = 0
 
     for token, count in gene_counts.items():
         if count >= min_threshold:
@@ -77,6 +83,11 @@ def main():
 
         if count >= core_threshold:
             num_core += 1
+        elif count < rare_threshold:
+            num_rare += 1
+        else:
+            num_intermediate += 1
+
     
     # annotate clusters
     annotations = {}
@@ -134,7 +145,7 @@ def main():
     
     # print summary file
     with open(args.outpref + "_summary.txt", "w") as o:
-        o.write(f"pan_genes\t{pangenome_size}\ncore_genes\t{num_core}\navg_gene_freq\t{avg_genome_size}\ngenes_below_min_freq\t{len(genes_dropped)}")
+        o.write(f"pan_genes\t{pangenome_size}\ncore_genes\t{num_core}\nintermediate_genes\t{num_intermediate}\nrare_genes\t{num_rare}\navg_gene_freq\t{avg_genome_size}\ngenes_below_min_freq\t{len(genes_dropped)}")
 
 if __name__ == "__main__":
     main()
