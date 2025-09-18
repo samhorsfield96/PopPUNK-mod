@@ -366,7 +366,7 @@ def process_result(completed_process, *inputs, **kwinputs):
         freq_core, freq_intermediate, freq_rare = calculate_gene_freqs(simulations_freqs, core_threshold, rare_threshold)
   
         # read observations file
-        obs_df = read_distfile(kwinputs['obs_file']')
+        obs_df = read_distfile(kwinputs['obs_file'])
 
         divergence = KDE_JS_divergence(obs_df, simulations, gamma=kwinputs['gamma'], eps=0, log=False)
     except FileNotFoundError:
