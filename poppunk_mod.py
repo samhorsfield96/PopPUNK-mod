@@ -250,30 +250,22 @@ def get_options():
 
     return parser.parse_args()
 
-def read_distfile(filename):
-    # read first line, determine if csv
-    with open(filename, "r") as f:
-        first_line = f.readline()
-        if "," in first_line:
-            obs = pd.read_csv(filename, index_col=None, header=None, sep=",")
-        else:
-            obs = pd.read_csv(filename, index_col=None, header=None, sep="\t")
+def read_distfile(obs_file):
+    two_column = False
+    with open(obs_file, "r") as f:
+        line = f.readline().rstrip().split("\t")
+        if len(line) == 2:
+            two_column = True
 
-    if len(obs.columns) == 2:
-        obs.rename(columns={obs.columns[0]: "Core",
-                           obs.columns[1]: "Accessory"}, inplace=True)
-    elif len(obs.columns) == 4:
-        # rename columns
-        obs.rename(columns={obs.columns[0]: "Sample1", obs.columns[1] : "Sample2", obs.columns[2]: "Core",
-                           obs.columns[3]: "Accessory"}, inplace=True)
+    if two_column:
+        obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
     else:
-        print("Incorrect number of columns in distfile. Should be 2 or 4.")
-        sys.exit(1)
+        obs_df_pd = pd.read_csv(obs_file, sep = '\t')
+        obs_df = obs_df_pd.drop(obs_df_pd.columns[[0, 1]], axis=1).to_numpy()
+        del obs_df_pd
+    
+    return obs_df
 
-    obs['Core'] = pd.to_numeric(obs['Core'])
-    obs['Accessory'] = pd.to_numeric(obs['Accessory'])
-
-    return obs
 
 # process the summary statistic, 0 for core, 1 for accessory
 def js_distance(sim, col, obs):
@@ -295,12 +287,6 @@ def calculate_gene_freqs(X, core_threshold, rare_threshold):
     freq_intermediate = np.count_nonzero((rare_threshold <= X) & (X < core_threshold)) / num_genes
 
     return freq_core, freq_intermediate, freq_rare
-
-# def wasserstein_distance(sim, obs):
-#     sim_array = np.column_stack(sim)
-#     obs_array = np.column_stack(obs)
-
-#     return wasserstein_distance_nd(obs_array, sim_array)
 
 # Function to prepare the inputs for the simulator. We will create filenames and write an input file.
 def prepare_inputs(*inputs, **kwinputs):
@@ -380,9 +366,9 @@ def process_result(completed_process, *inputs, **kwinputs):
         freq_core, freq_intermediate, freq_rare = calculate_gene_freqs(simulations_freqs, core_threshold, rare_threshold)
   
         # read observations file
-        obs = np.loadtxt(kwinputs['obs_file'], delimiter='\t', dtype='float64')
+        obs_df = read_distfile(kwinputs['obs_file']')
 
-        divergence = KDE_JS_divergence(obs, simulations, gamma=kwinputs['gamma'], eps=0, log=False)
+        divergence = KDE_JS_divergence(obs_df, simulations, gamma=kwinputs['gamma'], eps=0, log=False)
     except FileNotFoundError:
         print(f"{output_filename} not found.\ncompleted_process: {completed_process}")
         raise FileNotFoundError
@@ -443,18 +429,7 @@ if __name__ == "__main__":
             elfi.set_client('native')
 
     # read in real files, determine if two column
-    two_column = False
-    with open(obs_file, "r") as f:
-        line = f.readline().rstrip().split("\t")
-        if len(line) == 2:
-            two_column = True
-    
-    if two_column:
-        obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
-    else:
-        obs_df_pd = pd.read_csv(obs_file, sep = '\t')
-        obs_df = obs_df_pd.drop(obs_df_pd.columns[[0, 1]], axis=1).to_numpy()
-        del obs_df_pd
+    obs_df = read_distfile(obs_file)
 
     # plot contours and curve fit
     plot_negative_exponential(obs_df, outpref)
