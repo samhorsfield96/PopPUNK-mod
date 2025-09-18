@@ -442,8 +442,19 @@ if __name__ == "__main__":
         else:
             elfi.set_client('native')
 
-    # read in real files
-    obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+    # read in real files, determine if two column
+    two_column = False
+    with open(obs_file, "r") as f:
+        line = f.readline().rstrip().split("\t")
+        if len(line) == 2:
+            two_column = True
+    
+    if two_column:
+        obs_df = np.loadtxt(obs_file, delimiter='\t', dtype='float64')
+    else:
+        obs_df_pd = pd.read_csv(obs_file, sep = '\t')
+        obs_df = obs_df_pd.drop(obs_df_pd.columns[[0, 1]], axis=1).to_numpy()
+        del obs_df_pd
 
     # plot contours and curve fit
     plot_negative_exponential(obs_df, outpref)
