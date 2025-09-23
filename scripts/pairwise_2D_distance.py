@@ -1,12 +1,16 @@
 import argparse
 from multiprocessing import Pool
+import sys
+import os
+# add the parent directory to sys.path
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(parent_dir)
 from KDE_distance import KDE_JS_divergence
 import numpy as np
 import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 import itertools
-import sys
 import math
 
 def get_options():
@@ -100,7 +104,7 @@ def main():
                 pan_genes = int(split_line[1])
                 core_genes = int(split_line[2]) / pan_genes
                 intermediate_genes = int(split_line[3]) / pan_genes
-                rare_genes = (split_line[4]) / pan_genes
+                rare_genes = int(split_line[4]) / pan_genes
                 file = split_line[6]
                 files.append((file, core_genes, intermediate_genes, rare_genes))
 
