@@ -6,6 +6,8 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 import itertools
+import sys
+import math
 
 def get_options():
     description = 'Comput pairwise 2D distances between selection of files'
@@ -14,8 +16,11 @@ def get_options():
 
     IO = parser.add_argument_group('Input/Output options')
     IO.add_argument('--indir',
-                    required=True,
+                    default=None,
                     help='Directory containing run files from gridsearch run.')
+    IO.add_argument('--infile',
+                    default=None,
+                    help='File generated from create_ppmod_input.py.')
     IO.add_argument('--outpref',
                     default = "output",
                     help='Output prefix. Default = "output"')
@@ -36,27 +41,69 @@ def read_file(file):
     return df.to_numpy()
 
 def get_distance(file_tuple):
-    df1 = read_file(file_tuple[0])
-    df2 = read_file(file_tuple[1])
+    input1 = file_tuple[0]
+    input2 = file_tuple[1]
+
+    df1 = read_file(input1[0])
+    df2 = read_file(input2[0])
+
     js_distance = KDE_JS_divergence(df1, df2, gamma=0.25, eps=0.0, log=False)
     min_core = np.min(df2[:, 0])
     max_core = np.max(df2[:, 0])
     min_acc = np.min(df2[:, 1])
     max_acc = np.max(df2[:, 1])
-    return (file_tuple[0], file_tuple[1], js_distance, (min_core, max_core, min_acc, max_acc))
+
+    if len(input1) == 1:
+        distance = js_distance
+    else:
+        # calculate distance as done in pp-mod using euclidean distance
+        js_distance1 = 0
+        core1 = input1[1]
+        inter1 = input1[2]
+        rare1 = input1[3]
+        results1 = (js_distance1, core1, inter1, rare1)
+
+        js_distance2 = js_distance
+        core2 = input2[1]
+        inter2 = input2[2]
+        rare2 = input2[3]
+        results2 = (js_distance2, core2, inter2, rare2)
+
+        euclidean_dist = math.dist(results1, results2)
+        distance = euclidean_dist
+    
+    return (input1[0], input2[0], distance, (min_core, max_core, min_acc, max_acc))
 
 def main():
     options = get_options()
 
     indir = options.indir
+    infile = options.infile
     outpref = options.outpref
     threads = options.threads
 
+    if indir == None and infile == None:
+        print("Please specify one of --indir or --infile")
+        sys.exit(1)
+
     files = []
-    for path in Path(indir).glob("*.txt"):
-        # Print the path (file or directory) to the console
-        files.append(str(path))
-    
+
+    if indir != None:
+        for path in Path(indir).glob("*.txt"):
+            # Print the path (file or directory) to the console
+            files.append((str(path)))
+    else:
+        with open(infile, "r") as f:
+            f.readline()
+            for line in f:
+                split_line = line.rstrip().split("\t")
+                pan_genes = int(split_line[1])
+                core_genes = int(split_line[2]) / pan_genes
+                intermediate_genes = int(split_line[3]) / pan_genes
+                rare_genes = (split_line[4]) / pan_genes
+                file = split_line[6]
+                files.append((file, core_genes, intermediate_genes, rare_genes))
+
     #print(files)
     file_combinations = list(itertools.combinations(files, 2))
 
