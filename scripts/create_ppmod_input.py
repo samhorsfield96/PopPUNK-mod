@@ -35,10 +35,10 @@ def main():
         name = parsed_filename.split(args.cut_string)[0]
 
         name_list.append(name)
-        pos = [i for i, s in enumerate(distance_files) if name in s]
+        pos = [i for i, s in enumerate(distance_files) if name in s][0]
         distance_file_order.append(pos)
     
-    distance_files = [x for _, x in sorted(zip(distance_file_order, distance_files))]
+    distance_files = [distance_files[i] for i in distance_file_order]
 
     with open(args.outpref + ".txt", "w") as o:
         o.write("name\tpan_genes\tcore_genes\tintermediate_genes\trare_genes\tavg_gene_freq\tdist_file\n")
