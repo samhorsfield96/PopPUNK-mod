@@ -14,6 +14,7 @@ import pickle
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
 from sklearn import utils
+import random
 #from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
 from KDE_distance import KDE_KL_divergence, KDE_JS_divergence, get_grid
