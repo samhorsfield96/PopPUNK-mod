@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import pickle
 from scipy.spatial import distance
 from scipy.optimize import curve_fit
+from sklearn import utils
 #from scipy.stats import wasserstein_distance_nd
 import scipy.stats as ss
 from KDE_distance import KDE_KL_divergence, KDE_JS_divergence, get_grid
@@ -430,6 +431,10 @@ if __name__ == "__main__":
 
     # read in real files, determine if two column
     obs_df = read_distfile(obs_file)
+
+    # filter down to maximum number of distances
+    if obs_df.shape[0] > max_distances:
+        obs_df = utils.shuffle(obs_df, random_state=random.randint(1,10000))[0:max_distances,]
 
     # plot contours and curve fit
     plot_negative_exponential(obs_df, outpref)
