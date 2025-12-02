@@ -27,6 +27,8 @@ def main():
     pangenome_files = glob.glob(args.indir_pan + "/*")
     distance_files = glob.glob(args.indir_dist + "/*")
 
+    distance_files_stem = [Path(filename).stem.split(".")[0] for filename in distance_files]
+
     # match up filenames
     distance_file_order = []
     name_list = []
@@ -35,7 +37,7 @@ def main():
         name = parsed_filename.split(args.cut_string)[0]
 
         name_list.append(name)
-        pos = [i for i, s in enumerate(distance_files) if name in s][0]
+        pos = [i for i, s in enumerate(distance_files_stem) if name == s][0]
         distance_file_order.append(pos)
     
     distance_files = [distance_files[i] for i in distance_file_order]
