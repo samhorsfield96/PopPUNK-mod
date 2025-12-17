@@ -36,9 +36,12 @@ def find_files_with_extension(root_dir, extension, sample_dict, outpref, concat)
     num_searches = len(sample_dict)
     count = 0
     
+    found = set()
     with open(outpref + ".tsv", "w") as o1, open(outpref + ".concat", "w") as o2:
         for file in root.rglob(f'*.{extension.lstrip(".")}'):
             base = os.path.basename(file).split(".")[0]
+            if base in found:
+                continue
             if base in sample_dict:
                 o1.write(f"{sample_dict[base]}\t{base}\t{file}\n")
                 #print(f"{sample_dict[base]}\t{base}\t{file}\n")
@@ -47,10 +50,10 @@ def find_files_with_extension(root_dir, extension, sample_dict, outpref, concat)
                     with open(file, "r") as i2:
                         o2.write(i2.read())
 
-                count += 1
-                print(f"Found: {count}")
+                found.add(base)
+                print(f"Found: {len(found)}")
             
-            if count >= num_searches:
+            if len(found) >= num_searches:
                 break
 
     
