@@ -162,10 +162,10 @@ plot_results <- function(df_paths, parameter, outpref, sample.num, plot_line, co
 }
 
 
-files <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/core_vs_acc/*.tsv")
+files <- Sys.glob("pansim_runs/core_vs_acc/*.tsv")
 sample.num <- 30000
-indir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/core_vs_acc/"
-outdir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/"
+indir <- "pansim_runs/core_vs_acc/"
+outdir <- "pansim_runs/figures_distances"
 facet_align = "v"
 
 # prop_genes2

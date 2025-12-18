@@ -32,9 +32,9 @@ parse_filename <- function(filename) {
   )
 }
 
-files <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/selection/*.tsv")
-indir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/selection/"
-outdir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_runs/"
+files <- Sys.glob("pansim_runs/selection/*.tsv")
+indir <- "pansim_runs/selection/"
+outdir <- "pansim_runs/"
 
 plot_results_selection <- function(df_paths, parameter, outpref, label)
 {

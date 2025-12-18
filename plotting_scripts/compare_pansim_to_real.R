@@ -4,8 +4,8 @@ library(dplyr)
 library(ggpubr)
 library(ggsci)
 
-real.files <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/sample_distances/*.txt")
-sim.files <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/pansim_distances/chosen_dists/*.tsv")
+real.files <- Sys.glob("sample_distances/*.txt")
+sim.files <- Sys.glob("pansim_distances/chosen_dists/*.tsv")
 sample.replace <- FALSE
 sample.num <- 30000
 plot_on_same_axis = FALSE
@@ -51,7 +51,6 @@ all_pairs$Species[all_pairs$Species == "hflu"] <- "H. influenzae"
 all_pairs$Species[all_pairs$Species == "hp"] <- "H. pylori"
 all_pairs$Species[all_pairs$Species == "kp"] <- "K. pneumoniae"
 all_pairs$Species[all_pairs$Species == "lm"] <- "L. monocytogenes"
-all_pairs$Species[all_pairs$Species == "lp"] <- "L. pneumophila"
 all_pairs$Species[all_pairs$Species == "ma"] <- "M. abscessus"
 all_pairs$Species[all_pairs$Species == "mcat"] <- "M. catarrhalis"
 all_pairs$Species[all_pairs$Species == "mtb"] <- "M. tuberculosis"

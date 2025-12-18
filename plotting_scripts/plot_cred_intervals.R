@@ -51,8 +51,8 @@ parse_results <- function(df_paths)
   return(df_all)
 }
 
-df_paths <- Sys.glob("/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/credible_intervals/RBF_KDE_smoothing_0.25/*.csv")
-outpref <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/credible_intervals"
+df_paths <- Sys.glob("credible_intervals/RBF_KDE_smoothing_0.25/*.csv")
+outpref <- "credible_intervals"
 df_all <- parse_results(df_paths)
 df_all$rate_genes1 <- factor(df_all$rate_genes1)
 df_all$prop_genes2 <- factor(df_all$prop_genes2)
@@ -140,7 +140,8 @@ df_all$core_mu <- factor(df_all$core_mu)
             axis.text=element_text(size=10),
             legend.title=element_text(size=12, face="bold"), 
             legend.text=element_text(size=12),
-            legend.position = "None")
+            legend.position = "None") +
+      labs(fill = "Population size")
     p
     ggsave(paste(outpref,"overall_sensitivity.png", sep="/"), width = 9, height = 6)
     

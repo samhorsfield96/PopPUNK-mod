@@ -10,7 +10,7 @@ library(ggmagnify)
 
 path_to_python="/Users/shorsfield/miniforge3/envs/biopython/bin/python"
 use_python(path_to_python)
-annotate_graphs = FALSE
+annotate_graphs = TRUE
 trend_line = TRUE
 plot_on_same_axis = TRUE
 generate_plots = TRUE
@@ -83,7 +83,6 @@ all_pairs$Species[all_pairs$Species == "hflu"] <- "H. influenzae"
 all_pairs$Species[all_pairs$Species == "hp"] <- "H. pylori"
 all_pairs$Species[all_pairs$Species == "kp"] <- "K. pneumoniae"
 all_pairs$Species[all_pairs$Species == "lm"] <- "L. monocytogenes"
-all_pairs$Species[all_pairs$Species == "lp"] <- "L. pneumophila"
 all_pairs$Species[all_pairs$Species == "ma"] <- "M. abscessus"
 all_pairs$Species[all_pairs$Species == "mcat"] <- "M. catarrhalis"
 all_pairs$Species[all_pairs$Species == "mtb"] <- "M. tuberculosis"
@@ -128,8 +127,8 @@ for (i in 1:length(all_species))
       scale_color_viridis_c() + theme_light() + ylab("Accessory Distance") + xlab("Core Distance") +
       theme(axis.text.x = element_text(size = 18), axis.text.y = element_text(size = 18), axis.title=element_text(size=16,face="bold"), strip.text.x = element_text(size = 12), legend.position="none")
     
-    anno_pos_x <- min(sample_points$Core)
-    anno_pos_y <- max(sample_points$Accessory)
+    anno_pos_x <- min(min_core)
+    anno_pos_y <- max(max_acc)
     
     if (trend_line == TRUE)
     {
@@ -138,7 +137,8 @@ for (i in 1:length(all_species))
       if (annotate_graphs == TRUE)
       {
         p <- p + annotate("text", x = anno_pos_x, y = anno_pos_y, hjust = 0, vjust = 1,
-                          label = sprintf("b0 = %.2f, b1 = %.2f, b2 = %.2f\nb0_err = %.2f, b1_err = %.2f, b2_err = %.2f", b0, b1, b2, b0_err, b1_err, b2_err),
+                          #label = sprintf("i = %.2f, j = %.2f, k = %.2f\ni err = %.2f, j err = %.2f, k err = %.2f", b0, b1, b2, b0_err, b1_err, b2_err),
+                          label = sprintf("i = %.2f, j = %.2f, k = %.2f", b0, b1, b2),
                           size = 5)
       }
     }
@@ -149,7 +149,7 @@ for (i in 1:length(all_species))
       anno_pos_y <- max_acc
       
       # magnify small plots
-      if (max(sample_points$Core) <= (max_core / 8) | max(sample_points$Accessory) <= (max_acc / 10)) {
+      if (max(sample_points$Core) <= (max_core / 6) | max(sample_points$Accessory) <= (max_acc / 6)) {
         #from <- c(xmin = min(sample_points$Core), xmax = max(sample_points$Core), ymin = min(sample_points$Accessory), ymax = max(sample_points$Accessory))
         to <- c(xmin = max_core * 0.35, xmax =  max_core * 0.95, ymin = max_acc * 0.25, ymax = max_acc * 0.85)
         
@@ -159,7 +159,7 @@ for (i in 1:length(all_species))
     }
     
     
-    ggsave(paste("./species_distances/", Species, " contour_trend_line.svg", sep=""), plot = p, width=10, height = 6)
+    #ggsave(paste("./species_distances/", Species, " contour_trend_line.svg", sep=""), plot = p, width=10, height = 6)
     ggsave(paste("./species_distances/", Species, " contour_trend_line.png", sep=""), plot = p, width=10, height = 6)
   }
 
@@ -260,7 +260,6 @@ for (i in 1:length(all_species))
   ne_dataframe$Species[ne_dataframe$Abbreviation == "hp"] <- "H. pylori"
   ne_dataframe$Species[ne_dataframe$Abbreviation == "kp"] <- "K. pneumoniae"
   ne_dataframe$Species[ne_dataframe$Abbreviation == "lm"] <- "L. monocytogenes"
-  ne_dataframe$Species[ne_dataframe$Abbreviation == "lp"] <- "L. pneumophila"
   ne_dataframe$Species[ne_dataframe$Abbreviation == "ma"] <- "M. abscessus"
   ne_dataframe$Species[ne_dataframe$Abbreviation == "mcat"] <- "M. catarrhalis"
   ne_dataframe$Species[ne_dataframe$Abbreviation == "mtb"] <- "M. tuberculosis"
