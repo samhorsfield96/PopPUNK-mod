@@ -52,10 +52,26 @@ Use NCBI accession numbers to pull [metaTraits](https://metatraits.embl.de) info
 
 Experimental script for calculate Kolmogorov-Smirnov (KS) distribution distances for pairwise distance distributions.
 
-###
+### merge_gridsearch_params.py
 
-###
+Merges gridsearch runs into single file.
 
-###
+### non_linear_regression.R
 
-###
+Script for conducting non-linear regression on pairwise distance distributions
+
+### pairwise_2D_distance.py
+
+Compute pairwise 2D distances between two distance files.
+
+### parse_cred_intervals.py
+
+Parses credible interval output from [BOLFI](https://elfi.readthedocs.io/en/latest/usage/BOLFI.html).
+
+### run_latinhypercube.py
+
+Generate a latin-hypercube of parameters values for Pansim gridsearch.
+
+### test_classifiers.py
+
+Tests importance of classifiers from Pansim gridsearch.
