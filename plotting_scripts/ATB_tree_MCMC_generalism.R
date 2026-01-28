@@ -7,6 +7,9 @@ library(dplyr)
 library(stringr)
 library(ape)
 library(coda)
+library(taxize)
+library(tools)
+library(tidyr)
 
 
 # from https://github.com/AnnaEDewar/pangenome_lifestyle/blob/main/Code_S1.R
@@ -34,177 +37,86 @@ summary_mcmc_glmm <- function(mcmc_model) {
   return(summary_subset)
 }
 
-overall_indir <- ""
+overall_indir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/"
 indir <- paste0(overall_indir, "ATB_tree/")
 tree.file <- paste0(indir, "data/", "reps_ppmod_tree.treefile")
 summary.file <- paste0(indir, "data/", "ppmod_summary.csv")
 index.file <- paste0(indir, "data/", "sampled_alignments.tsv")
+gtdb.file <- paste0(indir, "data/", "gtdbtk.bac120.summary.tsv")
 outpref <- paste0(indir, "figures/")
 
-summary.df <- read.csv(summary.file)
+summary.df <- read.csv(summary.file, row.names = 1)
+
+values.NA <- summary.df[is.na(summary.df$order),]
+
 index.df <- read.csv(index.file, sep="\t", header = FALSE)
 colnames(index.df) <- c("taxa", "tip", "file_path")
 
 meta <- merge(summary.df, index.df, by = "taxa")
-rownames(meta) <- meta$tip
 
+# read in taxonomy
+gtdb.df <- read.csv(gtdb.file, sep="\t", header = TRUE)
+gtdb.df <- select(gtdb.df, c('user_genome', 'classification'))
+gtdb.df <- gtdb.df |> separate_wider_delim(classification, delim = ";", names = c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species"))
+gtdb.df$Domain <- gsub(".*__", "", gtdb.df$Domain)
+gtdb.df$Phylum <- gsub(".*__", "", gtdb.df$Phylum)
+gtdb.df$Class <- gsub(".*__", "", gtdb.df$Class)
+gtdb.df$Order <- gsub(".*__", "", gtdb.df$Order)
+gtdb.df$Family <- gsub(".*__", "", gtdb.df$Family)
+gtdb.df$Genus <- gsub(".*__", "", gtdb.df$Genus)
+gtdb.df$Species <- gsub(".*__", "", gtdb.df$Species)
+
+gtdb.df <- as.data.frame(gtdb.df)
+
+meta <- merge(meta, gtdb.df, by.x = "tip", by.y = "user_genome")
+rownames(meta) <- meta$tip
 traits <- meta[, c("rate_genes1_median", "core_mu_median", "prop_genes2_median")]
 colnames(traits) <- c("Basal gene turnover rate", "Core mutation rate", "Proportion fast genes")
 
+# -------------------------------
+# Load tree
+# -------------------------------
 tree <- read.tree(tree.file)
 
-# remove tips with no data
+# -------------------------------
+# Taxonomy vector (named!)
+# -------------------------------
+tax <- meta$Phylum
+names(tax) <- rownames(meta)
+tax <- factor(tax)
+
+# -------------------------------
+# Drop tips with no taxonomy
+# -------------------------------
 tips_with_data <- rownames(traits)   # or meta$tip
 tree <- drop.tip(
   tree,
   setdiff(tree$tip.label, tips_with_data)
 )
-traits <- traits[tree$tip.label, , drop = FALSE]
 
-lambda_results <- lapply(seq_len(ncol(traits)), function(i) {
-  phylosig(
-    tree,
-    traits[, i],
-    method = "lambda",
-    test = TRUE
-  )
-})
-
-names(lambda_results) <- colnames(traits)
-
-# --- midpoint root the tree ---
+# -------------------------------
+# Root tree
+# -------------------------------
 tree <- midpoint.root(tree)
 
-# plot individual trees
+# -------------------------------
+# Reorder taxonomy to tree tips
+# -------------------------------
+tax <- tax[tree$tip.label]
+tax <- droplevels(tax)
+traits <- traits[tree$tip.label, , drop = FALSE]
 
-{
-  ring_colours <- c("#E64B35FF", "#4DBBD5FF", "#00A087FF")
-  png(
-    paste0(outpref, "phylo_radial_bars_indiv_trees.png"),
-    units = "in",
-    width = 5.25, height = 8, res = 150
-  )
-  # svglite(
-  #   filename = paste0(outpref, "phylo_radial_bars_indiv_trees.svg"),
-  #   width = 5.25,    # width in inches
-  #   height = 8,  # height in inches (scale up as needed)
-  # )
-  
-  par(mfrow = c(3, 1), mar = c(10, 1, 10, 1), oma = c(2, 0, 2, 0))
-  
-  panel_labels <- c("A", "B", "C")
-  
-  for (i in seq_len(ncol(traits))) {
-    
-    trait <- colnames(traits)[i]
-    sig   <- lambda_results[[trait]]
-    ntip  <- length(tree$tip.label)
-    
-    ## 1) Plot tree (one per row)
-    plotTree(tree, type = "fan", ftype = "off", lwd = 1)
-    
-    ## 2) Panel label (top-left corner)
-    mtext(
-      panel_labels[i],
-      side = 3,
-      adj = 0,
-      line = -1.0,
-      cex = 1.4,
-      font = 2
-    )
-    
-    ## 3) Get tip coordinates
-    pp <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-    x  <- pp$xx[1:ntip]
-    y  <- pp$yy[1:ntip]
-    
-    angles     <- atan2(y, x)
-    tip_radius <- sqrt(x^2 + y^2)
-    
-    ## 4) Ring parameters
-    base_radius <- max(tip_radius) + 0.1
-    ring_gap   <- 0.02
-    ring_width <- 0.15
-    dtheta     <- pi / ntip
-    
-    ## 5) Trait scaling
-    vals <- traits[tree$tip.label, i]
-    
-    #if (trait == "Basal gene turnover rate")
-    if (trait == "")
-    {
-      vals <- log10(vals + 1e-6)
-      vals_scaled <- (vals - min(vals)) / (max(vals) - min(vals))
-    } else {
-      vals[!is.finite(vals)] <- 0
-      vals_scaled <- vals / max(vals)
-    }
-    
-    
-    r0   <- base_radius
-    cols <- rep(ring_colours[i], ntip)
-    
-    ## 6) Draw bars
-    for (j in seq_len(ntip)) {
-      
-      segments(
-        x0 = x[j], y0 = y[j],
-        x1 = base_radius * cos(angles[j]),
-        y1 = base_radius * sin(angles[j]),
-        col = "grey40",
-        lwd = 0.1
-      )
-      
-      r1 <- r0 + vals_scaled[j] * ring_width
-      theta <- angles[j]
-      
-      polygon(
-        c(
-          r0 * cos(theta - dtheta),
-          r1 * cos(theta - dtheta),
-          r1 * cos(theta + dtheta),
-          r0 * cos(theta + dtheta)
-        ),
-        c(
-          r0 * sin(theta - dtheta),
-          r1 * sin(theta - dtheta),
-          r1 * sin(theta + dtheta),
-          r0 * sin(theta + dtheta)
-        ),
-        col = ring_colours[i],
-        border = NA
-      )
-    }
-    
-    # ## 7) Pagel's lambda annotation
-    # mtext(
-    #   sprintf("Pagel's \u03BB = %.2f\np = %.3g",
-    #           sig$lambda, sig$P),
-    #   side = 4,
-    #   line = 0,
-    #   cex = 0.8
-    # )
-    
-    max_x <- max(pp$xx[1:length(tree$tip.label)])
-    
-    caption_x <- max_x + 0.3  # 0.5 adjusts horizontal distance from tree edge
-    caption_y <- 0             # vertical center
-    
-    caption_text <- sprintf("%s\nPagel's \u03BB = %.2f\np = %.3g", trait, sig$lambda, sig$P)
-    
-    text(
-      x = caption_x,
-      y = caption_y,
-      labels = caption_text,
-      adj = c(0, 0.5),  # left align horizontally, center vertically
-      cex = 1.0,
-      font = 1
-    )
-  }
-  
-  dev.off()
-  
-}
+# -------------------------------
+# HARD SAFETY CHECKS
+# -------------------------------
+stopifnot(
+  length(tax) == length(tree$tip.label),
+  all(names(tax) == tree$tip.label),
+  !any(is.na(tax)),
+  nrow(traits) == length(tree$tip.label),
+  all(rownames(traits) == tree$tip.label),
+  !any(is.na(traits))
+)
 
 # add traits
 i <- 1
@@ -241,13 +153,12 @@ for (i in seq_len(ncol(traits))) {
   if (i == 1) {
     summary.stats.df <- temp.df
   } else {
-    summary.stats.df <- rbind(summary.df, temp.df)
+    summary.stats.df <- rbind(summary.stats.df, temp.df)
   }
 }
 
 traits.stacked <- stack(traits, select = c("Basal gene turnover rate", "Core mutation rate", "Proportion fast genes"))
 colnames(traits.stacked) <- c("Value", "Trait")
-#traits.stacked$Value[traits.stacked$Trait == "Basal gene turnover rate"] <- log10(traits.stacked$Value[traits.stacked$Trait == "Basal gene turnover rate"])
 
 # generate summary statistics of traits
 p <- ggplot(traits.stacked, aes(x=Trait, y = Value)) + 
@@ -282,7 +193,8 @@ traits.df.final <- traits.df.final %>%
 meta$tip <- rownames(meta)
 
 # match across datasets
-merged.df <- merge(meta, traits.df.final, by.x = "taxa", by.y = "label")
+merged.df <- merge(meta, traits.df.final, by.x = "Species", by.y = "species..GTDB.")
+rownames(merged.df) <- merged.df$tip
 
 # MCMCglmm
 tree <- read.tree(tree.file)
@@ -296,6 +208,19 @@ tree <- drop.tip(
 
 # --- midpoint root the tree ---
 tree <- midpoint.root(tree)
+
+# -------------------------------
+# Reorder taxonomy to tree tips
+# -------------------------------
+merged.df <- merged.df[tree$tip.label, , drop = FALSE]
+
+# -------------------------------
+# HARD SAFETY CHECKS
+# -------------------------------
+stopifnot(
+  nrow(merged.df) == length(tree$tip.label),
+  all(rownames(merged.df) == tree$tip.label)
+)
 
 Ainv <- inverseA(tree, nodes = "TIPS", scale = FALSE)$Ainv
 
@@ -525,16 +450,6 @@ rownames(merged.df) <- merged.df$tip
 traits <- merged.df[, c("rate_genes1_median", "core_mu_median", "prop_genes2_median", "generalism_score")]
 colnames(traits) <- c("Basal gene turnover rate", "Core mutation rate", "Proportion fast genes", "Generalism score")
 
-lambda_results <- lapply(seq_len(ncol(traits)), function(i) {
-  phylosig(
-    tree,
-    traits[, i],
-    method = "lambda",
-    test = TRUE
-  )
-})
-names(lambda_results) <- colnames(traits)
-
 # redraw tree, with all datapoints
 tree <- read.tree(tree.file)
 
@@ -547,20 +462,33 @@ rownames(merged.df.all.x) <- merged.df.all.x$tip
 traits <- merged.df.all.x[, c("rate_genes1_median", "core_mu_median", "prop_genes2_median", "generalism_score")]
 colnames(traits) <- c("Basal gene turnover rate", "Core mutation rate", "Proportion fast genes", "Generalism score")
 
-traits[is.na(traits)] <- 0
-
 # remove tips with no data
 tips_with_data <- rownames(traits)   # or meta$tip
 tree <- drop.tip(
   tree,
   setdiff(tree$tip.label, tips_with_data)
 )
-traits <- traits[tree$tip.label, , drop = FALSE]
 
 tree <- midpoint.root(tree)
 
+# -------------------------------
+# Reorder taxonomy to tree tips
+# -------------------------------
+tax <- tax[tree$tip.label]
+tax <- droplevels(tax)
+traits <- traits[tree$tip.label, , drop = FALSE]
+
+generalism_vals <- traits[, 4]
+na_idx <- which(!is.na(generalism_vals))
+
+traits[is.na(traits)] <- 0
+
 {
-  png(paste0(outpref, "phylo_radial_bars_generalism.png"), width = 800, height = 800, res = 150)
+  png(paste0(outpref, "phylo_radial_bars_generalism_all.png"), units = "in", width = 9, height = 5.5, res = 150)
+  
+  layout_matrix <- matrix(c(1,2), ncol = 2, byrow = TRUE)
+  layout(layout_matrix, widths = c(5, 4))
+  par(mar = c(1, 1, 1, 1), oma = c(1, 1, 1, 1))
   
   # 1. Plot the tree invisibly to get coordinates
   plotTree(tree, type = "fan", ftype = "off", lwd = 1, plot = FALSE)  # plot=FALSE ignored by phytools, but let's try
@@ -584,26 +512,55 @@ tree <- midpoint.root(tree)
     ylim = ylim
   )
   
-  # --- extract tip angles and positions ---
+  ## ---- get plotting coordinates ----
   pp <- get("last_plot.phylo", envir = .PlotPhyloEnv)
-  ntip <- Ntip(tree)
+  
+  ntip <- length(tree$tip.label)
   
   x <- pp$xx[1:ntip]
   y <- pp$yy[1:ntip]
   
   angles <- atan2(y, x)
-  tip_radius <- sqrt(x^2 + y^2)
+  tip_r  <- sqrt(x^2 + y^2)
   
   # --- fixed base radius for all bars (start radius) ---
-  base_radius <- max(tip_radius) + 0.1  # slightly outside tips
+  base_radius <- max(tip_r) + 0.1  # slightly outside tips
   
-  # --- ring parameters ---
+  ## --- ring geometry ---
+  ring_inner <- max(tip_r) * 1.05
+  ring_width <- 0.08
   ring_gap   <- 0.02
-  ring_width <- 0.15
   dtheta     <- pi / ntip
   
-  # --- Viridis palettes for rings ---
-  palettes <- c("A", "B", "C", "D")
+  base_cols <- paletteer_d("ggsci::category20_d3")
+  
+  tax_cols <- setNames(
+    c(base_cols[1:length(levels(tax))]),
+    levels(tax)
+  )
+  
+  ## --- draw blocks ---
+  for (i in seq_len(ntip)) {
+    theta <- angles[i]
+    col   <- tax_cols[tax[i]]
+    
+    polygon(
+      x = c(
+        ring_inner * cos(theta - dtheta),
+        (ring_inner + ring_width) * cos(theta - dtheta),
+        (ring_inner + ring_width) * cos(theta + dtheta),
+        ring_inner * cos(theta + dtheta)
+      ),
+      y = c(
+        ring_inner * sin(theta - dtheta),
+        (ring_inner + ring_width) * sin(theta - dtheta),
+        (ring_inner + ring_width) * sin(theta + dtheta),
+        ring_inner * sin(theta + dtheta)
+      ),
+      col = col,
+      border = NA
+    )
+  }
   
   # --- draw connecting lines from tip to bars ---
   for (j in 1:ntip) {
@@ -616,6 +573,15 @@ tree <- midpoint.root(tree)
     )
   }
   
+  # update base_radius
+  base_radius <- base_radius + 1 * (ring_width + ring_gap) + 0.1
+  
+  # --- ring parameters ---
+  ring_width <- 0.15
+  dtheta     <- pi / ntip
+  
+  # --- Viridis palettes for rings ---
+  palettes <- c("A", "B", "C", "D")
   
   log <- FALSE
   ring_colours <- c("#E64B35FF", "#4DBBD5FF", "#00A087FF", "#3C5488FF")
@@ -665,6 +631,23 @@ tree <- midpoint.root(tree)
       )
     }
   }
+
+  # add asterisks if missing
+  if (length(na_idx) > 0) {
+
+    # radius just outside the outermost ring
+    outer_ring_radius <- base_radius +
+      (4 - 1) * (ring_width + ring_gap) +
+      ring_width + 0.03
+
+    text(
+      x = outer_ring_radius * cos(angles[na_idx]),
+      y = outer_ring_radius * sin(angles[na_idx]),
+      labels = "*",
+      cex = 0.6,
+      col = "black"
+    )
+  }
   
   # Add legend outside the plot (adjust x, y as needed)
   legend(
@@ -675,6 +658,21 @@ tree <- midpoint.root(tree)
     bty = "n",
     cex = 0.5,
     title = ""
+  )
+  
+  # Now plot the legend in the reserved right panel
+  par(mar = c(5, 2, 4, 2))  # bigger margins for legend panel
+  plot.new()
+  legend(
+    "center",
+    legend = names(tax_cols),
+    fill = tax_cols,
+    border = NA,
+    bty = "n",
+    cex = 0.8,
+    y.intersp = 1.2,
+    x.intersp = 1,
+    title = "Taxonomy"
   )
   
   
