@@ -177,15 +177,14 @@ def main():
         oFile.write("Gene\tOdds_Ratio\tStdErr\tLower_CI\tUpper_CI\tP_Value\tSignificance\tConcordant_Low\tDiscordant_Low\tConcordant_High\tDiscordant_High\n")
         for gene in gene_odds_ratios:
             odds_ratio, stderr, conf_interval_95, p_value, concordant_low, discordant_low, concordant_high, discordant_high = gene_odds_ratios[gene]
-            if (conf_interval_95[0] <= 1 <= conf_interval_95[1]) or p_value >= 0.05:
-                significance = "NS"
+            if conf_interval_95[0] > 1 and p_value < 0.05:
+                significance = "Lo"
+            elif conf_interval_95[1] < 1 and p_value < 0.05:
+                significance = "Hi"
+            elif p_value < 0.05:
+                significance = "Mid"
             else:
-                if conf_interval_95[0] > 1 and p_value < 0.05:
-                    significance = "Lo"
-                elif conf_interval_95[1] < 1 and p_value < 0.05:
-                    significance = "Hi"
-                else:
-                    significance = "NS"
+                significance = "NS"
             oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\n")
     
     with open(args.outpref + "_missing_genomes.txt", 'w') as mFile:
