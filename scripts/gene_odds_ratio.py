@@ -5,6 +5,7 @@ import pandas as pd
 import argparse
 from extract_poppunk_distances import listDistInts, isolateNameToLabel
 from collections import defaultdict
+from tqdm import tqdm
 
 # command line parsing
 def get_options():
@@ -66,6 +67,7 @@ def main():
     ref_distances = defaultdict(lambda: {q: [] for q in quantiles})
 
     # for each genome, get number of genomes within margin of each quantile distance, where margin is the distance between the two quantiles
+    print("Extracting subset of distances for each genome...")
     for i, (r_index, q_index) in enumerate(listDistInts(r_names, q_names, r_names == q_names)):
         ref, query, distance = q_names[q_index], r_names[r_index], X[i, dist_col]
 
@@ -79,6 +81,12 @@ def main():
                     ref_distances[ref][q].append((query, distance))
     
     del X # free memory
+
+    # determine number of genes
+    with open(args.pa_matrix, 'r') as pa_file:
+        num_genes = sum(1 for line in pa_file) - 1 # subtract header
+
+    progress_bar = tqdm(total=num_genes, desc="Calculating odds ratios", unit="gene")
 
     gene_odds_ratios = {}
     with open(args.pa_matrix, 'r') as pa_file:
@@ -129,8 +137,12 @@ def main():
             conf_interval_95 = (np.exp(np.log(odds_ratio) - 1.96*stderr), np.exp(np.log(odds_ratio) + 1.96*stderr))
 
             gene_odds_ratios[gene] = (odds_ratio, stderr, conf_interval_95)
+            progress_bar.update(1)
+
+    progress_bar.close()
 
     # calculate odds ratio for each gene and quantile
+    print("Writing odds ratios to output file...")
     with open(args.outpref + "_odds_ratios.tsv", 'w') as oFile:
         oFile.write("Gene\tOdds_Ratio\tStdErr\tLower_CI\tUpper_CI\n")
         for gene in gene_odds_ratios:
