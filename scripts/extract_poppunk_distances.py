@@ -7,7 +7,9 @@ import sys, os
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from run_elfi import negative_exponential
+
+def negative_exponential(x, b0, b1, b2): # based on https://isem-cueb-ztian.github.io/Intro-Econometrics-2017/handouts/lecture_notes/lecture_10/lecture_10.pdf and https://www.statforbiology.com/articles/usefulequations/
+    return b0 - (b0 - b1) * np.exp(-b2 * x)
 
 # command line parsing
 def get_options():
