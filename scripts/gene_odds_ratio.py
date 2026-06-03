@@ -94,6 +94,21 @@ def main():
         # strip file extension from genome ids if present
         genome_ids = [os.path.splitext(gid)[0] for gid in genome_ids]
 
+        # Build O(1) lookup dict to replace repeated O(n) list.index() calls
+        genome_id_to_index = {gid: i for i, gid in enumerate(genome_ids)}
+
+        # Pre-convert ref_distances to numpy index arrays once, amortised over all genes
+        ref_distances_idx = {}
+        for genome, q_dict in ref_distances.items():
+            ref_distances_idx[genome] = {}
+            for q, pairs in q_dict.items():
+                indices = []
+                for query, _ in pairs:
+                    if query not in genome_id_to_index:
+                        raise ValueError(f"Query genome {query} from distance matrix not found in pa matrix")
+                    indices.append(genome_id_to_index[query])
+                ref_distances_idx[genome][q] = np.array(indices, dtype=np.intp)
+
         for line in pa_file:
             gene, *presence = line.rstrip().split(",")
             presence = np.array(presence).astype(int)
@@ -108,29 +123,20 @@ def main():
             concordant_low, concordant_high, discordant_low, discordant_high = 0.5, 0.5, 0.5, 0.5 # pseudocounts to avoid division by zero
 
             for genome in genomes_gene_present:
-                for q_idx, q, q_value in zip(range(len(quantiles)), quantiles, quantile_values):    
-                    if genome not in ref_distances:
-                        raise ValueError(f"Genome {genome} from pa matrix not found in distance matrix")
-                    else:
-                        for query, distance in ref_distances[genome][q]:
-                            # get whether query has gene present
-                            try:
-                                query_index = genome_ids.index(query)
-                            except ValueError:
-                                raise ValueError(f"Query genome {query} from distance matrix not found in pa matrix")
-                            
-                            query_has_gene = gene_presence[query_index]
-
-                            if query_has_gene:
-                                if q_idx == 0:
-                                    concordant_low += 1
-                                else:
-                                    concordant_high += 1
-                            else:
-                                if q_idx == 0:
-                                    discordant_low += 1
-                                else:
-                                    discordant_high += 1
+                if genome not in ref_distances_idx:
+                    raise ValueError(f"Genome {genome} from pa matrix not found in distance matrix")
+                for q_idx, q in enumerate(quantiles):
+                    query_indices = ref_distances_idx[genome][q]
+                    if len(query_indices) > 0:
+                        has_gene = gene_presence[query_indices]
+                        count_with = int(has_gene.sum())
+                        count_without = len(query_indices) - count_with
+                        if q_idx == 0:
+                            concordant_low += count_with
+                            discordant_low += count_without
+                        else:
+                            concordant_high += count_with
+                            discordant_high += count_without
 
             odds_ratio = (concordant_low / discordant_low) / (concordant_high / discordant_high)
             stderr = np.sqrt(1/concordant_low + 1/discordant_low + 1/concordant_high + 1/discordant_high)
