@@ -107,7 +107,8 @@ def main():
                 indices = []
                 for query, _ in pairs:
                     if query not in genome_id_to_index:
-                        raise ValueError(f"Query genome {query} from distance matrix not found in pa matrix")
+                        missing_genomes.add(query) 
+                        continue # skip genomes with no distance data
                     indices.append(genome_id_to_index[query])
                 ref_distances_idx[genome][q] = np.array(indices, dtype=np.intp)
 
