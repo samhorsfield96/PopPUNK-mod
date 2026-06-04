@@ -243,6 +243,12 @@ def main():
             else:
                 oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\t{gene_frequency}\n")
 
+    # Reopen, sort by Odds_Ratio descending, and resave
+    odds_path = args.outpref + "_odds_ratios.tsv"
+    odds_df = pd.read_csv(odds_path, sep="\t")
+    odds_df.sort_values("Odds_Ratio", ascending=False, inplace=True)
+    odds_df.to_csv(odds_path, sep="\t", index=False)
+
     with open(args.outpref + "_missing_genomes.txt", 'w') as mFile:
         mFile.write("Genomes missing from distance data:\n")
         for genome in sorted(missing_genomes):

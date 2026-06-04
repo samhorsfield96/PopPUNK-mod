@@ -10,7 +10,9 @@ option_list <- list(
   make_option(c("--max-freq"),        type = "double",    default = 1.0,
               help = "Maximum gene frequency [default: %default]"),
   make_option(c("-p", "--p-cutoff"),  type = "double",    default = 0.05,
-              help = "BH-adjusted p-value cutoff [default: %default]")
+              help = "BH-adjusted p-value cutoff [default: %default]"),
+  make_option(c("--product"),          type = "character", default = NULL,
+              help = "Comma-separated regex pattern(s) to match against the Product field for enrichment analysis [optional]")
 )
 
 opt <- parse_args(OptionParser(option_list = option_list))
@@ -22,10 +24,12 @@ if (is.null(opt$infile)) {
 infile   <- opt$infile
 min.freq <- opt[["min-freq"]]
 max.freq <- opt[["max-freq"]]
-p.cutoff <- opt[["p-cutoff"]]
+p.cutoff        <- opt[["p-cutoff"]]
+product.patterns <- if (!is.null(opt$product)) trimws(strsplit(opt$product, ",")[[1]]) else NULL
 outfile  <- if (!is.null(opt$outfile)) opt$outfile else
               sub("(\\.tsv|\\.csv)?$", "_go_enrichment.csv",
                   tools::file_path_sans_ext(infile), ignore.case = TRUE)
+product.outfile <- sub("_go_enrichment\\.csv$", "_product_enrichment.csv", outfile)
 
 df <- read.csv(infile, sep = "\t")
 # subset.df <- subset(df, Gene_Frequency > min.freq & Gene_Frequency <= max.freq & Significance != "NS")
@@ -66,10 +70,10 @@ go_enrichment <- function(df, group, min.freq = 0.0, max.freq = 0.95, p.adj.cuto
     #            in_group  other
     # has_go        a        b
     # no_go         c        d
-    a <- sum(has_go &  in_group)
-    b <- sum(has_go & !in_group)
-    c <- sum(!has_go &  in_group)
-    d <- sum(!has_go & !in_group)
+    a <- sum(has_go &  in_group) + 0.5
+    b <- sum(has_go & !in_group) + 0.5
+    c <- sum(!has_go &  in_group) + 0.5
+    d <- sum(!has_go & !in_group) + 0.5
 
     ft <- fisher.test(matrix(c(a, c, b, d), nrow = 2))
 
@@ -92,6 +96,54 @@ go_enrichment <- function(df, group, min.freq = 0.0, max.freq = 0.95, p.adj.cuto
   subset(results_df, P_Adj <= p.adj.cutoff)
 }
 
+# Product text enrichment analysis
+# Tests whether genes whose Product field matches a regex pattern are enriched
+# in each Significance group (Hi/Lo/NS) vs all other genes, using Fisher's
+# exact test with BH FDR correction across all pattern x group combinations.
+# Args:
+#   df          : data frame from the odds ratios TSV (full, unfiltered)
+#   patterns    : character vector of regex patterns to match against Product
+#   min.freq    : minimum gene frequency threshold
+#   max.freq    : maximum gene frequency threshold
+#   p.adj.cutoff: adjusted p-value significance cutoff
+# Returns a data frame of significant pattern x group combinations.
+product_enrichment <- function(df, patterns, min.freq = 0.0, max.freq = 1.0, p.adj.cutoff = 0.05) {
+  df <- subset(df, Gene_Frequency > min.freq & Gene_Frequency <= max.freq)
+
+  groups <- sort(unique(df$Significance))
+
+  results <- do.call(rbind, lapply(patterns, function(pat) {
+    matches <- grepl(pat, df$Product, ignore.case = TRUE, perl = TRUE)
+
+    do.call(rbind, lapply(groups, function(group) {
+      in_group <- df$Significance == group
+
+      a <- sum( matches &  in_group) + 0.5
+      b <- sum( matches & !in_group) + 0.5
+      c <- sum(!matches &  in_group) + 0.5
+      d <- sum(!matches & !in_group) + 0.5
+
+      ft <- fisher.test(matrix(c(a, c, b, d), nrow = 2))
+
+      data.frame(
+        Pattern    = pat,
+        Group      = group,
+        In_Group   = a,
+        Other      = b,
+        Odds_Ratio = as.numeric(ft$estimate),
+        P_Value    = ft$p.value,
+        stringsAsFactors = FALSE
+      )
+    }))
+  }))
+
+  results$P_Adj <- p.adjust(results$P_Value, method = "BH")
+  results <- results[order(results$P_Adj, results$P_Value), ]
+  rownames(results) <- NULL
+
+  subset(results, P_Adj <= p.adj.cutoff)
+}
+
 # Example usage: run enrichment for each Significance group
 go_hi <- go_enrichment(df, group = "Hi",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
 go_lo <- go_enrichment(df, group = "Lo",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
@@ -101,3 +153,9 @@ total.go.df <- rbind(go_lo, go_ns, go_hi)
 
 write.csv(total.go.df, outfile, row.names = FALSE)
 message("Written: ", outfile)
+
+if (!is.null(product.patterns)) {
+  prod.df <- product_enrichment(df, product.patterns, min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
+  write.csv(prod.df, product.outfile, row.names = FALSE)
+  message("Written: ", product.outfile)
+}
