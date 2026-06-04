@@ -26,8 +26,13 @@ def get_options():
     parser.add_argument('--n-samples', help='Number of distances to sample per gene per quantile. Default = 1000',
                                     type=int,
                                     default=1000)
+    parser.add_argument('--min-freq', help='Minimum frequency of a gene to be considered. Default = 0.0',
+                                    type=float,
+                                    default=0.0)
     parser.add_argument('--outpref', help='Output prefix (required)',
                                     required = True)
+    parser.add_argument('--print-distances', help='Print distances for each gene and quantile to output file (optional)',
+                                    action='store_true')
     return parser.parse_args()
 
 def main():
@@ -72,15 +77,30 @@ def main():
     for i, (r_index, q_index) in enumerate(listDistInts(r_names, q_names, r_names == q_names)):
         ref, query, distance = q_names[q_index], r_names[r_index], X[i, dist_col]
 
-        # avoid computing for completed references
-        if all(len(ref_distances[ref][q]) >= args.n_samples for q in quantiles):
-            continue
+        ref_complete = all(len(ref_distances[ref][q]) >= args.n_samples for q in quantiles)
+        query_complete = all(len(ref_distances[query][q]) >= args.n_samples for q in quantiles)
 
-        for q_idx, q, q_value in zip(range(len(quantiles)), quantiles, quantile_values):
-            if len(ref_distances[ref][q]) < args.n_samples:
-                if (q_idx == 0 and distance <= q_value) or (q_idx == 1 and distance >= q_value):
-                    ref_distances[ref][q].append((query, distance))
+        # avoid computing for completed references and queries
+        if not ref_complete:
+            for q_idx, q, q_value in zip(range(len(quantiles)), quantiles, quantile_values):
+                if len(ref_distances[ref][q]) < args.n_samples:
+                    if (q_idx == 0 and distance <= q_value) or (q_idx == 1 and distance >= q_value):
+                        ref_distances[ref][q].append((query, distance))
+        if not query_complete:
+            for q_idx, q, q_value in zip(range(len(quantiles)), quantiles, quantile_values):
+                if len(ref_distances[query][q]) < args.n_samples:
+                    if (q_idx == 0 and distance <= q_value) or (q_idx == 1 and distance >= q_value):
+                        ref_distances[query][q].append((ref, distance))
     
+    if args.print_distances:
+        print("Printing distances to output file...")
+        with open(args.outpref + "_distances.tsv", 'w') as dFile:
+            dFile.write("Reference\tQuery\tCore\tAccessory\tVector\n")
+            for i, (r_index, q_index) in enumerate(listDistInts(r_names, q_names, r_names == q_names)):
+                ref, query, core, acc = q_names[q_index], r_names[r_index], X[i, 0], X[i, 1]
+                vector_distance = np.sqrt(core**2 + acc**2)
+                dFile.write(f"{ref}\t{query}\t{core}\t{acc}\t{vector_distance}\n")
+
     del X # free memory
 
     # determine number of genes
@@ -94,7 +114,7 @@ def main():
     with open(args.pa_matrix, 'r') as pa_file:
         genome_ids = pa_file.readline().rstrip().split(",")[1:] # first column is gene name
         # strip file extension from genome ids if present
-        genome_ids = [os.path.splitext(gid)[0] for gid in genome_ids]
+        genome_ids = [gid.split(".")[0] for gid in genome_ids]
 
         # Build O(1) lookup dict to replace repeated O(n) list.index() calls
         genome_id_to_index = {gid: i for i, gid in enumerate(genome_ids)}
@@ -115,10 +135,17 @@ def main():
         for line in pa_file:
             gene, *presence = line.rstrip().split(",")
             presence = np.array(presence).astype(int)
+
+            # get gene frequency as percentage of genomes with gene present
+            gene_frequency = (np.sum(presence) / presence.shape[0])
+
+            if gene_frequency < args.min_freq:
+                progress_bar.update(1)
+                continue # skip genes below minimum frequency threshold
             
             # find isolates with gene present
             gene_presence = presence.astype(bool)
-
+            
             # get list of indices with gene present
             gene_present_indices = np.where(gene_presence)[0]
             genomes_gene_present = [genome_ids[i] for i in gene_present_indices]
@@ -160,24 +187,31 @@ def main():
                 z = np.log(odds_ratio) / stderr
                 p_value = 2 * norm.sf(abs(z))
 
-            gene_odds_ratios[gene] = (odds_ratio, stderr, conf_interval_95, p_value, concordant_low, discordant_low, concordant_high, discordant_high)
+            gene_odds_ratios[gene] = (odds_ratio, stderr, conf_interval_95, p_value, concordant_low, discordant_low, concordant_high, discordant_high, gene_frequency)
             progress_bar.update(1)
 
     progress_bar.close()
+
+    # print genomes from pa matrix
+    if args.print_distances:
+        with open(args.outpref + "_pa_genomes.txt", 'w') as gFile:
+            gFile.write("Genome\tDistances\n")
+            for genome in sorted(genome_ids):
+                gFile.write(f"{genome}\t{genome in ref_distances}\n")
 
     # adjust p-values for multiple testing using Benjamini-Hochberg procedure
     p_values = [gene_odds_ratios[gene][3] for gene in gene_odds_ratios]
     p_adjusted = false_discovery_control(p_values)
     for i, gene in enumerate(gene_odds_ratios):
-        odds_ratio, stderr, conf_interval_95, _, concordant_low, discordant_low, concordant_high, discordant_high = gene_odds_ratios[gene]
-        gene_odds_ratios[gene] = (odds_ratio, stderr, conf_interval_95, p_adjusted[i], concordant_low, discordant_low, concordant_high, discordant_high)
+        odds_ratio, stderr, conf_interval_95, _, concordant_low, discordant_low, concordant_high, discordant_high, gene_frequency = gene_odds_ratios[gene]
+        gene_odds_ratios[gene] = (odds_ratio, stderr, conf_interval_95, p_adjusted[i], concordant_low, discordant_low, concordant_high, discordant_high, gene_frequency)
 
     # calculate odds ratio for each gene and quantile
     print("Writing odds ratios to output file...")
     with open(args.outpref + "_odds_ratios.tsv", 'w') as oFile:
-        oFile.write("Gene\tOdds_Ratio\tStdErr\tLower_CI\tUpper_CI\tP_Value\tSignificance\tConcordant_Low\tDiscordant_Low\tConcordant_High\tDiscordant_High\n")
+        oFile.write("Gene\tOdds_Ratio\tStdErr\tLower_CI\tUpper_CI\tP_Value\tSignificance\tConcordant_Low\tDiscordant_Low\tConcordant_High\tDiscordant_High\tGene_Frequency\n")
         for gene in gene_odds_ratios:
-            odds_ratio, stderr, conf_interval_95, p_value, concordant_low, discordant_low, concordant_high, discordant_high = gene_odds_ratios[gene]
+            odds_ratio, stderr, conf_interval_95, p_value, concordant_low, discordant_low, concordant_high, discordant_high, gene_frequency = gene_odds_ratios[gene]
             if conf_interval_95[0] > 1 and p_value < 0.05:
                 significance = "Lo"
             elif conf_interval_95[1] < 1 and p_value < 0.05:
@@ -186,7 +220,7 @@ def main():
                 significance = "Mid"
             else:
                 significance = "NS"
-            oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\n")
+            oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\t{gene_frequency}\n")
     
     with open(args.outpref + "_missing_genomes.txt", 'w') as mFile:
         mFile.write("Genomes missing from distance data:\n")
