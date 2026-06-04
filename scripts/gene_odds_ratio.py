@@ -97,11 +97,11 @@ def main():
     if args.print_distances:
         print("Printing distances to output file...")
         with open(args.outpref + "_distances.tsv", 'w') as dFile:
-            dFile.write("Reference,Query,Core,Accessory,Vector\n")
+            dFile.write("Reference\tQuery\tCore\tAccessory\tVector\n")
             for i, (r_index, q_index) in enumerate(listDistInts(r_names, q_names, r_names == q_names)):
                 ref, query, core, acc = q_names[q_index], r_names[r_index], X[i, 0], X[i, 1]
                 vector_distance = np.sqrt(core**2 + acc**2)
-                dFile.write(f"{ref},{query},{core},{acc},{vector_distance}\n")
+                dFile.write(f"{ref}\t{query}\t{core}\t{acc}\t{vector_distance}\n")
 
     del X # free memory
 
@@ -197,9 +197,9 @@ def main():
     # print genomes from pa matrix
     if args.print_distances:
         with open(args.outpref + "_pa_genomes.txt", 'w') as gFile:
-            gFile.write("Genome,Distances\n")
+            gFile.write("Genome\tDistances\n")
             for genome in sorted(genome_ids):
-                gFile.write(f"{genome},{genome in ref_distances}\n")
+                gFile.write(f"{genome}\t{genome in ref_distances}\n")
 
     # adjust p-values for multiple testing using Benjamini-Hochberg procedure
     p_values = [gene_odds_ratios[gene][3] for gene in gene_odds_ratios]
@@ -210,19 +210,19 @@ def main():
 
     # calculate odds ratio for each gene and quantile
     print("Writing odds ratios to output file...")
-    with open(args.outpref + "_odds_ratios.csv", 'w') as oFile:
-        file_header = "Gene,Odds_Ratio,StdErr,Lower_CI,Upper_CI,P_Value,Significance,Concordant_Low,Discordant_Low,Concordant_High,Discordant_High,Gene_Frequency"
+    with open(args.outpref + "_odds_ratios.tsv", 'w') as oFile:
+        file_header = "Gene\tOdds_Ratio\tStdErr\tLower_CI\tUpper_CI\tP_Value\tSignificance\tConcordant_Low\tDiscordant_Low\tConcordant_High\tDiscordant_High\tGene_Frequency"
         if args.annotations is not None:
             print("Reading annotations...")              
             with open(args.annotations, 'r') as ann_file:
                 annotation_header = ann_file.readline().rstrip().split("\t")[2:] # skip header
-                annotation_header = "Gene_Name," + ",".join(annotation_header) # prepend gene name to annotation header for easier output
+                annotation_header = "Gene_Name\t" + "\t".join(annotation_header) # prepend gene name to annotation header for easier output
                 annotation_dict = {}
                 for line in ann_file:
                     gene_name, gene_id, *annotation = line.rstrip().split("\t")
                     annotation.insert(0, gene_name) # prepend gene name to annotation for easier output                
                     annotation_dict[gene_id] = annotation
-            file_header += "," + annotation_header
+            file_header += "\t" + annotation_header
         
         oFile.write(file_header + "\n")
     
@@ -238,10 +238,10 @@ def main():
                 significance = "NS"
             
             if args.annotations is not None:
-                annotation = annotation_dict.get(gene, ["NA"] * len(annotation_header.split(","))) # get annotation for gene or fill with NA if not found
-                oFile.write(f"{gene},{odds_ratio},{stderr},{conf_interval_95[0]},{conf_interval_95[1]},{p_value},{significance},{concordant_low},{discordant_low},{concordant_high},{discordant_high},{gene_frequency}," + ",".join(annotation) + "\n")
+                annotation = annotation_dict.get(gene, ["NA"] * len(annotation_header.split("\t"))) # get annotation for gene or fill with NA if not found
+                oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\t{gene_frequency}\t" + "\t".join(annotation) + "\n")
             else:
-                oFile.write(f"{gene},{odds_ratio},{stderr},{conf_interval_95[0]},{conf_interval_95[1]},{p_value},{significance},{concordant_low},{discordant_low},{concordant_high},{discordant_high},{gene_frequency}\n")
+                oFile.write(f"{gene}\t{odds_ratio}\t{stderr}\t{conf_interval_95[0]}\t{conf_interval_95[1]}\t{p_value}\t{significance}\t{concordant_low}\t{discordant_low}\t{concordant_high}\t{discordant_high}\t{gene_frequency}\n")
 
     with open(args.outpref + "_missing_genomes.txt", 'w') as mFile:
         mFile.write("Genomes missing from distance data:\n")
