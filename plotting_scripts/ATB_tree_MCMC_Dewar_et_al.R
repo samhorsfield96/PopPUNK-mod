@@ -162,7 +162,7 @@ run_mcmc_model <- function(y_var, x_vars, data, tree, nitt = 50000) {
   # With y in [0,1], V=1 is a safe weakly-informative prior
   scaled_prior <- list(
     R = list(V = 1, nu = 0.002),
-    G = list(G1 = list(V = 1, nu = 1, alpha.mu = 0, alpha.V = 1000))
+    G = list(G1 = list(V = 1, nu = 0.002, alpha.mu = 0, alpha.V = 1000))
   )
 
   model <- MCMCglmm(model_formula,
