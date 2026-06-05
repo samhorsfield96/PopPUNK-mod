@@ -22,25 +22,19 @@ assign_p_stars <- function(p_values)
 }
 
 # from https://github.com/AnnaEDewar/pangenome_lifestyle/blob/main/Code_S1.R
-summary_mcmc_glmm <- function(mcmc_model) {
-  summary <- summary(mcmc_model)
-  summary_subset <- as.data.frame(summary$solutions)
-  
+format_mcmc_summary <- function(summary_subset) {
   p_values <- summary_subset$pMCMC
-
   summary_subset$signif. <- assign_p_stars(p_values)
-  
-  # Extract numeric columns
+
   num_cols <- sapply(summary_subset, is.numeric)
-  numeric_table <- summary_subset[, num_cols]
-  
-  # Format numeric columns to 4 significant figures
-  formatted_table <- format(numeric_table, scientific = FALSE, digits = 4)
-  
-  # Replace original numeric columns with formatted columns
+  formatted_table <- format(summary_subset[, num_cols], scientific = FALSE, digits = 4)
   summary_subset[, num_cols] <- formatted_table
-  
-  return(summary_subset)
+  summary_subset
+}
+
+summary_mcmc_glmm <- function(mcmc_model) {
+  summary_subset <- as.data.frame(summary(mcmc_model)$solutions)
+  format_mcmc_summary(summary_subset)
 }
 
 generate_tree <- function(tree, dataframe){
@@ -116,38 +110,12 @@ pangenome_lifestyles$Effect_on_host <- factor(pangenome_lifestyles$Effect_on_hos
 pangenome_lifestyles$Motility <- factor(pangenome_lifestyles$Motility, levels=c("Non-motile","Both","Motile"))
 pangenome_lifestyles$Category_primary_env <- factor(pangenome_lifestyles$Category_primary_env, levels=c("Host","Free","Unknown"))
 
-## Make data set a 'data.frame' (to avoid any errors from data format)
-pangenome_lifestyles$pangenome_fluidity <- pangenome_lifestyles$genome_fluidity
-
 pangenome_lifestyles <- as.data.frame(pangenome_lifestyles)
 
 # Normalize species names: replace spaces with underscores, strip trailing GTDB letter suffix (e.g. " maltophilia_A" -> "_maltophilia")
 meta$Species_norm <- gsub("_[A-Z]+$", "", gsub(" ", "_", meta$Species))
 merged.df <- merge(meta, pangenome_lifestyles, by.x = "Species_norm", by.y = "Species")
 rownames(merged.df) <- merged.df$tip
-
-# Host_or_free vs. fitted params
-pangenome_lifestyles_host_free_no_unknown <- merged.df %>%
-  filter(Host_or_free != "Unknown")
-
-pangenome_lifestyles_host_free_no_unknown <- as.data.frame(pangenome_lifestyles_host_free_no_unknown)
-
-tree.df.list <- generate_tree(tree, pangenome_lifestyles_host_free_no_unknown)
-new.tree <- tree.df.list[[1]]
-new.df <- tree.df.list[[2]]
-
-Ainv <- inverseA(new.tree, nodes = "TIPS", scale = FALSE)$Ainv
-
-prior <- list(
-  G = list(
-    G1 = list(V = 1, nu = 1)
-  ),
-  R = list(
-    R1 = list(V = 1, nu = 1)
-  )
-)
-
-prior <- list(R=list(V = 1, nu = 0.002), G=list(G1=list(V=1,nu=0.002))) 
 
 # --------------------------------------------------------------------------
 # Generic MCMCglmm runner with phylogenetic correction
@@ -173,16 +141,28 @@ run_mcmc_model <- function(y_var, x_vars, data, tree, nitt = 50000) {
 
   Ainv_sub <- inverseA(sub_tree, nodes = "TIPS", scale = FALSE)$Ainv
 
+  # Store y scaling parameters for back-transformation later
+  y_mean <- mean(sub_df[[y_var]], na.rm = TRUE)
+  y_sd   <- sd(sub_df[[y_var]], na.rm = TRUE)
+
+  # Z-score scale y (mean=0, sd=1) so var(y)=1 exactly, matching V=1 prior
+  sub_df[[y_var]] <- scale(sub_df[[y_var]])[, 1]
+
+  # Z-score scale any continuous (numeric) x variables
+  for (xv in x_vars) {
+    if (xv %in% colnames(sub_df) && is.numeric(sub_df[[xv]])) {
+      sub_df[[xv]] <- scale(sub_df[[xv]])[, 1]
+    }
+  }
+
   model_formula <- as.formula(
     paste(y_var, "~", paste(x_vars, collapse = " + "))
   )
 
-  # Scale prior V by observed response variance so it works for both
-  # binary/categorical and continuous y variables
-  y_var_val <- var(sub_df[[y_var]], na.rm = TRUE)
+  # With y in [0,1], V=1 is a safe weakly-informative prior
   scaled_prior <- list(
-    R = list(V = y_var_val / 2, nu = 0.002),
-    G = list(G1 = list(V = y_var_val / 2, nu = 0.002))
+    R = list(V = 1, nu = 0.002),
+    G = list(G1 = list(V = 1, nu = 1, alpha.mu = 0, alpha.V = 1000))
   )
 
   model <- MCMCglmm(model_formula,
@@ -209,16 +189,34 @@ run_mcmc_model <- function(y_var, x_vars, data, tree, nitt = 50000) {
   colnames(R2_table) <- c("R-squared value")
   
   # model checks
-  png(filename=paste0(outpref, y_var, "_MCMC_variance_components.png"))
+  png(filename=paste0(outpref, y_var, "_", paste(x_vars, sep="_", collapse = "_"), "_MCMC_variance_components.png"))
   plot(model$VCV)    # variance components
   dev.off()
   
   
-  png(filename=paste0(outpref, y_var, "_MCMC_fixed_components.png"))
+  png(filename=paste0(outpref, y_var, "_", paste(x_vars, sep="_", collapse = "_"), "_MCMC_fixed_components.png"))
   plot(model$Sol)    # fixed effects
   dev.off()
 
-  list(model = model, summary = summary_mcmc_glmm(model), R2 = R2_table)
+  # Back-transform summary coefficients to original y scale on raw numerics,
+  # then format. Slopes scale by y_sd; intercept also shifts by y_mean.
+  raw_summary <- as.data.frame(summary(model)$solutions)
+  bt_cols <- c("post.mean", "l-95% CI", "u-95% CI")
+  bt_cols <- bt_cols[bt_cols %in% colnames(raw_summary)]
+  intercept_idx <- which(rownames(raw_summary) == "(Intercept)")
+  slope_idx <- setdiff(seq_len(nrow(raw_summary)), intercept_idx)
+  for (col in bt_cols) {
+    if (length(intercept_idx) > 0)
+      raw_summary[intercept_idx, col] <- raw_summary[intercept_idx, col] * y_sd + y_mean
+    raw_summary[slope_idx, col] <- raw_summary[slope_idx, col] * y_sd
+  }
+  mcmc_summary <- format_mcmc_summary(raw_summary)
+
+  # Back-transform variance components (scale by y_sd^2)
+  vcv_orig <- vcv_means * y_sd^2
+
+  list(model = model, summary = mcmc_summary, R2 = R2_table,
+       y_mean = y_mean, y_sd = y_sd, vcv_original_scale = vcv_orig)
 }
 
 # --------------------------------------------------------------------------
@@ -287,11 +285,13 @@ get_all_r2 <- function(results) {
   for (y in names(results)) {
     for (x in names(results[[y]])) {
       r2_mat <- results[[y]][[x]]$R2
+      res    <- results[[y]][[x]]
+      vcv_bt <- res$vcv_original_scale
       rows[[length(rows) + 1]] <- data.frame(
-        y_var   = y,
-        x_model = x,
-        metric  = rownames(r2_mat),
-        value   = as.numeric(r2_mat[, 1]),
+        y_var          = y,
+        x_model        = x,
+        metric         = c(rownames(r2_mat), names(vcv_bt)),
+        value          = c(as.numeric(r2_mat[, 1]), as.numeric(vcv_bt)),
         stringsAsFactors = FALSE
       )
     }
