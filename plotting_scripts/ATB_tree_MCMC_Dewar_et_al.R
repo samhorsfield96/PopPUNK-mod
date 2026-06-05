@@ -304,3 +304,6 @@ all_r2        <- get_all_r2(all_results)
 
 all_summaries$pMCMC_adjusted <- p.adjust(all_summaries$pMCMC, method = "BH")
 all_summaries$pMCMC_adjusted_sig <- assign_p_stars(all_summaries$pMCMC_adjusted)
+
+write.csv(all_r2, paste0(outpref, "MCMC_r2.csv"), row.names = FALSE)
+write.csv(all_summaries, paste0(outpref, "MCMC_summary.csv"), row.names = FALSE)
