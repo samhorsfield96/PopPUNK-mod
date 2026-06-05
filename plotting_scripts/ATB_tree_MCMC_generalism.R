@@ -37,13 +37,12 @@ summary_mcmc_glmm <- function(mcmc_model) {
   return(summary_subset)
 }
 
-overall_indir <- "/Users/shorsfield/Library/Mobile Documents/com~apple~CloudDocs/Work/Postdoc/Analysis/PopPUNK-mod/publication_figures/"
-indir <- paste0(overall_indir, "ATB_tree/")
-tree.file <- paste0(indir, "data/", "reps_ppmod_tree.treefile")
-summary.file <- paste0(indir, "data/", "ppmod_summary.csv")
-index.file <- paste0(indir, "data/", "sampled_alignments.tsv")
-gtdb.file <- paste0(indir, "data/", "gtdbtk.bac120.summary.tsv")
-outpref <- paste0(indir, "figures/")
+indir <- "../MCMCTree_analysis/"
+tree.file <- paste0(indir, "reps_ppmod_tree.treefile")
+summary.file <- paste0(indir, "ppmod_summary.csv")
+index.file <- paste0(indir, "sampled_alignments.tsv")
+gtdb.file <- paste0(indir, "gtdbtk.bac120.summary.tsv")
+outpref <- paste0(indir, "output")
 
 summary.df <- read.csv(summary.file, row.names = 1)
 
@@ -176,7 +175,7 @@ ggsave(paste(outpref, "trait_values.png", sep=""), plot = p, height = 8, width =
 
 # MCMCglmm analysis
 # parse generalism analysis
-traits.file <- paste0(indir, "data/", "metadata_with_traits.tsv")
+traits.file <- paste0(indir, "metadata_with_traits.tsv")
 traits.df <- read.csv(traits.file, sep="\t", header = TRUE)
 to.keep <- c("taxonID.GTDB", "total.genomes", "majority.fraction", "species..GTDB.", "strain..GTDB.", "generalism_score", "habitat_count", "pangenome_openness", "intra_species_nucleotide_diversity", "generalist")
 
@@ -224,13 +223,10 @@ stopifnot(
 
 Ainv <- inverseA(tree, nodes = "TIPS", scale = FALSE)$Ainv
 
+y_var_val <- var(merged.df$generalism_score, na.rm = TRUE)
 prior <- list(
-  G = list(
-    G1 = list(V = 1, nu = 1)
-  ),
-  R = list(
-    R1 = list(V = 1, nu = 1)
-  )
+  R = list(V = y_var_val / 2, nu = 0.002),
+  G = list(G1 = list(V = y_var_val / 2, nu = 0.002))
 )
 
 # with tree

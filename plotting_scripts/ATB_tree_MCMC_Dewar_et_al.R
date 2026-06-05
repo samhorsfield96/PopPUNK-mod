@@ -12,17 +12,23 @@ library(tools)
 library(tidyr)
 
 
+assign_p_stars <- function(p_values)
+{
+  stars <- ifelse(p_values < 0.001, "***",
+                  ifelse(p_values < 0.01, "**",
+                         ifelse(p_values < 0.05, "*",
+                                ifelse(p_values < 0.1, ".","ns"))))
+  stars
+}
+
 # from https://github.com/AnnaEDewar/pangenome_lifestyle/blob/main/Code_S1.R
 summary_mcmc_glmm <- function(mcmc_model) {
   summary <- summary(mcmc_model)
   summary_subset <- as.data.frame(summary$solutions)
   
   p_values <- summary_subset$pMCMC
-  stars <- ifelse(p_values < 0.001, "***",
-                  ifelse(p_values < 0.01, "**",
-                         ifelse(p_values < 0.05, "*",
-                                ifelse(p_values < 0.1, ".","ns"))))
-  summary_subset$signif. <- stars
+
+  summary_subset$signif. <- assign_p_stars(p_values)
   
   # Extract numeric columns
   num_cols <- sapply(summary_subset, is.numeric)
@@ -64,14 +70,14 @@ generate_tree <- function(tree, dataframe){
   list(new.tree, new.dataframe)
 }
 
-indir <- "/Users/samhorsfield/Software/PopPUNK-mod/Dewar_et_al_analysis/"
+indir <- "MCMCglmm_analysis/"
 
 tree.file <- paste0(indir, "reps_ppmod_tree.treefile")
 summary.file <- paste0(indir, "ppmod_summary.csv")
 index.file <- paste0(indir, "sampled_alignments.tsv")
 gtdb.file <- paste0(indir, "gtdbtk.bac120.summary.tsv")
 lifestyle.file <- paste0(indir, "pangenome_lifestyles.csv")
-outpref <- paste0(indir, "/Dewar_analysis")
+outpref <- paste0(indir, "/Dewar_analysis_")
 
 summary.df <- read.csv(summary.file, row.names = 1)
 
@@ -146,12 +152,16 @@ prior <- list(R=list(V = 1, nu = 0.002), G=list(G1=list(V=1,nu=0.002)))
 # --------------------------------------------------------------------------
 # Generic MCMCglmm runner with phylogenetic correction
 # --------------------------------------------------------------------------
-run_mcmc_model <- function(y_var, x_vars, data, tree, prior, nitt = 50000) {
-  # Drop rows where any categorical x variable is "Unknown" or ""
-  filter_mask <- rep(TRUE, nrow(data))
+run_mcmc_model <- function(y_var, x_vars, data, tree, nitt = 50000) {
+  # Drop rows with NA in the y variable
+  filter_mask <- !is.na(data[[y_var]])
+  # Drop rows where any x variable is NA, "Unknown", or ""
   for (xv in x_vars) {
-    if (xv %in% colnames(data) && is.factor(data[[xv]])) {
-      filter_mask <- filter_mask & !(as.character(data[[xv]]) %in% c("Unknown", ""))
+    if (xv %in% colnames(data)) {
+      filter_mask <- filter_mask & !is.na(data[[xv]])
+      if (is.factor(data[[xv]])) {
+        filter_mask <- filter_mask & !(as.character(data[[xv]]) %in% c("Unknown", ""))
+      }
     }
   }
   sub_data <- droplevels(data[filter_mask, , drop = FALSE])
@@ -167,11 +177,19 @@ run_mcmc_model <- function(y_var, x_vars, data, tree, prior, nitt = 50000) {
     paste(y_var, "~", paste(x_vars, collapse = " + "))
   )
 
+  # Scale prior V by observed response variance so it works for both
+  # binary/categorical and continuous y variables
+  y_var_val <- var(sub_df[[y_var]], na.rm = TRUE)
+  scaled_prior <- list(
+    R = list(V = y_var_val / 2, nu = 0.002),
+    G = list(G1 = list(V = y_var_val / 2, nu = 0.002))
+  )
+
   model <- MCMCglmm(model_formula,
                     random   = ~tip,
                     data     = sub_df,
                     nitt     = nitt,
-                    prior    = prior,
+                    prior    = scaled_prior,
                     ginverse = list(tip = Ainv_sub),
                     verbose  = FALSE)
 
@@ -189,6 +207,16 @@ run_mcmc_model <- function(y_var, x_vars, data, tree, prior, nitt = 50000) {
   R2_table <- format(R2_table, digits = 4)
   rownames(R2_table) <- c("Fixed effect", "Random effect", "Total model")
   colnames(R2_table) <- c("R-squared value")
+  
+  # model checks
+  png(filename=paste0(outpref, y_var, "_MCMC_variance_components.png"))
+  plot(model$VCV)    # variance components
+  dev.off()
+  
+  
+  png(filename=paste0(outpref, y_var, "_MCMC_fixed_components.png"))
+  plot(model$Sol)    # fixed effects
+  dev.off()
 
   list(model = model, summary = summary_mcmc_glmm(model), R2 = R2_table)
 }
@@ -210,7 +238,12 @@ x_var_sets <- list(
   Effect_on_host         = c("Effect_on_host"),
   Motility               = c("Motility"),
   combined               = c("Obligate_facultative", "Intra_or_extracellular",
-                              "Effect_on_host", "Motility")
+                              "Effect_on_host", "Motility"),
+  NE = c("Ne"),
+  Genome_size = c("genome_size"),
+  Pan_size = c("pan_size"),
+  Pangenome_fluidity = c("pangenome_fluidity"),
+  Total_envs = c("Total_envs")
 )
 
 # --------------------------------------------------------------------------
@@ -226,8 +259,7 @@ for (y in y_vars) {
       y_var  = y,
       x_vars = x_var_sets[[x_name]],
       data   = merged.df,
-      tree   = tree,
-      prior  = prior
+      tree   = tree
     )
   }
 }
@@ -269,3 +301,6 @@ get_all_r2 <- function(results) {
 
 all_summaries <- get_all_summaries(all_results)
 all_r2        <- get_all_r2(all_results)
+
+all_summaries$pMCMC_adjusted <- p.adjust(all_summaries$pMCMC, method = "BH")
+all_summaries$pMCMC_adjusted_sig <- assign_p_stars(all_summaries$pMCMC_adjusted)
