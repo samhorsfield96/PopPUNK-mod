@@ -1,541 +1,541 @@
 "y_var","x_model","metric","value"
-"rate_genes1_median","Host_or_free","Fixed effect",0.03602
-"rate_genes1_median","Host_or_free","Random effect",0.06184
-"rate_genes1_median","Host_or_free","Total model",0.09786
-"rate_genes1_median","Host_or_free","tip",1.32215535797286e-06
-"rate_genes1_median","Host_or_free","units",1.92870887417263e-05
-"rate_genes1_median","Category_primary_env","Fixed effect",0.01238
-"rate_genes1_median","Category_primary_env","Random effect",0.05583
-"rate_genes1_median","Category_primary_env","Total model",0.06822
-"rate_genes1_median","Category_primary_env","tip",1.17317398866289e-06
-"rate_genes1_median","Category_primary_env","units",1.95792402967809e-05
-"rate_genes1_median","Obligate_facultative","Fixed effect",0.00861
-"rate_genes1_median","Obligate_facultative","Random effect",0.07481
-"rate_genes1_median","Obligate_facultative","Total model",0.08342
-"rate_genes1_median","Obligate_facultative","tip",1.64647739522758e-06
-"rate_genes1_median","Obligate_facultative","units",2.01722415721519e-05
-"rate_genes1_median","Intra_or_extracellular","Fixed effect",0.02498
-"rate_genes1_median","Intra_or_extracellular","Random effect",0.07291
-"rate_genes1_median","Intra_or_extracellular","Total model",0.09789
-"rate_genes1_median","Intra_or_extracellular","tip",1.58826177605887e-06
-"rate_genes1_median","Intra_or_extracellular","units",1.96508960254324e-05
-"rate_genes1_median","Effect_on_host","Fixed effect",0.001338
-"rate_genes1_median","Effect_on_host","Random effect",0.075141
-"rate_genes1_median","Effect_on_host","Total model",0.076479
-"rate_genes1_median","Effect_on_host","tip",1.65976015906863e-06
-"rate_genes1_median","Effect_on_host","units",2.03992309139613e-05
-"rate_genes1_median","Motility","Fixed effect",0.02542
-"rate_genes1_median","Motility","Random effect",0.05532
-"rate_genes1_median","Motility","Total model",0.08074
-"rate_genes1_median","Motility","tip",1.18184513609683e-06
-"rate_genes1_median","Motility","units",1.96387731580528e-05
-"rate_genes1_median","combined","Fixed effect",0.05545
-"rate_genes1_median","combined","Random effect",0.08106
-"rate_genes1_median","combined","Total model",0.13652
-"rate_genes1_median","combined","tip",1.94136417010091e-06
-"rate_genes1_median","combined","units",2.0679911354456e-05
-"rate_genes1_median","NE","Fixed effect",0.005036
-"rate_genes1_median","NE","Random effect",0.105154
-"rate_genes1_median","NE","Total model",0.110191
-"rate_genes1_median","NE","tip",3.1559960772878e-06
-"rate_genes1_median","NE","units",2.67058495057789e-05
-"rate_genes1_median","Genome_size","Fixed effect",2.546e-05
-"rate_genes1_median","Genome_size","Random effect",0.07304
-"rate_genes1_median","Genome_size","Total model",0.07307
-"rate_genes1_median","Genome_size","tip",1.54961458304769e-06
-"rate_genes1_median","Genome_size","units",1.96658713022634e-05
-"rate_genes1_median","Pan_size","Fixed effect",1.507e-05
-"rate_genes1_median","Pan_size","Random effect",0.06892
-"rate_genes1_median","Pan_size","Total model",0.06893
-"rate_genes1_median","Pan_size","tip",1.46216690660656e-06
-"rate_genes1_median","Pan_size","units",1.97542934979302e-05
-"rate_genes1_median","Pangenome_fluidity","Fixed effect",0.001009
-"rate_genes1_median","Pangenome_fluidity","Random effect",0.065186
-"rate_genes1_median","Pangenome_fluidity","Total model",0.066194
-"rate_genes1_median","Pangenome_fluidity","tip",1.37805851236531e-06
-"rate_genes1_median","Pangenome_fluidity","units",1.97410573695396e-05
-"rate_genes1_median","Total_envs","Fixed effect",0.0256
-"rate_genes1_median","Total_envs","Random effect",0.05337
-"rate_genes1_median","Total_envs","Total model",0.07897
-"rate_genes1_median","Total_envs","tip",1.12770543151618e-06
-"rate_genes1_median","Total_envs","units",1.94612265678096e-05
-"rate_genes1_lower_CI","Host_or_free","Fixed effect",0.005465
-"rate_genes1_lower_CI","Host_or_free","Random effect",0.955397
-"rate_genes1_lower_CI","Host_or_free","Total model",0.960862
-"rate_genes1_lower_CI","Host_or_free","tip",1.3838563019361e-06
-"rate_genes1_lower_CI","Host_or_free","units",5.66894734785112e-08
-"rate_genes1_lower_CI","Category_primary_env","Fixed effect",0.0001963
-"rate_genes1_lower_CI","Category_primary_env","Random effect",0.962429
-"rate_genes1_lower_CI","Category_primary_env","Total model",0.9626253
-"rate_genes1_lower_CI","Category_primary_env","tip",1.42258931535252e-06
-"rate_genes1_lower_CI","Category_primary_env","units",5.52444738348161e-08
-"rate_genes1_lower_CI","Obligate_facultative","Fixed effect",0.001394
-"rate_genes1_lower_CI","Obligate_facultative","Random effect",0.962425
-"rate_genes1_lower_CI","Obligate_facultative","Total model",0.96382
-"rate_genes1_lower_CI","Obligate_facultative","tip",1.48088764225436e-06
-"rate_genes1_lower_CI","Obligate_facultative","units",5.5670802697628e-08
-"rate_genes1_lower_CI","Intra_or_extracellular","Fixed effect",0.03184
-"rate_genes1_lower_CI","Intra_or_extracellular","Random effect",0.93084
-"rate_genes1_lower_CI","Intra_or_extracellular","Total model",0.96268
-"rate_genes1_lower_CI","Intra_or_extracellular","tip",1.39039489709097e-06
-"rate_genes1_lower_CI","Intra_or_extracellular","units",5.5749881114898e-08
-"rate_genes1_lower_CI","Effect_on_host","Fixed effect",0.0004776
-"rate_genes1_lower_CI","Effect_on_host","Random effect",0.9633478
-"rate_genes1_lower_CI","Effect_on_host","Total model",0.9638254
-"rate_genes1_lower_CI","Effect_on_host","tip",1.49941355978393e-06
-"rate_genes1_lower_CI","Effect_on_host","units",5.63043558127648e-08
-"rate_genes1_lower_CI","Motility","Fixed effect",0.001177
-"rate_genes1_lower_CI","Motility","Random effect",0.960007
-"rate_genes1_lower_CI","Motility","Total model",0.961185
-"rate_genes1_lower_CI","Motility","tip",1.41348168826304e-06
-"rate_genes1_lower_CI","Motility","units",5.71504506739291e-08
-"rate_genes1_lower_CI","combined","Fixed effect",0.03503
-"rate_genes1_lower_CI","combined","Random effect",0.92755
-"rate_genes1_lower_CI","combined","Total model",0.96258
-"rate_genes1_lower_CI","combined","tip",1.51703876257825e-06
-"rate_genes1_lower_CI","combined","units",6.12003723999301e-08
-"rate_genes1_lower_CI","NE","Fixed effect",8.291e-08
-"rate_genes1_lower_CI","NE","Random effect",0.9675
-"rate_genes1_lower_CI","NE","Total model",0.9675
-"rate_genes1_lower_CI","NE","tip",1.95872313336498e-06
-"rate_genes1_lower_CI","NE","units",6.57547592486295e-08
-"rate_genes1_lower_CI","Genome_size","Fixed effect",0.0004897
-"rate_genes1_lower_CI","Genome_size","Random effect",0.9626623
-"rate_genes1_lower_CI","Genome_size","Total model",0.963152
-"rate_genes1_lower_CI","Genome_size","tip",1.42851727924664e-06
-"rate_genes1_lower_CI","Genome_size","units",5.46796614726143e-08
-"rate_genes1_lower_CI","Pan_size","Fixed effect",1.999e-05
-"rate_genes1_lower_CI","Pan_size","Random effect",0.9618
-"rate_genes1_lower_CI","Pan_size","Total model",0.9618
-"rate_genes1_lower_CI","Pan_size","tip",1.39763783094365e-06
-"rate_genes1_lower_CI","Pan_size","units",5.54773037992159e-08
-"rate_genes1_lower_CI","Pangenome_fluidity","Fixed effect",6.788e-05
-"rate_genes1_lower_CI","Pangenome_fluidity","Random effect",0.9621
-"rate_genes1_lower_CI","Pangenome_fluidity","Total model",0.9621
-"rate_genes1_lower_CI","Pangenome_fluidity","tip",1.4085694659409e-06
-"rate_genes1_lower_CI","Pangenome_fluidity","units",5.54595955563057e-08
-"rate_genes1_lower_CI","Total_envs","Fixed effect",0.0003786
-"rate_genes1_lower_CI","Total_envs","Random effect",0.961665
-"rate_genes1_lower_CI","Total_envs","Total model",0.9620436
-"rate_genes1_lower_CI","Total_envs","tip",1.40676485066777e-06
-"rate_genes1_lower_CI","Total_envs","units",5.55241832770211e-08
-"rate_genes1_upper_CI","Host_or_free","Fixed effect",0.0004152
-"rate_genes1_upper_CI","Host_or_free","Random effect",0.986588
-"rate_genes1_upper_CI","Host_or_free","Total model",0.9870032
-"rate_genes1_upper_CI","Host_or_free","tip",0.0106530119437593
-"rate_genes1_upper_CI","Host_or_free","units",0.000140336952504407
-"rate_genes1_upper_CI","Category_primary_env","Fixed effect",8.158e-05
-"rate_genes1_upper_CI","Category_primary_env","Random effect",0.9863
-"rate_genes1_upper_CI","Category_primary_env","Total model",0.9863
-"rate_genes1_upper_CI","Category_primary_env","tip",0.0104299796816308
-"rate_genes1_upper_CI","Category_primary_env","units",0.000144460459181787
-"rate_genes1_upper_CI","Obligate_facultative","Fixed effect",1.011e-05
-"rate_genes1_upper_CI","Obligate_facultative","Random effect",0.9873
-"rate_genes1_upper_CI","Obligate_facultative","Total model",0.9873
-"rate_genes1_upper_CI","Obligate_facultative","tip",0.0109553235841862
-"rate_genes1_upper_CI","Obligate_facultative","units",0.000141080979247846
-"rate_genes1_upper_CI","Intra_or_extracellular","Fixed effect",0.0001267
-"rate_genes1_upper_CI","Intra_or_extracellular","Random effect",0.9873951
-"rate_genes1_upper_CI","Intra_or_extracellular","Total model",0.9875218
-"rate_genes1_upper_CI","Intra_or_extracellular","tip",0.0109548212205403
-"rate_genes1_upper_CI","Intra_or_extracellular","units",0.000138441777089397
-"rate_genes1_upper_CI","Effect_on_host","Fixed effect",0.03277
-"rate_genes1_upper_CI","Effect_on_host","Random effect",0.95306
-"rate_genes1_upper_CI","Effect_on_host","Total model",0.98583
-"rate_genes1_upper_CI","Effect_on_host","tip",0.010071622996556
-"rate_genes1_upper_CI","Effect_on_host","units",0.000149715751467409
-"rate_genes1_upper_CI","Motility","Fixed effect",0.001305
-"rate_genes1_upper_CI","Motility","Random effect",0.984702
-"rate_genes1_upper_CI","Motility","Total model",0.986008
-"rate_genes1_upper_CI","Motility","tip",0.0105080387267603
-"rate_genes1_upper_CI","Motility","units",0.000149315687794617
-"rate_genes1_upper_CI","combined","Fixed effect",0.03873
-"rate_genes1_upper_CI","combined","Random effect",0.94694
-"rate_genes1_upper_CI","combined","Total model",0.98567
-"rate_genes1_upper_CI","combined","tip",0.0107901340429339
-"rate_genes1_upper_CI","combined","units",0.000163265737827426
-"rate_genes1_upper_CI","NE","Fixed effect",0.001134
-"rate_genes1_upper_CI","NE","Random effect",0.98941
-"rate_genes1_upper_CI","NE","Total model",0.990544
-"rate_genes1_upper_CI","NE","tip",0.0156501752148414
-"rate_genes1_upper_CI","NE","units",0.000149568672196921
-"rate_genes1_upper_CI","Genome_size","Fixed effect",0.004396
-"rate_genes1_upper_CI","Genome_size","Random effect",0.98216
-"rate_genes1_upper_CI","Genome_size","Total model",0.986555
-"rate_genes1_upper_CI","Genome_size","tip",0.0104715047013946
-"rate_genes1_upper_CI","Genome_size","units",0.000143343817636414
-"rate_genes1_upper_CI","Pan_size","Fixed effect",5.955e-05
-"rate_genes1_upper_CI","Pan_size","Random effect",0.986
-"rate_genes1_upper_CI","Pan_size","Total model",0.986
-"rate_genes1_upper_CI","Pan_size","tip",0.0103016390935349
-"rate_genes1_upper_CI","Pan_size","units",0.000145823410628484
-"rate_genes1_upper_CI","Pangenome_fluidity","Fixed effect",0.0003503
-"rate_genes1_upper_CI","Pangenome_fluidity","Random effect",0.9860799
-"rate_genes1_upper_CI","Pangenome_fluidity","Total model",0.9864302
-"rate_genes1_upper_CI","Pangenome_fluidity","tip",0.0105415045926227
-"rate_genes1_upper_CI","Pangenome_fluidity","units",0.000145065409121446
-"rate_genes1_upper_CI","Total_envs","Fixed effect",0.0008491
-"rate_genes1_upper_CI","Total_envs","Random effect",0.9853074
-"rate_genes1_upper_CI","Total_envs","Total model",0.9861565
-"rate_genes1_upper_CI","Total_envs","tip",0.0103198905984222
-"rate_genes1_upper_CI","Total_envs","units",0.000144993795163677
-"core_mu_median","Host_or_free","Fixed effect",0.03503
-"core_mu_median","Host_or_free","Random effect",0.14675
-"core_mu_median","Host_or_free","Total model",0.18179
-"core_mu_median","Host_or_free","tip",1.07474751507588e-09
-"core_mu_median","Host_or_free","units",5.99228198060231e-09
-"core_mu_median","Category_primary_env","Fixed effect",0.01922
-"core_mu_median","Category_primary_env","Random effect",0.16724
-"core_mu_median","Category_primary_env","Total model",0.18646
-"core_mu_median","Category_primary_env","tip",1.21276870335896e-09
-"core_mu_median","Category_primary_env","units",5.89967097394796e-09
-"core_mu_median","Obligate_facultative","Fixed effect",0.01362
-"core_mu_median","Obligate_facultative","Random effect",0.17111
-"core_mu_median","Obligate_facultative","Total model",0.18473
-"core_mu_median","Obligate_facultative","tip",1.25320793102342e-09
-"core_mu_median","Obligate_facultative","units",5.97121587700132e-09
-"core_mu_median","Intra_or_extracellular","Fixed effect",0.05652
-"core_mu_median","Intra_or_extracellular","Random effect",0.20068
-"core_mu_median","Intra_or_extracellular","Total model",0.2572
-"core_mu_median","Intra_or_extracellular","tip",1.50994293827813e-09
-"core_mu_median","Intra_or_extracellular","units",5.58903900838862e-09
-"core_mu_median","Effect_on_host","Fixed effect",0.01815
-"core_mu_median","Effect_on_host","Random effect",0.20596
-"core_mu_median","Effect_on_host","Total model",0.2241
-"core_mu_median","Effect_on_host","tip",1.57144282033626e-09
-"core_mu_median","Effect_on_host","units",5.92007381658885e-09
-"core_mu_median","Motility","Fixed effect",0.09324
-"core_mu_median","Motility","Random effect",0.1112
-"core_mu_median","Motility","Total model",0.20444
-"core_mu_median","Motility","tip",8.0081890743697e-10
-"core_mu_median","Motility","units",5.72950696566778e-09
-"core_mu_median","combined","Fixed effect",0.1421
-"core_mu_median","combined","Random effect",0.1999
-"core_mu_median","combined","Total model",0.3421
-"core_mu_median","combined","tip",1.62882443924265e-09
-"core_mu_median","combined","units",5.35976131606127e-09
-"core_mu_median","NE","Fixed effect",0.02426
-"core_mu_median","NE","Random effect",0.26761
-"core_mu_median","NE","Total model",0.29187
-"core_mu_median","NE","tip",2.13606457196455e-09
-"core_mu_median","NE","units",5.65218175193204e-09
-"core_mu_median","Genome_size","Fixed effect",0.01855
-"core_mu_median","Genome_size","Random effect",0.16568
-"core_mu_median","Genome_size","Total model",0.18423
-"core_mu_median","Genome_size","tip",1.21116715441806e-09
-"core_mu_median","Genome_size","units",5.96340373318361e-09
-"core_mu_median","Pan_size","Fixed effect",0.08583
-"core_mu_median","Pan_size","Random effect",0.13449
-"core_mu_median","Pan_size","Total model",0.22032
-"core_mu_median","Pan_size","tip",9.70719879844569e-10
-"core_mu_median","Pan_size","units",5.62768468855294e-09
-"core_mu_median","Pangenome_fluidity","Fixed effect",0.09163
-"core_mu_median","Pangenome_fluidity","Random effect",0.10474
-"core_mu_median","Pangenome_fluidity","Total model",0.19637
-"core_mu_median","Pangenome_fluidity","tip",7.37575914599833e-10
-"core_mu_median","Pangenome_fluidity","units",5.65900525296823e-09
-"core_mu_median","Total_envs","Fixed effect",0.008471
-"core_mu_median","Total_envs","Random effect",0.147353
-"core_mu_median","Total_envs","Total model",0.155824
-"core_mu_median","Total_envs","tip",1.0590514584166e-09
-"core_mu_median","Total_envs","units",6.06723494387429e-09
-"core_mu_lower_CI","Host_or_free","Fixed effect",0.03698
-"core_mu_lower_CI","Host_or_free","Random effect",0.08443
-"core_mu_lower_CI","Host_or_free","Total model",0.12141
-"core_mu_lower_CI","Host_or_free","tip",1.42772714015227e-10
-"core_mu_lower_CI","Host_or_free","units",1.4857696739316e-09
-"core_mu_lower_CI","Category_primary_env","Fixed effect",0.03856
-"core_mu_lower_CI","Category_primary_env","Random effect",0.07199
-"core_mu_lower_CI","Category_primary_env","Total model",0.11055
-"core_mu_lower_CI","Category_primary_env","tip",1.19222563768945e-10
-"core_mu_lower_CI","Category_primary_env","units",1.47311369916776e-09
-"core_mu_lower_CI","Obligate_facultative","Fixed effect",0.008053
-"core_mu_lower_CI","Obligate_facultative","Random effect",0.10634
-"core_mu_lower_CI","Obligate_facultative","Total model",0.114394
-"core_mu_lower_CI","Obligate_facultative","tip",1.82701682446306e-10
-"core_mu_lower_CI","Obligate_facultative","units",1.52154589684722e-09
-"core_mu_lower_CI","Intra_or_extracellular","Fixed effect",0.05292
-"core_mu_lower_CI","Intra_or_extracellular","Random effect",0.12011
-"core_mu_lower_CI","Intra_or_extracellular","Total model",0.17303
-"core_mu_lower_CI","Intra_or_extracellular","tip",2.06683201027681e-10
-"core_mu_lower_CI","Intra_or_extracellular","units",1.42308375385893e-09
-"core_mu_lower_CI","Effect_on_host","Fixed effect",0.01901
-"core_mu_lower_CI","Effect_on_host","Random effect",0.11875
-"core_mu_lower_CI","Effect_on_host","Total model",0.13777
-"core_mu_lower_CI","Effect_on_host","tip",2.0705893646023e-10
-"core_mu_lower_CI","Effect_on_host","units",1.50343025900966e-09
-"core_mu_lower_CI","Motility","Fixed effect",0.04914
-"core_mu_lower_CI","Motility","Random effect",0.0834
-"core_mu_lower_CI","Motility","Total model",0.13254
-"core_mu_lower_CI","Motility","tip",1.41525755469638e-10
-"core_mu_lower_CI","Motility","units",1.47205408725397e-09
-"core_mu_lower_CI","combined","Fixed effect",0.1097
-"core_mu_lower_CI","combined","Random effect",0.1795
-"core_mu_lower_CI","combined","Total model",0.2893
-"core_mu_lower_CI","combined","tip",3.48997039697231e-10
-"core_mu_lower_CI","combined","units",1.38143026930547e-09
-"core_mu_lower_CI","NE","Fixed effect",0.02042
-"core_mu_lower_CI","NE","Random effect",0.30774
-"core_mu_lower_CI","NE","Total model",0.32815
-"core_mu_lower_CI","NE","tip",6.11928185062181e-10
-"core_mu_lower_CI","NE","units",1.33594367863254e-09
-"core_mu_lower_CI","Genome_size","Fixed effect",0.02281
-"core_mu_lower_CI","Genome_size","Random effect",0.08664
-"core_mu_lower_CI","Genome_size","Total model",0.10945
-"core_mu_lower_CI","Genome_size","tip",1.45393123202913e-10
-"core_mu_lower_CI","Genome_size","units",1.49451080007492e-09
-"core_mu_lower_CI","Pan_size","Fixed effect",0.09893
-"core_mu_lower_CI","Pan_size","Random effect",0.06826
-"core_mu_lower_CI","Pan_size","Total model",0.16719
-"core_mu_lower_CI","Pan_size","tip",1.13492441689931e-10
-"core_mu_lower_CI","Pan_size","units",1.38458631967005e-09
-"core_mu_lower_CI","Pangenome_fluidity","Fixed effect",0.0458
-"core_mu_lower_CI","Pangenome_fluidity","Random effect",0.07067
-"core_mu_lower_CI","Pangenome_fluidity","Total model",0.11647
-"core_mu_lower_CI","Pangenome_fluidity","tip",1.17156002857299e-10
-"core_mu_lower_CI","Pangenome_fluidity","units",1.46466502262115e-09
-"core_mu_lower_CI","Total_envs","Fixed effect",0.005265
-"core_mu_lower_CI","Total_envs","Random effect",0.079222
-"core_mu_lower_CI","Total_envs","Total model",0.084487
-"core_mu_lower_CI","Total_envs","tip",1.31483962663233e-10
-"core_mu_lower_CI","Total_envs","units",1.51947082494203e-09
-"core_mu_upper_CI","Host_or_free","Fixed effect",0.01182
-"core_mu_upper_CI","Host_or_free","Random effect",0.19641
-"core_mu_upper_CI","Host_or_free","Total model",0.20823
-"core_mu_upper_CI","Host_or_free","tip",8.05150938312775e-09
-"core_mu_upper_CI","Host_or_free","units",3.24572866213321e-08
-"core_mu_upper_CI","Category_primary_env","Fixed effect",0.03252
-"core_mu_upper_CI","Category_primary_env","Random effect",0.23588
-"core_mu_upper_CI","Category_primary_env","Total model",0.2684
-"core_mu_upper_CI","Category_primary_env","tip",9.7575417021035e-09
-"core_mu_upper_CI","Category_primary_env","units",3.02643385993675e-08
-"core_mu_upper_CI","Obligate_facultative","Fixed effect",0.007913
-"core_mu_upper_CI","Obligate_facultative","Random effect",0.227193
-"core_mu_upper_CI","Obligate_facultative","Total model",0.235106
-"core_mu_upper_CI","Obligate_facultative","tip",9.42141971615477e-09
-"core_mu_upper_CI","Obligate_facultative","units",3.17192576526268e-08
-"core_mu_upper_CI","Intra_or_extracellular","Fixed effect",0.05803
-"core_mu_upper_CI","Intra_or_extracellular","Random effect",0.17996
-"core_mu_upper_CI","Intra_or_extracellular","Total model",0.23799
-"core_mu_upper_CI","Intra_or_extracellular","tip",7.31707281975411e-09
-"core_mu_upper_CI","Intra_or_extracellular","units",3.09828906215086e-08
-"core_mu_upper_CI","Effect_on_host","Fixed effect",0.04449
-"core_mu_upper_CI","Effect_on_host","Random effect",0.32968
-"core_mu_upper_CI","Effect_on_host","Total model",0.37417
-"core_mu_upper_CI","Effect_on_host","tip",1.50482163197565e-08
-"core_mu_upper_CI","Effect_on_host","units",2.85663017520593e-08
-"core_mu_upper_CI","Motility","Fixed effect",0.05466
-"core_mu_upper_CI","Motility","Random effect",0.17791
-"core_mu_upper_CI","Motility","Total model",0.23257
-"core_mu_upper_CI","Motility","tip",7.25227735240262e-09
-"core_mu_upper_CI","Motility","units",3.12827065252749e-08
-"core_mu_upper_CI","combined","Fixed effect",0.1394
-"core_mu_upper_CI","combined","Random effect",0.2522
-"core_mu_upper_CI","combined","Total model",0.3916
-"core_mu_upper_CI","combined","tip",1.16260059638162e-08
-"core_mu_upper_CI","combined","units",2.80395703312424e-08
-"core_mu_upper_CI","NE","Fixed effect",0.0004335
-"core_mu_upper_CI","NE","Random effect",0.2290999
-"core_mu_upper_CI","NE","Total model",0.2295333
-"core_mu_upper_CI","NE","tip",1.01442531826037e-08
-"core_mu_upper_CI","NE","units",3.41152928329578e-08
-"core_mu_upper_CI","Genome_size","Fixed effect",0.0004694
-"core_mu_upper_CI","Genome_size","Random effect",0.2323396
-"core_mu_upper_CI","Genome_size","Total model",0.2328091
-"core_mu_upper_CI","Genome_size","tip",9.57448875436725e-09
-"core_mu_upper_CI","Genome_size","units",3.16151870534072e-08
-"core_mu_upper_CI","Pan_size","Fixed effect",0.01957
-"core_mu_upper_CI","Pan_size","Random effect",0.21883
-"core_mu_upper_CI","Pan_size","Total model",0.2384
-"core_mu_upper_CI","Pan_size","tip",8.98005665993181e-09
-"core_mu_upper_CI","Pan_size","units",3.12532097422565e-08
-"core_mu_upper_CI","Pangenome_fluidity","Fixed effect",0.09939
-"core_mu_upper_CI","Pangenome_fluidity","Random effect",0.11273
-"core_mu_upper_CI","Pangenome_fluidity","Total model",0.21213
-"core_mu_upper_CI","Pangenome_fluidity","tip",4.37074779936685e-09
-"core_mu_upper_CI","Pangenome_fluidity","units",3.05471066891514e-08
-"core_mu_upper_CI","Total_envs","Fixed effect",0.006977
-"core_mu_upper_CI","Total_envs","Random effect",0.237851
-"core_mu_upper_CI","Total_envs","Total model",0.244827
-"core_mu_upper_CI","Total_envs","tip",9.85363492245724e-09
-"core_mu_upper_CI","Total_envs","units",3.12851792420126e-08
-"prop_genes2_median","Host_or_free","Fixed effect",0.05817
-"prop_genes2_median","Host_or_free","Random effect",0.23705
-"prop_genes2_median","Host_or_free","Total model",0.29522
-"prop_genes2_median","Host_or_free","tip",0.0044654721919594
-"prop_genes2_median","Host_or_free","units",0.0132761806194972
-"prop_genes2_median","Category_primary_env","Fixed effect",0.01996
-"prop_genes2_median","Category_primary_env","Random effect",0.19683
-"prop_genes2_median","Category_primary_env","Total model",0.21679
-"prop_genes2_median","Category_primary_env","tip",0.00355601455949051
-"prop_genes2_median","Category_primary_env","units",0.0141499303598323
-"prop_genes2_median","Obligate_facultative","Fixed effect",0.08736
-"prop_genes2_median","Obligate_facultative","Random effect",0.17711
-"prop_genes2_median","Obligate_facultative","Total model",0.26447
-"prop_genes2_median","Obligate_facultative","tip",0.00319719133886393
-"prop_genes2_median","Obligate_facultative","units",0.0132781065176105
-"prop_genes2_median","Intra_or_extracellular","Fixed effect",0.05596
-"prop_genes2_median","Intra_or_extracellular","Random effect",0.15485
-"prop_genes2_median","Intra_or_extracellular","Total model",0.21081
-"prop_genes2_median","Intra_or_extracellular","tip",0.0027422609046842
-"prop_genes2_median","Intra_or_extracellular","units",0.0139755350955934
-"prop_genes2_median","Effect_on_host","Fixed effect",0.1364
-"prop_genes2_median","Effect_on_host","Random effect",0.1787
-"prop_genes2_median","Effect_on_host","Total model",0.315
-"prop_genes2_median","Effect_on_host","tip",0.00323815976466793
-"prop_genes2_median","Effect_on_host","units",0.0124153188252105
-"prop_genes2_median","Motility","Fixed effect",0.01346
-"prop_genes2_median","Motility","Random effect",0.23301
-"prop_genes2_median","Motility","Total model",0.24647
-"prop_genes2_median","Motility","tip",0.00434722811021981
-"prop_genes2_median","Motility","units",0.0140583525992029
-"prop_genes2_median","combined","Fixed effect",0.1723
-"prop_genes2_median","combined","Random effect",0.2001
-"prop_genes2_median","combined","Total model",0.3725
-"prop_genes2_median","combined","tip",0.00401957092342247
-"prop_genes2_median","combined","units",0.0126029335982656
-"prop_genes2_median","NE","Fixed effect",0.01038
-"prop_genes2_median","NE","Random effect",0.19669
-"prop_genes2_median","NE","Total model",0.20708
-"prop_genes2_median","NE","tip",0.00323730972823269
-"prop_genes2_median","NE","units",0.013050362960896
-"prop_genes2_median","Genome_size","Fixed effect",0.02782
-"prop_genes2_median","Genome_size","Random effect",0.25788
-"prop_genes2_median","Genome_size","Total model",0.28571
-"prop_genes2_median","Genome_size","tip",0.00485533069447119
-"prop_genes2_median","Genome_size","units",0.0134484816483099
-"prop_genes2_median","Pan_size","Fixed effect",0.1128
-"prop_genes2_median","Pan_size","Random effect",0.1725
-"prop_genes2_median","Pan_size","Total model",0.2853
-"prop_genes2_median","Pan_size","tip",0.00311928686907404
-"prop_genes2_median","Pan_size","units",0.0129280932762408
-"prop_genes2_median","Pangenome_fluidity","Fixed effect",0.22959
-"prop_genes2_median","Pangenome_fluidity","Random effect",0.06448
-"prop_genes2_median","Pangenome_fluidity","Total model",0.29407
-"prop_genes2_median","Pangenome_fluidity","tip",0.00110254738870287
-"prop_genes2_median","Pangenome_fluidity","units",0.0120705192673126
-"prop_genes2_median","Total_envs","Fixed effect",0.004721
-"prop_genes2_median","Total_envs","Random effect",0.202718
-"prop_genes2_median","Total_envs","Total model",0.207439
-"prop_genes2_median","Total_envs","tip",0.00368112639419601
-"prop_genes2_median","Total_envs","units",0.0143919899315547
-"prop_genes2_lower_CI","Host_or_free","Fixed effect",0.06793
-"prop_genes2_lower_CI","Host_or_free","Random effect",0.12132
-"prop_genes2_lower_CI","Host_or_free","Total model",0.18926
-"prop_genes2_lower_CI","Host_or_free","tip",0.00105222658258247
-"prop_genes2_lower_CI","Host_or_free","units",0.00703145242268457
-"prop_genes2_lower_CI","Category_primary_env","Fixed effect",0.005055
-"prop_genes2_lower_CI","Category_primary_env","Random effect",0.12103
-"prop_genes2_lower_CI","Category_primary_env","Total model",0.126085
-"prop_genes2_lower_CI","Category_primary_env","tip",0.00102926411055564
-"prop_genes2_lower_CI","Category_primary_env","units",0.00743194963956658
-"prop_genes2_lower_CI","Obligate_facultative","Fixed effect",0.10363
-"prop_genes2_lower_CI","Obligate_facultative","Random effect",0.09461
-"prop_genes2_lower_CI","Obligate_facultative","Total model",0.19824
-"prop_genes2_lower_CI","Obligate_facultative","tip",0.000814249112885602
-"prop_genes2_lower_CI","Obligate_facultative","units",0.00690029725946529
-"prop_genes2_lower_CI","Intra_or_extracellular","Fixed effect",0.03323
-"prop_genes2_lower_CI","Intra_or_extracellular","Random effect",0.12561
-"prop_genes2_lower_CI","Intra_or_extracellular","Total model",0.15884
-"prop_genes2_lower_CI","Intra_or_extracellular","tip",0.00108791235266751
-"prop_genes2_lower_CI","Intra_or_extracellular","units",0.00728518580161618
-"prop_genes2_lower_CI","Effect_on_host","Fixed effect",0.14272
-"prop_genes2_lower_CI","Effect_on_host","Random effect",0.09493
-"prop_genes2_lower_CI","Effect_on_host","Total model",0.23766
-"prop_genes2_lower_CI","Effect_on_host","tip",0.000812224764762859
-"prop_genes2_lower_CI","Effect_on_host","units",0.00652243708485269
-"prop_genes2_lower_CI","Motility","Fixed effect",0.02861
-"prop_genes2_lower_CI","Motility","Random effect",0.14036
-"prop_genes2_lower_CI","Motility","Total model",0.16897
-"prop_genes2_lower_CI","Motility","tip",0.00122325798049945
-"prop_genes2_lower_CI","Motility","units",0.00724280104084385
-"prop_genes2_lower_CI","combined","Fixed effect",0.1788
-"prop_genes2_lower_CI","combined","Random effect",0.1432
-"prop_genes2_lower_CI","combined","Total model",0.322
-"prop_genes2_lower_CI","combined","tip",0.00137818176913835
-"prop_genes2_lower_CI","combined","units",0.00652623793774818
-"prop_genes2_lower_CI","NE","Fixed effect",0.01836
-"prop_genes2_lower_CI","NE","Random effect",0.19193
-"prop_genes2_lower_CI","NE","Total model",0.21029
-"prop_genes2_lower_CI","NE","tip",0.00182712495886829
-"prop_genes2_lower_CI","NE","units",0.00751784361878874
-"prop_genes2_lower_CI","Genome_size","Fixed effect",0.09603
-"prop_genes2_lower_CI","Genome_size","Random effect",0.14272
-"prop_genes2_lower_CI","Genome_size","Total model",0.23874
-"prop_genes2_lower_CI","Genome_size","tip",0.00124746863495486
-"prop_genes2_lower_CI","Genome_size","units",0.00665411118029063
-"prop_genes2_lower_CI","Pan_size","Fixed effect",0.19124
-"prop_genes2_lower_CI","Pan_size","Random effect",0.05616
-"prop_genes2_lower_CI","Pan_size","Total model",0.24739
-"prop_genes2_lower_CI","Pan_size","tip",0.000468116558783314
-"prop_genes2_lower_CI","Pan_size","units",0.00627382715554341
-"prop_genes2_lower_CI","Pangenome_fluidity","Fixed effect",0.14828
-"prop_genes2_lower_CI","Pangenome_fluidity","Random effect",0.06398
-"prop_genes2_lower_CI","Pangenome_fluidity","Total model",0.21225
-"prop_genes2_lower_CI","Pangenome_fluidity","tip",0.0005290672451688
-"prop_genes2_lower_CI","Pangenome_fluidity","units",0.00651418897689404
-"prop_genes2_lower_CI","Total_envs","Fixed effect",0.02192
-"prop_genes2_lower_CI","Total_envs","Random effect",0.1141
-"prop_genes2_lower_CI","Total_envs","Total model",0.13602
-"prop_genes2_lower_CI","Total_envs","tip",0.000968548199758593
-"prop_genes2_lower_CI","Total_envs","units",0.00733391123126645
-"prop_genes2_upper_CI","Host_or_free","Fixed effect",0.05116
-"prop_genes2_upper_CI","Host_or_free","Random effect",0.26882
-"prop_genes2_upper_CI","Host_or_free","Total model",0.31998
-"prop_genes2_upper_CI","Host_or_free","tip",0.0085997635273975
-"prop_genes2_upper_CI","Host_or_free","units",0.0217542398941226
-"prop_genes2_upper_CI","Category_primary_env","Fixed effect",0.01652
-"prop_genes2_upper_CI","Category_primary_env","Random effect",0.2782
-"prop_genes2_upper_CI","Category_primary_env","Total model",0.29472
-"prop_genes2_upper_CI","Category_primary_env","tip",0.00880728073062147
-"prop_genes2_upper_CI","Category_primary_env","units",0.022327900291095
-"prop_genes2_upper_CI","Obligate_facultative","Fixed effect",0.05583
-"prop_genes2_upper_CI","Obligate_facultative","Random effect",0.2686
-"prop_genes2_upper_CI","Obligate_facultative","Total model",0.32443
-"prop_genes2_upper_CI","Obligate_facultative","tip",0.00843811889289476
-"prop_genes2_upper_CI","Obligate_facultative","units",0.0212235845817055
-"prop_genes2_upper_CI","Intra_or_extracellular","Fixed effect",0.0399
-"prop_genes2_upper_CI","Intra_or_extracellular","Random effect",0.1939
-"prop_genes2_upper_CI","Intra_or_extracellular","Total model",0.2338
-"prop_genes2_upper_CI","Intra_or_extracellular","tip",0.00580938534852816
-"prop_genes2_upper_CI","Intra_or_extracellular","units",0.0229576503054863
-"prop_genes2_upper_CI","Effect_on_host","Fixed effect",0.1305
-"prop_genes2_upper_CI","Effect_on_host","Random effect",0.3389
-"prop_genes2_upper_CI","Effect_on_host","Total model",0.4694
-"prop_genes2_upper_CI","Effect_on_host","tip",0.0114997502181715
-"prop_genes2_upper_CI","Effect_on_host","units",0.0180074051215078
-"prop_genes2_upper_CI","Motility","Fixed effect",0.01328
-"prop_genes2_upper_CI","Motility","Random effect",0.27999
-"prop_genes2_upper_CI","Motility","Total model",0.29327
-"prop_genes2_upper_CI","Motility","tip",0.00902360784743733
-"prop_genes2_upper_CI","Motility","units",0.0227768834728698
-"prop_genes2_upper_CI","combined","Fixed effect",0.1483
-"prop_genes2_upper_CI","combined","Random effect",0.3727
-"prop_genes2_upper_CI","combined","Total model",0.521
-"prop_genes2_upper_CI","combined","tip",0.0143389075421392
-"prop_genes2_upper_CI","combined","units",0.0184282186839574
-"prop_genes2_upper_CI","NE","Fixed effect",0.003588
-"prop_genes2_upper_CI","NE","Random effect",0.149687
-"prop_genes2_upper_CI","NE","Total model",0.153276
-"prop_genes2_upper_CI","NE","tip",0.00397787667235173
-"prop_genes2_upper_CI","NE","units",0.0225013254572766
-"prop_genes2_upper_CI","Genome_size","Fixed effect",0.0007049
-"prop_genes2_upper_CI","Genome_size","Random effect",0.2845485
-"prop_genes2_upper_CI","Genome_size","Total model",0.2852534
-"prop_genes2_upper_CI","Genome_size","tip",0.00904786431968353
-"prop_genes2_upper_CI","Genome_size","units",0.0227269906646414
-"prop_genes2_upper_CI","Pan_size","Fixed effect",0.04267
-"prop_genes2_upper_CI","Pan_size","Random effect",0.27253
-"prop_genes2_upper_CI","Pan_size","Total model",0.3152
-"prop_genes2_upper_CI","Pan_size","tip",0.00863747089940496
-"prop_genes2_upper_CI","Pan_size","units",0.0217039539530148
-"prop_genes2_upper_CI","Pangenome_fluidity","Fixed effect",0.1761
-"prop_genes2_upper_CI","Pangenome_fluidity","Random effect",0.1047
-"prop_genes2_upper_CI","Pangenome_fluidity","Total model",0.2808
-"prop_genes2_upper_CI","Pangenome_fluidity","tip",0.0030616408965612
-"prop_genes2_upper_CI","Pangenome_fluidity","units",0.021020245501685
-"prop_genes2_upper_CI","Total_envs","Fixed effect",0.0008347
-"prop_genes2_upper_CI","Total_envs","Random effect",0.2555604
-"prop_genes2_upper_CI","Total_envs","Total model",0.2563952
-"prop_genes2_upper_CI","Total_envs","tip",0.00796888847668194
-"prop_genes2_upper_CI","Total_envs","units",0.0231870973191639
+"rate_genes1_median","Host_or_free","Fixed effect",0.0339
+"rate_genes1_median","Host_or_free","Random effect",0.05899
+"rate_genes1_median","Host_or_free","Total model",0.09289
+"rate_genes1_median","Host_or_free","tip",1.26532809785241e-06
+"rate_genes1_median","Host_or_free","units",1.94570916472612e-05
+"rate_genes1_median","Category_primary_env","Fixed effect",0.01269
+"rate_genes1_median","Category_primary_env","Random effect",0.05393
+"rate_genes1_median","Category_primary_env","Total model",0.06662
+"rate_genes1_median","Category_primary_env","tip",1.13468739587539e-06
+"rate_genes1_median","Category_primary_env","units",1.96381671030275e-05
+"rate_genes1_median","Obligate_facultative","Fixed effect",0.008883
+"rate_genes1_median","Obligate_facultative","Random effect",0.070076
+"rate_genes1_median","Obligate_facultative","Total model",0.078959
+"rate_genes1_median","Obligate_facultative","tip",1.543640040416e-06
+"rate_genes1_median","Obligate_facultative","units",2.02888268237365e-05
+"rate_genes1_median","Intra_or_extracellular","Fixed effect",0.02503
+"rate_genes1_median","Intra_or_extracellular","Random effect",0.0724
+"rate_genes1_median","Intra_or_extracellular","Total model",0.09743
+"rate_genes1_median","Intra_or_extracellular","tip",1.57750316374771e-06
+"rate_genes1_median","Intra_or_extracellular","units",1.96651065136449e-05
+"rate_genes1_median","Effect_on_host","Fixed effect",0.001449
+"rate_genes1_median","Effect_on_host","Random effect",0.07102
+"rate_genes1_median","Effect_on_host","Total model",0.072469
+"rate_genes1_median","Effect_on_host","tip",1.56434274902662e-06
+"rate_genes1_median","Effect_on_host","units",2.04303865873041e-05
+"rate_genes1_median","Motility","Fixed effect",0.02563
+"rate_genes1_median","Motility","Random effect",0.05229
+"rate_genes1_median","Motility","Total model",0.07791
+"rate_genes1_median","Motility","tip",1.11361363589564e-06
+"rate_genes1_median","Motility","units",1.96394423821222e-05
+"rate_genes1_median","combined","Fixed effect",0.05473
+"rate_genes1_median","combined","Random effect",0.07693
+"rate_genes1_median","combined","Total model",0.13166
+"rate_genes1_median","combined","tip",1.84656145843124e-06
+"rate_genes1_median","combined","units",2.08441128205191e-05
+"rate_genes1_median","NE","Fixed effect",0.004848
+"rate_genes1_median","NE","Random effect",0.098797
+"rate_genes1_median","NE","Total model",0.103645
+"rate_genes1_median","NE","tip",2.95751260861409e-06
+"rate_genes1_median","NE","units",2.68327220154318e-05
+"rate_genes1_median","Genome_size","Fixed effect",1.969e-06
+"rate_genes1_median","Genome_size","Random effect",0.06851
+"rate_genes1_median","Genome_size","Total model",0.06851
+"rate_genes1_median","Genome_size","tip",1.45062530792122e-06
+"rate_genes1_median","Genome_size","units",1.97235956267643e-05
+"rate_genes1_median","Pan_size","Fixed effect",6.337e-07
+"rate_genes1_median","Pan_size","Random effect",0.06651
+"rate_genes1_median","Pan_size","Total model",0.06651
+"rate_genes1_median","Pan_size","tip",1.40201264124036e-06
+"rate_genes1_median","Pan_size","units",1.96772410995571e-05
+"rate_genes1_median","Pangenome_fluidity","Fixed effect",0.001215
+"rate_genes1_median","Pangenome_fluidity","Random effect",0.065347
+"rate_genes1_median","Pangenome_fluidity","Total model",0.066562
+"rate_genes1_median","Pangenome_fluidity","tip",1.37879908282341e-06
+"rate_genes1_median","Pangenome_fluidity","units",1.9695104725784e-05
+"rate_genes1_median","Total_envs","Fixed effect",0.02522
+"rate_genes1_median","Total_envs","Random effect",0.0522
+"rate_genes1_median","Total_envs","Total model",0.07742
+"rate_genes1_median","Total_envs","tip",1.09683602153689e-06
+"rate_genes1_median","Total_envs","units",1.9385466904381e-05
+"rate_genes1_lower_CI","Host_or_free","Fixed effect",0.005763
+"rate_genes1_lower_CI","Host_or_free","Random effect",0.955022
+"rate_genes1_lower_CI","Host_or_free","Total model",0.960785
+"rate_genes1_lower_CI","Host_or_free","tip",1.38839138825652e-06
+"rate_genes1_lower_CI","Host_or_free","units",5.70100033013948e-08
+"rate_genes1_lower_CI","Category_primary_env","Fixed effect",0.0001799
+"rate_genes1_lower_CI","Category_primary_env","Random effect",0.9617173
+"rate_genes1_lower_CI","Category_primary_env","Total model",0.9618973
+"rate_genes1_lower_CI","Category_primary_env","tip",1.39895099919211e-06
+"rate_genes1_lower_CI","Category_primary_env","units",5.54257214919994e-08
+"rate_genes1_lower_CI","Obligate_facultative","Fixed effect",0.001424
+"rate_genes1_lower_CI","Obligate_facultative","Random effect",0.962262
+"rate_genes1_lower_CI","Obligate_facultative","Total model",0.963686
+"rate_genes1_lower_CI","Obligate_facultative","tip",1.47074241745125e-06
+"rate_genes1_lower_CI","Obligate_facultative","units",5.55025173859139e-08
+"rate_genes1_lower_CI","Intra_or_extracellular","Fixed effect",0.03077
+"rate_genes1_lower_CI","Intra_or_extracellular","Random effect",0.93099
+"rate_genes1_lower_CI","Intra_or_extracellular","Total model",0.96176
+"rate_genes1_lower_CI","Intra_or_extracellular","tip",1.37556073100876e-06
+"rate_genes1_lower_CI","Intra_or_extracellular","units",5.65007360923038e-08
+"rate_genes1_lower_CI","Effect_on_host","Fixed effect",0.0003816
+"rate_genes1_lower_CI","Effect_on_host","Random effect",0.9628987
+"rate_genes1_lower_CI","Effect_on_host","Total model",0.9632803
+"rate_genes1_lower_CI","Effect_on_host","tip",1.46873584322795e-06
+"rate_genes1_lower_CI","Effect_on_host","units",5.60096021925303e-08
+"rate_genes1_lower_CI","Motility","Fixed effect",0.001215
+"rate_genes1_lower_CI","Motility","Random effect",0.959652
+"rate_genes1_lower_CI","Motility","Total model",0.960867
+"rate_genes1_lower_CI","Motility","tip",1.3997420069586e-06
+"rate_genes1_lower_CI","Motility","units",5.70789556382951e-08
+"rate_genes1_lower_CI","combined","Fixed effect",0.03693
+"rate_genes1_lower_CI","combined","Random effect",0.92491
+"rate_genes1_lower_CI","combined","Total model",0.96184
+"rate_genes1_lower_CI","combined","tip",1.49151958103549e-06
+"rate_genes1_lower_CI","combined","units",6.15333747036985e-08
+"rate_genes1_lower_CI","NE","Fixed effect",3.02e-08
+"rate_genes1_lower_CI","NE","Random effect",0.9676
+"rate_genes1_lower_CI","NE","Total model",0.9676
+"rate_genes1_lower_CI","NE","tip",1.95663219992789e-06
+"rate_genes1_lower_CI","NE","units",6.55660771044201e-08
+"rate_genes1_lower_CI","Genome_size","Fixed effect",0.000408
+"rate_genes1_lower_CI","Genome_size","Random effect",0.962468
+"rate_genes1_lower_CI","Genome_size","Total model",0.962876
+"rate_genes1_lower_CI","Genome_size","tip",1.40702306622404e-06
+"rate_genes1_lower_CI","Genome_size","units",5.42708135594537e-08
+"rate_genes1_lower_CI","Pan_size","Fixed effect",3.52e-05
+"rate_genes1_lower_CI","Pan_size","Random effect",0.9619159
+"rate_genes1_lower_CI","Pan_size","Total model",0.9619511
+"rate_genes1_lower_CI","Pan_size","tip",1.40350229880874e-06
+"rate_genes1_lower_CI","Pan_size","units",5.55159933876336e-08
+"rate_genes1_lower_CI","Pangenome_fluidity","Fixed effect",6.495e-05
+"rate_genes1_lower_CI","Pangenome_fluidity","Random effect",0.9623
+"rate_genes1_lower_CI","Pangenome_fluidity","Total model",0.9623
+"rate_genes1_lower_CI","Pangenome_fluidity","tip",1.40756651706187e-06
+"rate_genes1_lower_CI","Pangenome_fluidity","units",5.51218875186722e-08
+"rate_genes1_lower_CI","Total_envs","Fixed effect",0.0003437
+"rate_genes1_lower_CI","Total_envs","Random effect",0.9616327
+"rate_genes1_lower_CI","Total_envs","Total model",0.9619764
+"rate_genes1_lower_CI","Total_envs","tip",1.3984035834524e-06
+"rate_genes1_lower_CI","Total_envs","units",5.52938310522489e-08
+"rate_genes1_upper_CI","Host_or_free","Fixed effect",0.0003475
+"rate_genes1_upper_CI","Host_or_free","Random effect",0.9862818
+"rate_genes1_upper_CI","Host_or_free","Total model",0.9866292
+"rate_genes1_upper_CI","Host_or_free","tip",0.0105271705208719
+"rate_genes1_upper_CI","Host_or_free","units",0.000142714359700833
+"rate_genes1_upper_CI","Category_primary_env","Fixed effect",0.0001046
+"rate_genes1_upper_CI","Category_primary_env","Random effect",0.9862133
+"rate_genes1_upper_CI","Category_primary_env","Total model",0.9863179
+"rate_genes1_upper_CI","Category_primary_env","tip",0.0103935721541141
+"rate_genes1_upper_CI","Category_primary_env","units",0.000144193999241229
+"rate_genes1_upper_CI","Obligate_facultative","Fixed effect",4.622e-06
+"rate_genes1_upper_CI","Obligate_facultative","Random effect",0.9872
+"rate_genes1_upper_CI","Obligate_facultative","Total model",0.9872
+"rate_genes1_upper_CI","Obligate_facultative","tip",0.0109451867079415
+"rate_genes1_upper_CI","Obligate_facultative","units",0.000142121299530227
+"rate_genes1_upper_CI","Intra_or_extracellular","Fixed effect",7.772e-05
+"rate_genes1_upper_CI","Intra_or_extracellular","Random effect",0.9869
+"rate_genes1_upper_CI","Intra_or_extracellular","Total model",0.9869
+"rate_genes1_upper_CI","Intra_or_extracellular","tip",0.0108049382468342
+"rate_genes1_upper_CI","Intra_or_extracellular","units",0.000143023467002395
+"rate_genes1_upper_CI","Effect_on_host","Fixed effect",0.03335
+"rate_genes1_upper_CI","Effect_on_host","Random effect",0.95269
+"rate_genes1_upper_CI","Effect_on_host","Total model",0.98604
+"rate_genes1_upper_CI","Effect_on_host","tip",0.0100572882474143
+"rate_genes1_upper_CI","Effect_on_host","units",0.000147381589555507
+"rate_genes1_upper_CI","Motility","Fixed effect",0.001248
+"rate_genes1_upper_CI","Motility","Random effect",0.984605
+"rate_genes1_upper_CI","Motility","Total model",0.985853
+"rate_genes1_upper_CI","Motility","tip",0.010392345923142
+"rate_genes1_upper_CI","Motility","units",0.000149320956839662
+"rate_genes1_upper_CI","combined","Fixed effect",0.0393
+"rate_genes1_upper_CI","combined","Random effect",0.9465
+"rate_genes1_upper_CI","combined","Total model",0.9858
+"rate_genes1_upper_CI","combined","tip",0.0108146082440044
+"rate_genes1_upper_CI","combined","units",0.000162178733540717
+"rate_genes1_upper_CI","NE","Fixed effect",0.001269
+"rate_genes1_upper_CI","NE","Random effect",0.989081
+"rate_genes1_upper_CI","NE","Total model",0.990351
+"rate_genes1_upper_CI","NE","tip",0.0153869814500936
+"rate_genes1_upper_CI","NE","units",0.000150112906409976
+"rate_genes1_upper_CI","Genome_size","Fixed effect",0.004414
+"rate_genes1_upper_CI","Genome_size","Random effect",0.982546
+"rate_genes1_upper_CI","Genome_size","Total model",0.98696
+"rate_genes1_upper_CI","Genome_size","tip",0.0104428461826787
+"rate_genes1_upper_CI","Genome_size","units",0.000138593131418917
+"rate_genes1_upper_CI","Pan_size","Fixed effect",0.0001059
+"rate_genes1_upper_CI","Pan_size","Random effect",0.9864778
+"rate_genes1_upper_CI","Pan_size","Total model",0.9865837
+"rate_genes1_upper_CI","Pan_size","tip",0.0104206793914143
+"rate_genes1_upper_CI","Pan_size","units",0.000141723226007084
+"rate_genes1_upper_CI","Pangenome_fluidity","Fixed effect",0.0003053
+"rate_genes1_upper_CI","Pangenome_fluidity","Random effect",0.9863381
+"rate_genes1_upper_CI","Pangenome_fluidity","Total model",0.9866433
+"rate_genes1_upper_CI","Pangenome_fluidity","tip",0.0105022908543937
+"rate_genes1_upper_CI","Pangenome_fluidity","units",0.000142218439444868
+"rate_genes1_upper_CI","Total_envs","Fixed effect",0.000869
+"rate_genes1_upper_CI","Total_envs","Random effect",0.985413
+"rate_genes1_upper_CI","Total_envs","Total model",0.986282
+"rate_genes1_upper_CI","Total_envs","tip",0.0103924334086267
+"rate_genes1_upper_CI","Total_envs","units",0.00014467013154603
+"core_mu_median","Host_or_free","Fixed effect",0.03409
+"core_mu_median","Host_or_free","Random effect",0.13873
+"core_mu_median","Host_or_free","Total model",0.17282
+"core_mu_median","Host_or_free","tip",1.00095646068641e-09
+"core_mu_median","Host_or_free","units",5.96799018649881e-09
+"core_mu_median","Category_primary_env","Fixed effect",0.01949
+"core_mu_median","Category_primary_env","Random effect",0.15251
+"core_mu_median","Category_primary_env","Total model",0.172
+"core_mu_median","Category_primary_env","tip",1.09603375277346e-09
+"core_mu_median","Category_primary_env","units",5.9504975355342e-09
+"core_mu_median","Obligate_facultative","Fixed effect",0.01329
+"core_mu_median","Obligate_facultative","Random effect",0.16384
+"core_mu_median","Obligate_facultative","Total model",0.17714
+"core_mu_median","Obligate_facultative","tip",1.20190140670156e-09
+"core_mu_median","Obligate_facultative","units",6.03620522391058e-09
+"core_mu_median","Intra_or_extracellular","Fixed effect",0.0559
+"core_mu_median","Intra_or_extracellular","Random effect",0.1833
+"core_mu_median","Intra_or_extracellular","Total model",0.2392
+"core_mu_median","Intra_or_extracellular","tip",1.3598378347278e-09
+"core_mu_median","Intra_or_extracellular","units",5.64519372472185e-09
+"core_mu_median","Effect_on_host","Fixed effect",0.01801
+"core_mu_median","Effect_on_host","Random effect",0.20107
+"core_mu_median","Effect_on_host","Total model",0.21908
+"core_mu_median","Effect_on_host","tip",1.52047036917078e-09
+"core_mu_median","Effect_on_host","units",5.90519633715875e-09
+"core_mu_median","Motility","Fixed effect",0.09287
+"core_mu_median","Motility","Random effect",0.10286
+"core_mu_median","Motility","Total model",0.19573
+"core_mu_median","Motility","tip",7.37015805840941e-10
+"core_mu_median","Motility","units",5.76268692793647e-09
+"core_mu_median","combined","Fixed effect",0.1409
+"core_mu_median","combined","Random effect",0.1909
+"core_mu_median","combined","Total model",0.3318
+"core_mu_median","combined","tip",1.54821642723811e-09
+"core_mu_median","combined","units",5.41912385598186e-09
+"core_mu_median","NE","Fixed effect",0.02456
+"core_mu_median","NE","Random effect",0.24897
+"core_mu_median","NE","Total model",0.27353
+"core_mu_median","NE","tip",1.96381142527378e-09
+"core_mu_median","NE","units",5.73017429646864e-09
+"core_mu_median","Genome_size","Fixed effect",0.01864
+"core_mu_median","Genome_size","Random effect",0.16054
+"core_mu_median","Genome_size","Total model",0.17919
+"core_mu_median","Genome_size","tip",1.16026941873161e-09
+"core_mu_median","Genome_size","units",5.93206852382434e-09
+"core_mu_median","Pan_size","Fixed effect",0.08629
+"core_mu_median","Pan_size","Random effect",0.12567
+"core_mu_median","Pan_size","Total model",0.21196
+"core_mu_median","Pan_size","tip",8.97256477507663e-10
+"core_mu_median","Pan_size","units",5.62625860270771e-09
+"core_mu_median","Pangenome_fluidity","Fixed effect",0.0927
+"core_mu_median","Pangenome_fluidity","Random effect",0.1019
+"core_mu_median","Pangenome_fluidity","Total model",0.1946
+"core_mu_median","Pangenome_fluidity","tip",7.17741078728487e-10
+"core_mu_median","Pangenome_fluidity","units",5.67044289973114e-09
+"core_mu_median","Total_envs","Fixed effect",0.009483
+"core_mu_median","Total_envs","Random effect",0.139972
+"core_mu_median","Total_envs","Total model",0.149456
+"core_mu_median","Total_envs","tip",1.0053856322199e-09
+"core_mu_median","Total_envs","units",6.10924699749431e-09
+"core_mu_lower_CI","Host_or_free","Fixed effect",0.03584
+"core_mu_lower_CI","Host_or_free","Random effect",0.07662
+"core_mu_lower_CI","Host_or_free","Total model",0.11246
+"core_mu_lower_CI","Host_or_free","tip",1.28777668371803e-10
+"core_mu_lower_CI","Host_or_free","units",1.49163424888006e-09
+"core_mu_lower_CI","Category_primary_env","Fixed effect",0.0399
+"core_mu_lower_CI","Category_primary_env","Random effect",0.06629
+"core_mu_lower_CI","Category_primary_env","Total model",0.10619
+"core_mu_lower_CI","Category_primary_env","tip",1.09692551825533e-10
+"core_mu_lower_CI","Category_primary_env","units",1.47898777359349e-09
+"core_mu_lower_CI","Obligate_facultative","Fixed effect",0.007717
+"core_mu_lower_CI","Obligate_facultative","Random effect",0.09661
+"core_mu_lower_CI","Obligate_facultative","Total model",0.104327
+"core_mu_lower_CI","Obligate_facultative","tip",1.63716469149818e-10
+"core_mu_lower_CI","Obligate_facultative","units",1.51781825233831e-09
+"core_mu_lower_CI","Intra_or_extracellular","Fixed effect",0.05383
+"core_mu_lower_CI","Intra_or_extracellular","Random effect",0.11361
+"core_mu_lower_CI","Intra_or_extracellular","Total model",0.16744
+"core_mu_lower_CI","Intra_or_extracellular","tip",1.94982155908545e-10
+"core_mu_lower_CI","Intra_or_extracellular","units",1.42893251530529e-09
+"core_mu_lower_CI","Effect_on_host","Fixed effect",0.01925
+"core_mu_lower_CI","Effect_on_host","Random effect",0.11629
+"core_mu_lower_CI","Effect_on_host","Total model",0.13555
+"core_mu_lower_CI","Effect_on_host","tip",2.01807243378897e-10
+"core_mu_lower_CI","Effect_on_host","units",1.50009349487461e-09
+"core_mu_lower_CI","Motility","Fixed effect",0.05009
+"core_mu_lower_CI","Motility","Random effect",0.07984
+"core_mu_lower_CI","Motility","Total model",0.12993
+"core_mu_lower_CI","Motility","tip",1.34492370326534e-10
+"core_mu_lower_CI","Motility","units",1.46570233300123e-09
+"core_mu_lower_CI","combined","Fixed effect",0.1092
+"core_mu_lower_CI","combined","Random effect",0.1776
+"core_mu_lower_CI","combined","Total model",0.2869
+"core_mu_lower_CI","combined","tip",3.44256033266139e-10
+"core_mu_lower_CI","combined","units",1.38226639284011e-09
+"core_mu_lower_CI","NE","Fixed effect",0.02092
+"core_mu_lower_CI","NE","Random effect",0.27966
+"core_mu_lower_CI","NE","Total model",0.30058
+"core_mu_lower_CI","NE","tip",5.37550763267946e-10
+"core_mu_lower_CI","NE","units",1.34440449154897e-09
+"core_mu_lower_CI","Genome_size","Fixed effect",0.02448
+"core_mu_lower_CI","Genome_size","Random effect",0.08246
+"core_mu_lower_CI","Genome_size","Total model",0.10695
+"core_mu_lower_CI","Genome_size","tip",1.3836159144938e-10
+"core_mu_lower_CI","Genome_size","units",1.49841680247214e-09
+"core_mu_lower_CI","Pan_size","Fixed effect",0.1003
+"core_mu_lower_CI","Pan_size","Random effect",0.06182
+"core_mu_lower_CI","Pan_size","Total model",0.16211
+"core_mu_lower_CI","Pan_size","tip",1.02771123282015e-10
+"core_mu_lower_CI","Pan_size","units",1.39298992577456e-09
+"core_mu_lower_CI","Pangenome_fluidity","Fixed effect",0.04501
+"core_mu_lower_CI","Pangenome_fluidity","Random effect",0.06485
+"core_mu_lower_CI","Pangenome_fluidity","Total model",0.10987
+"core_mu_lower_CI","Pangenome_fluidity","tip",1.06624485684887e-10
+"core_mu_lower_CI","Pangenome_fluidity","units",1.46342186233762e-09
+"core_mu_lower_CI","Total_envs","Fixed effect",0.005046
+"core_mu_lower_CI","Total_envs","Random effect",0.072773
+"core_mu_lower_CI","Total_envs","Total model",0.077819
+"core_mu_lower_CI","Total_envs","tip",1.20327823011583e-10
+"core_mu_lower_CI","Total_envs","units",1.52479150460477e-09
+"core_mu_upper_CI","Host_or_free","Fixed effect",0.01203
+"core_mu_upper_CI","Host_or_free","Random effect",0.18785
+"core_mu_upper_CI","Host_or_free","Total model",0.19988
+"core_mu_upper_CI","Host_or_free","tip",7.64329979443062e-09
+"core_mu_upper_CI","Host_or_free","units",3.2555221201102e-08
+"core_mu_upper_CI","Category_primary_env","Fixed effect",0.03173
+"core_mu_upper_CI","Category_primary_env","Random effect",0.22148
+"core_mu_upper_CI","Category_primary_env","Total model",0.2532
+"core_mu_upper_CI","Category_primary_env","tip",9.057968461872e-09
+"core_mu_upper_CI","Category_primary_env","units",3.05428286214048e-08
+"core_mu_upper_CI","Obligate_facultative","Fixed effect",0.007464
+"core_mu_upper_CI","Obligate_facultative","Random effect",0.215177
+"core_mu_upper_CI","Obligate_facultative","Total model",0.222641
+"core_mu_upper_CI","Obligate_facultative","tip",8.91598129095809e-09
+"core_mu_upper_CI","Obligate_facultative","units",3.22102751069665e-08
+"core_mu_upper_CI","Intra_or_extracellular","Fixed effect",0.059
+"core_mu_upper_CI","Intra_or_extracellular","Random effect",0.1681
+"core_mu_upper_CI","Intra_or_extracellular","Total model",0.2271
+"core_mu_upper_CI","Intra_or_extracellular","tip",6.79374508910391e-09
+"core_mu_upper_CI","Intra_or_extracellular","units",3.12390773321387e-08
+"core_mu_upper_CI","Effect_on_host","Fixed effect",0.04402
+"core_mu_upper_CI","Effect_on_host","Random effect",0.31992
+"core_mu_upper_CI","Effect_on_host","Total model",0.36395
+"core_mu_upper_CI","Effect_on_host","tip",1.445932481781e-08
+"core_mu_upper_CI","Effect_on_host","units",2.87471628964947e-08
+"core_mu_upper_CI","Motility","Fixed effect",0.05443
+"core_mu_upper_CI","Motility","Random effect",0.16268
+"core_mu_upper_CI","Motility","Total model",0.21711
+"core_mu_upper_CI","Motility","tip",6.59566539265012e-09
+"core_mu_upper_CI","Motility","units",3.17413934013169e-08
+"core_mu_upper_CI","combined","Fixed effect",0.1415
+"core_mu_upper_CI","combined","Random effect",0.2418
+"core_mu_upper_CI","combined","Total model",0.3834
+"core_mu_upper_CI","combined","tip",1.10012731742208e-08
+"core_mu_upper_CI","combined","units",2.80534337025747e-08
+"core_mu_upper_CI","NE","Fixed effect",0.0002758
+"core_mu_upper_CI","NE","Random effect",0.2209135
+"core_mu_upper_CI","NE","Total model",0.2211893
+"core_mu_upper_CI","NE","tip",9.63423194895278e-09
+"core_mu_upper_CI","NE","units",3.39646191535838e-08
+"core_mu_upper_CI","Genome_size","Fixed effect",0.0002861
+"core_mu_upper_CI","Genome_size","Random effect",0.2194488
+"core_mu_upper_CI","Genome_size","Total model",0.2197349
+"core_mu_upper_CI","Genome_size","tip",8.9358990085869e-09
+"core_mu_upper_CI","Genome_size","units",3.17721956475102e-08
+"core_mu_upper_CI","Pan_size","Fixed effect",0.01825
+"core_mu_upper_CI","Pan_size","Random effect",0.202
+"core_mu_upper_CI","Pan_size","Total model",0.22025
+"core_mu_upper_CI","Pan_size","tip",8.1930433381545e-09
+"core_mu_upper_CI","Pan_size","units",3.16259305652674e-08
+"core_mu_upper_CI","Pangenome_fluidity","Fixed effect",0.0991
+"core_mu_upper_CI","Pangenome_fluidity","Random effect",0.1054
+"core_mu_upper_CI","Pangenome_fluidity","Total model",0.2045
+"core_mu_upper_CI","Pangenome_fluidity","tip",4.06278288422404e-09
+"core_mu_upper_CI","Pangenome_fluidity","units",3.06580983417696e-08
+"core_mu_upper_CI","Total_envs","Fixed effect",0.006824
+"core_mu_upper_CI","Total_envs","Random effect",0.227839
+"core_mu_upper_CI","Total_envs","Total model",0.234662
+"core_mu_upper_CI","Total_envs","tip",9.37091242218771e-09
+"core_mu_upper_CI","Total_envs","units",3.14780311001704e-08
+"prop_genes2_median","Host_or_free","Fixed effect",0.05708
+"prop_genes2_median","Host_or_free","Random effect",0.22645
+"prop_genes2_median","Host_or_free","Total model",0.28354
+"prop_genes2_median","Host_or_free","tip",0.00422377633854021
+"prop_genes2_median","Host_or_free","units",0.0133633899127731
+"prop_genes2_median","Category_primary_env","Fixed effect",0.02036
+"prop_genes2_median","Category_primary_env","Random effect",0.19221
+"prop_genes2_median","Category_primary_env","Total model",0.21257
+"prop_genes2_median","Category_primary_env","tip",0.0034568729553109
+"prop_genes2_median","Category_primary_env","units",0.0141615769514584
+"prop_genes2_median","Obligate_facultative","Fixed effect",0.08879
+"prop_genes2_median","Obligate_facultative","Random effect",0.17376
+"prop_genes2_median","Obligate_facultative","Total model",0.26256
+"prop_genes2_median","Obligate_facultative","tip",0.00313076684924045
+"prop_genes2_median","Obligate_facultative","units",0.0132869796158839
+"prop_genes2_median","Intra_or_extracellular","Fixed effect",0.05605
+"prop_genes2_median","Intra_or_extracellular","Random effect",0.14833
+"prop_genes2_median","Intra_or_extracellular","Total model",0.20438
+"prop_genes2_median","Intra_or_extracellular","tip",0.00261518521708654
+"prop_genes2_median","Intra_or_extracellular","units",0.0140275386012235
+"prop_genes2_median","Effect_on_host","Fixed effect",0.1369
+"prop_genes2_median","Effect_on_host","Random effect",0.1711
+"prop_genes2_median","Effect_on_host","Total model",0.308
+"prop_genes2_median","Effect_on_host","tip",0.00308363048858114
+"prop_genes2_median","Effect_on_host","units",0.0124699940338158
+"prop_genes2_median","Motility","Fixed effect",0.01388
+"prop_genes2_median","Motility","Random effect",0.22377
+"prop_genes2_median","Motility","Total model",0.23765
+"prop_genes2_median","Motility","tip",0.004143243198617
+"prop_genes2_median","Motility","units",0.0141156160869376
+"prop_genes2_median","combined","Fixed effect",0.1712
+"prop_genes2_median","combined","Random effect",0.1897
+"prop_genes2_median","combined","Total model",0.3608
+"prop_genes2_median","combined","tip",0.00378172924699099
+"prop_genes2_median","combined","units",0.0127447659614038
+"prop_genes2_median","NE","Fixed effect",0.01135
+"prop_genes2_median","NE","Random effect",0.18699
+"prop_genes2_median","NE","Total model",0.19834
+"prop_genes2_median","NE","tip",0.00305490203257342
+"prop_genes2_median","NE","units",0.0130971431313372
+"prop_genes2_median","Genome_size","Fixed effect",0.0264
+"prop_genes2_median","Genome_size","Random effect",0.2489
+"prop_genes2_median","Genome_size","Total model",0.2753
+"prop_genes2_median","Genome_size","tip",0.00463264377780957
+"prop_genes2_median","Genome_size","units",0.0134884613232877
+"prop_genes2_median","Pan_size","Fixed effect",0.112
+"prop_genes2_median","Pan_size","Random effect",0.1675
+"prop_genes2_median","Pan_size","Total model",0.2795
+"prop_genes2_median","Pan_size","tip",0.00300636290903121
+"prop_genes2_median","Pan_size","units",0.0129336828633228
+"prop_genes2_median","Pangenome_fluidity","Fixed effect",0.2299
+"prop_genes2_median","Pangenome_fluidity","Random effect",0.06492
+"prop_genes2_median","Pangenome_fluidity","Total model",0.29482
+"prop_genes2_median","Pangenome_fluidity","tip",0.00110431747169724
+"prop_genes2_median","Pangenome_fluidity","units",0.0119960522713619
+"prop_genes2_median","Total_envs","Fixed effect",0.004981
+"prop_genes2_median","Total_envs","Random effect",0.193125
+"prop_genes2_median","Total_envs","Total model",0.198105
+"prop_genes2_median","Total_envs","tip",0.00347590350780399
+"prop_genes2_median","Total_envs","units",0.0144326871366035
+"prop_genes2_lower_CI","Host_or_free","Fixed effect",0.06794
+"prop_genes2_lower_CI","Host_or_free","Random effect",0.11861
+"prop_genes2_lower_CI","Host_or_free","Total model",0.18655
+"prop_genes2_lower_CI","Host_or_free","tip",0.00102222556122054
+"prop_genes2_lower_CI","Host_or_free","units",0.00701043111898471
+"prop_genes2_lower_CI","Category_primary_env","Fixed effect",0.005399
+"prop_genes2_lower_CI","Category_primary_env","Random effect",0.117701
+"prop_genes2_lower_CI","Category_primary_env","Total model",0.1231
+"prop_genes2_lower_CI","Category_primary_env","tip",0.000995592434052224
+"prop_genes2_lower_CI","Category_primary_env","units",0.00741741085024949
+"prop_genes2_lower_CI","Obligate_facultative","Fixed effect",0.10305
+"prop_genes2_lower_CI","Obligate_facultative","Random effect",0.09279
+"prop_genes2_lower_CI","Obligate_facultative","Total model",0.19584
+"prop_genes2_lower_CI","Obligate_facultative","tip",0.000796447763371472
+"prop_genes2_lower_CI","Obligate_facultative","units",0.00690259769914098
+"prop_genes2_lower_CI","Intra_or_extracellular","Fixed effect",0.03359
+"prop_genes2_lower_CI","Intra_or_extracellular","Random effect",0.12163
+"prop_genes2_lower_CI","Intra_or_extracellular","Total model",0.15522
+"prop_genes2_lower_CI","Intra_or_extracellular","tip",0.00104699415599385
+"prop_genes2_lower_CI","Intra_or_extracellular","units",0.00727189957836913
+"prop_genes2_lower_CI","Effect_on_host","Fixed effect",0.14224
+"prop_genes2_lower_CI","Effect_on_host","Random effect",0.09268
+"prop_genes2_lower_CI","Effect_on_host","Total model",0.23492
+"prop_genes2_lower_CI","Effect_on_host","tip",0.000793691038040196
+"prop_genes2_lower_CI","Effect_on_host","units",0.0065517063541569
+"prop_genes2_lower_CI","Motility","Fixed effect",0.0281
+"prop_genes2_lower_CI","Motility","Random effect",0.1354
+"prop_genes2_lower_CI","Motility","Total model",0.1635
+"prop_genes2_lower_CI","Motility","tip",0.00117328611624891
+"prop_genes2_lower_CI","Motility","units",0.00724980834958431
+"prop_genes2_lower_CI","combined","Fixed effect",0.1797
+"prop_genes2_lower_CI","combined","Random effect",0.1367
+"prop_genes2_lower_CI","combined","Total model",0.3164
+"prop_genes2_lower_CI","combined","tip",0.00131296815228061
+"prop_genes2_lower_CI","combined","units",0.00656380023577573
+"prop_genes2_lower_CI","NE","Fixed effect",0.01888
+"prop_genes2_lower_CI","NE","Random effect",0.18691
+"prop_genes2_lower_CI","NE","Total model",0.20579
+"prop_genes2_lower_CI","NE","tip",0.0017656837731961
+"prop_genes2_lower_CI","NE","units",0.00750258867518306
+"prop_genes2_lower_CI","Genome_size","Fixed effect",0.0965
+"prop_genes2_lower_CI","Genome_size","Random effect",0.1367
+"prop_genes2_lower_CI","Genome_size","Total model",0.2332
+"prop_genes2_lower_CI","Genome_size","tip",0.00119053103259142
+"prop_genes2_lower_CI","Genome_size","units",0.00667658083134627
+"prop_genes2_lower_CI","Pan_size","Fixed effect",0.1938
+"prop_genes2_lower_CI","Pan_size","Random effect",0.05484
+"prop_genes2_lower_CI","Pan_size","Total model",0.24863
+"prop_genes2_lower_CI","Pan_size","tip",0.000456007567137096
+"prop_genes2_lower_CI","Pan_size","units",0.00624834936768587
+"prop_genes2_lower_CI","Pangenome_fluidity","Fixed effect",0.14968
+"prop_genes2_lower_CI","Pangenome_fluidity","Random effect",0.06154
+"prop_genes2_lower_CI","Pangenome_fluidity","Total model",0.21122
+"prop_genes2_lower_CI","Pangenome_fluidity","tip",0.000506037160090339
+"prop_genes2_lower_CI","Pangenome_fluidity","units",0.00648621104094291
+"prop_genes2_lower_CI","Total_envs","Fixed effect",0.0212
+"prop_genes2_lower_CI","Total_envs","Random effect",0.1096
+"prop_genes2_lower_CI","Total_envs","Total model",0.1308
+"prop_genes2_lower_CI","Total_envs","tip",0.000927528815651715
+"prop_genes2_lower_CI","Total_envs","units",0.00735875906795014
+"prop_genes2_upper_CI","Host_or_free","Fixed effect",0.04923
+"prop_genes2_upper_CI","Host_or_free","Random effect",0.26292
+"prop_genes2_upper_CI","Host_or_free","Total model",0.31215
+"prop_genes2_upper_CI","Host_or_free","tip",0.00834382660159422
+"prop_genes2_upper_CI","Host_or_free","units",0.0218287152694531
+"prop_genes2_upper_CI","Category_primary_env","Fixed effect",0.0172
+"prop_genes2_upper_CI","Category_primary_env","Random effect",0.2735
+"prop_genes2_upper_CI","Category_primary_env","Total model",0.2907
+"prop_genes2_upper_CI","Category_primary_env","tip",0.00861882459398143
+"prop_genes2_upper_CI","Category_primary_env","units",0.0223479644237019
+"prop_genes2_upper_CI","Obligate_facultative","Fixed effect",0.05882
+"prop_genes2_upper_CI","Obligate_facultative","Random effect",0.25854
+"prop_genes2_upper_CI","Obligate_facultative","Total model",0.31736
+"prop_genes2_upper_CI","Obligate_facultative","tip",0.00809852705327813
+"prop_genes2_upper_CI","Obligate_facultative","units",0.0213834703802601
+"prop_genes2_upper_CI","Intra_or_extracellular","Fixed effect",0.0403
+"prop_genes2_upper_CI","Intra_or_extracellular","Random effect",0.1889
+"prop_genes2_upper_CI","Intra_or_extracellular","Total model",0.2292
+"prop_genes2_upper_CI","Intra_or_extracellular","tip",0.00563277126964755
+"prop_genes2_upper_CI","Intra_or_extracellular","units",0.0229878700808957
+"prop_genes2_upper_CI","Effect_on_host","Fixed effect",0.1321
+"prop_genes2_upper_CI","Effect_on_host","Random effect",0.323
+"prop_genes2_upper_CI","Effect_on_host","Total model",0.4551
+"prop_genes2_upper_CI","Effect_on_host","tip",0.0108273685452632
+"prop_genes2_upper_CI","Effect_on_host","units",0.0182643129489792
+"prop_genes2_upper_CI","Motility","Fixed effect",0.01336
+"prop_genes2_upper_CI","Motility","Random effect",0.26953
+"prop_genes2_upper_CI","Motility","Total model",0.28289
+"prop_genes2_upper_CI","Motility","tip",0.00852519008051566
+"prop_genes2_upper_CI","Motility","units",0.0226822556057046
+"prop_genes2_upper_CI","combined","Fixed effect",0.1464
+"prop_genes2_upper_CI","combined","Random effect",0.3557
+"prop_genes2_upper_CI","combined","Total model",0.5021
+"prop_genes2_upper_CI","combined","tip",0.0134223345426733
+"prop_genes2_upper_CI","combined","units",0.0187878039615355
+"prop_genes2_upper_CI","NE","Fixed effect",0.003645
+"prop_genes2_upper_CI","NE","Random effect",0.140271
+"prop_genes2_upper_CI","NE","Total model",0.143916
+"prop_genes2_upper_CI","NE","tip",0.0037138383425517
+"prop_genes2_upper_CI","NE","units",0.0226658985800774
+"prop_genes2_upper_CI","Genome_size","Fixed effect",0.0005217
+"prop_genes2_upper_CI","Genome_size","Random effect",0.2689973
+"prop_genes2_upper_CI","Genome_size","Total model",0.2695191
+"prop_genes2_upper_CI","Genome_size","tip",0.00846645794803895
+"prop_genes2_upper_CI","Genome_size","units",0.022991252155858
+"prop_genes2_upper_CI","Pan_size","Fixed effect",0.04249
+"prop_genes2_upper_CI","Pan_size","Random effect",0.25805
+"prop_genes2_upper_CI","Pan_size","Total model",0.30054
+"prop_genes2_upper_CI","Pan_size","tip",0.00808957619316295
+"prop_genes2_upper_CI","Pan_size","units",0.0219276895014791
+"prop_genes2_upper_CI","Pangenome_fluidity","Fixed effect",0.1753
+"prop_genes2_upper_CI","Pangenome_fluidity","Random effect",0.1063
+"prop_genes2_upper_CI","Pangenome_fluidity","Total model",0.2816
+"prop_genes2_upper_CI","Pangenome_fluidity","tip",0.00311033496696662
+"prop_genes2_upper_CI","Pangenome_fluidity","units",0.021013986468166
+"prop_genes2_upper_CI","Total_envs","Fixed effect",0.0008472
+"prop_genes2_upper_CI","Total_envs","Random effect",0.2457099
+"prop_genes2_upper_CI","Total_envs","Total model",0.2465571
+"prop_genes2_upper_CI","Total_envs","tip",0.00758730920508606
+"prop_genes2_upper_CI","Total_envs","units",0.0232656677792852

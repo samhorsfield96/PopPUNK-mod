@@ -1,0 +1,181 @@
+"y_var","x_model","metric","value"
+"rate_genes1_median","Generalism_score","Fixed effect",0.0007925
+"rate_genes1_median","Generalism_score","Random effect",0.1932855
+"rate_genes1_median","Generalism_score","Total model",0.194078
+"rate_genes1_median","Generalism_score","tip",2.55403842330132e-05
+"rate_genes1_median","Generalism_score","units",0.000106493029696385
+"rate_genes1_median","Pangenome_openness","Fixed effect",0.009412
+"rate_genes1_median","Pangenome_openness","Random effect",0.181439
+"rate_genes1_median","Pangenome_openness","Total model",0.190851
+"rate_genes1_median","Pangenome_openness","tip",2.42245017652015e-05
+"rate_genes1_median","Pangenome_openness","units",0.00010803196877074
+"rate_genes1_median","Habitat_count","Fixed effect",0.01394
+"rate_genes1_median","Habitat_count","Random effect",0.2088
+"rate_genes1_median","Habitat_count","Total model",0.22274
+"rate_genes1_median","Habitat_count","tip",2.78669626207013e-05
+"rate_genes1_median","Habitat_count","units",0.000103735571469113
+"rate_genes1_median","Intra_species_nucleotide_diversity","Fixed effect",0.008429
+"rate_genes1_median","Intra_species_nucleotide_diversity","Random effect",0.164439
+"rate_genes1_median","Intra_species_nucleotide_diversity","Total model",0.172868
+"rate_genes1_median","Intra_species_nucleotide_diversity","tip",2.53034371302914e-05
+"rate_genes1_median","Intra_species_nucleotide_diversity","units",0.000127276673452246
+"rate_genes1_lower_CI","Generalism_score","Fixed effect",1.804e-05
+"rate_genes1_lower_CI","Generalism_score","Random effect",0.998
+"rate_genes1_lower_CI","Generalism_score","Total model",0.998
+"rate_genes1_lower_CI","Generalism_score","tip",2.43439043495167e-06
+"rate_genes1_lower_CI","Generalism_score","units",4.86183476996888e-09
+"rate_genes1_lower_CI","Pangenome_openness","Fixed effect",8.304e-06
+"rate_genes1_lower_CI","Pangenome_openness","Random effect",0.9979
+"rate_genes1_lower_CI","Pangenome_openness","Total model",0.9979
+"rate_genes1_lower_CI","Pangenome_openness","tip",2.46028078554076e-06
+"rate_genes1_lower_CI","Pangenome_openness","units",5.11276328738361e-09
+"rate_genes1_lower_CI","Habitat_count","Fixed effect",2.24e-05
+"rate_genes1_lower_CI","Habitat_count","Random effect",0.9979393
+"rate_genes1_lower_CI","Habitat_count","Total model",0.9979617
+"rate_genes1_lower_CI","Habitat_count","tip",2.43921990937379e-06
+"rate_genes1_lower_CI","Habitat_count","units",4.98210660035168e-09
+"rate_genes1_lower_CI","Intra_species_nucleotide_diversity","Fixed effect",0.000275
+"rate_genes1_lower_CI","Intra_species_nucleotide_diversity","Random effect",0.997402
+"rate_genes1_lower_CI","Intra_species_nucleotide_diversity","Total model",0.997677
+"rate_genes1_lower_CI","Intra_species_nucleotide_diversity","tip",2.82159613251625e-06
+"rate_genes1_lower_CI","Intra_species_nucleotide_diversity","units",6.57262691230867e-09
+"rate_genes1_upper_CI","Generalism_score","Fixed effect",6.675e-05
+"rate_genes1_upper_CI","Generalism_score","Random effect",0.05436
+"rate_genes1_upper_CI","Generalism_score","Total model",0.05442
+"rate_genes1_upper_CI","Generalism_score","tip",0.00120010172386296
+"rate_genes1_upper_CI","Generalism_score","units",0.0208761486643321
+"rate_genes1_upper_CI","Pangenome_openness","Fixed effect",0.008458
+"rate_genes1_upper_CI","Pangenome_openness","Random effect",0.054257
+"rate_genes1_upper_CI","Pangenome_openness","Total model",0.062715
+"rate_genes1_upper_CI","Pangenome_openness","tip",0.00121547771213876
+"rate_genes1_upper_CI","Pangenome_openness","units",0.0209971113303646
+"rate_genes1_upper_CI","Habitat_count","Fixed effect",0.01005
+"rate_genes1_upper_CI","Habitat_count","Random effect",0.0584
+"rate_genes1_upper_CI","Habitat_count","Total model",0.06844
+"rate_genes1_upper_CI","Habitat_count","tip",0.00129849846538065
+"rate_genes1_upper_CI","Habitat_count","units",0.0207137879363225
+"rate_genes1_upper_CI","Intra_species_nucleotide_diversity","Fixed effect",0.009166
+"rate_genes1_upper_CI","Intra_species_nucleotide_diversity","Random effect",0.065035
+"rate_genes1_upper_CI","Intra_species_nucleotide_diversity","Total model",0.074201
+"rate_genes1_upper_CI","Intra_species_nucleotide_diversity","tip",0.00168161743523191
+"rate_genes1_upper_CI","Intra_species_nucleotide_diversity","units",0.0239386208739312
+"core_mu_median","Generalism_score","Fixed effect",0.02136
+"core_mu_median","Generalism_score","Random effect",0.08846
+"core_mu_median","Generalism_score","Total model",0.10982
+"core_mu_median","Generalism_score","tip",6.3864451401569e-10
+"core_mu_median","Generalism_score","units",6.4270143270548e-09
+"core_mu_median","Pangenome_openness","Fixed effect",0.0241
+"core_mu_median","Pangenome_openness","Random effect",0.1179
+"core_mu_median","Pangenome_openness","Total model",0.142
+"core_mu_median","Pangenome_openness","tip",8.5804792531029e-10
+"core_mu_median","Pangenome_openness","units",6.2426984650715e-09
+"core_mu_median","Habitat_count","Fixed effect",8.159e-05
+"core_mu_median","Habitat_count","Random effect",0.1091
+"core_mu_median","Habitat_count","Total model",0.1091
+"core_mu_median","Habitat_count","tip",7.92677646312077e-10
+"core_mu_median","Habitat_count","units",6.47534459793283e-09
+"core_mu_median","Intra_species_nucleotide_diversity","Fixed effect",0.01379
+"core_mu_median","Intra_species_nucleotide_diversity","Random effect",0.09352
+"core_mu_median","Intra_species_nucleotide_diversity","Total model",0.10731
+"core_mu_median","Intra_species_nucleotide_diversity","tip",6.82502333230007e-10
+"core_mu_median","Intra_species_nucleotide_diversity","units",6.51471851119605e-09
+"core_mu_lower_CI","Generalism_score","Fixed effect",0.002689
+"core_mu_lower_CI","Generalism_score","Random effect",0.061366
+"core_mu_lower_CI","Generalism_score","Total model",0.064056
+"core_mu_lower_CI","Generalism_score","tip",1.0894235195306e-10
+"core_mu_lower_CI","Generalism_score","units",1.66155953021276e-09
+"core_mu_lower_CI","Pangenome_openness","Fixed effect",0.04886
+"core_mu_lower_CI","Pangenome_openness","Random effect",0.09192
+"core_mu_lower_CI","Pangenome_openness","Total model",0.14078
+"core_mu_lower_CI","Pangenome_openness","tip",1.64516301357397e-10
+"core_mu_lower_CI","Pangenome_openness","units",1.53774034692136e-09
+"core_mu_lower_CI","Habitat_count","Fixed effect",0.001664
+"core_mu_lower_CI","Habitat_count","Random effect",0.06974
+"core_mu_lower_CI","Habitat_count","Total model",0.071404
+"core_mu_lower_CI","Habitat_count","tip",1.2398007550519e-10
+"core_mu_lower_CI","Habitat_count","units",1.65081001473325e-09
+"core_mu_lower_CI","Intra_species_nucleotide_diversity","Fixed effect",0.004199
+"core_mu_lower_CI","Intra_species_nucleotide_diversity","Random effect",0.059876
+"core_mu_lower_CI","Intra_species_nucleotide_diversity","Total model",0.064076
+"core_mu_lower_CI","Intra_species_nucleotide_diversity","tip",1.08172656044043e-10
+"core_mu_lower_CI","Intra_species_nucleotide_diversity","units",1.69083902752868e-09
+"core_mu_upper_CI","Generalism_score","Fixed effect",0.005826
+"core_mu_upper_CI","Generalism_score","Random effect",0.218696
+"core_mu_upper_CI","Generalism_score","Total model",0.224522
+"core_mu_upper_CI","Generalism_score","tip",1.05061800964856e-08
+"core_mu_upper_CI","Generalism_score","units",3.72540009035112e-08
+"core_mu_upper_CI","Pangenome_openness","Fixed effect",0.01168
+"core_mu_upper_CI","Pangenome_openness","Random effect",0.25809
+"core_mu_upper_CI","Pangenome_openness","Total model",0.26976
+"core_mu_upper_CI","Pangenome_openness","tip",1.26236950137021e-08
+"core_mu_upper_CI","Pangenome_openness","units",3.57179608622139e-08
+"core_mu_upper_CI","Habitat_count","Fixed effect",0.00843
+"core_mu_upper_CI","Habitat_count","Random effect",0.27106
+"core_mu_upper_CI","Habitat_count","Total model",0.27949
+"core_mu_upper_CI","Habitat_count","tip",1.33276193913326e-08
+"core_mu_upper_CI","Habitat_count","units",3.54272383931919e-08
+"core_mu_upper_CI","Intra_species_nucleotide_diversity","Fixed effect",0.01658
+"core_mu_upper_CI","Intra_species_nucleotide_diversity","Random effect",0.24596
+"core_mu_upper_CI","Intra_species_nucleotide_diversity","Total model",0.26254
+"core_mu_upper_CI","Intra_species_nucleotide_diversity","tip",1.19511626080636e-08
+"core_mu_upper_CI","Intra_species_nucleotide_diversity","units",3.58323452394398e-08
+"prop_genes2_median","Generalism_score","Fixed effect",0.02988
+"prop_genes2_median","Generalism_score","Random effect",0.20037
+"prop_genes2_median","Generalism_score","Total model",0.23025
+"prop_genes2_median","Generalism_score","tip",0.0039370829941002
+"prop_genes2_median","Generalism_score","units",0.01512495709321
+"prop_genes2_median","Pangenome_openness","Fixed effect",0.04868
+"prop_genes2_median","Pangenome_openness","Random effect",0.18217
+"prop_genes2_median","Pangenome_openness","Total model",0.23085
+"prop_genes2_median","Pangenome_openness","tip",0.00349982227845741
+"prop_genes2_median","Pangenome_openness","units",0.0147769622036251
+"prop_genes2_median","Habitat_count","Fixed effect",0.04399
+"prop_genes2_median","Habitat_count","Random effect",0.20148
+"prop_genes2_median","Habitat_count","Total model",0.24547
+"prop_genes2_median","Habitat_count","tip",0.00395733089720045
+"prop_genes2_median","Habitat_count","units",0.0148199950372955
+"prop_genes2_median","Intra_species_nucleotide_diversity","Fixed effect",0.01872
+"prop_genes2_median","Intra_species_nucleotide_diversity","Random effect",0.14442
+"prop_genes2_median","Intra_species_nucleotide_diversity","Total model",0.16315
+"prop_genes2_median","Intra_species_nucleotide_diversity","tip",0.00265593643680174
+"prop_genes2_median","Intra_species_nucleotide_diversity","units",0.0153894719260158
+"prop_genes2_lower_CI","Generalism_score","Fixed effect",0.001036
+"prop_genes2_lower_CI","Generalism_score","Random effect",0.18728
+"prop_genes2_lower_CI","Generalism_score","Total model",0.188316
+"prop_genes2_lower_CI","Generalism_score","tip",0.00193255123368739
+"prop_genes2_lower_CI","Generalism_score","units",0.00837581601799871
+"prop_genes2_lower_CI","Pangenome_openness","Fixed effect",0.1368
+"prop_genes2_lower_CI","Pangenome_openness","Random effect",0.1813
+"prop_genes2_lower_CI","Pangenome_openness","Total model",0.318
+"prop_genes2_lower_CI","Pangenome_openness","tip",0.00190147205944166
+"prop_genes2_lower_CI","Pangenome_openness","units",0.00715443941613848
+"prop_genes2_lower_CI","Habitat_count","Fixed effect",0.08439
+"prop_genes2_lower_CI","Habitat_count","Random effect",0.16321
+"prop_genes2_lower_CI","Habitat_count","Total model",0.2476
+"prop_genes2_lower_CI","Habitat_count","tip",0.00168308961784327
+"prop_genes2_lower_CI","Habitat_count","units",0.0077589137245822
+"prop_genes2_lower_CI","Intra_species_nucleotide_diversity","Fixed effect",0.01042
+"prop_genes2_lower_CI","Intra_species_nucleotide_diversity","Random effect",0.16042
+"prop_genes2_lower_CI","Intra_species_nucleotide_diversity","Total model",0.17084
+"prop_genes2_lower_CI","Intra_species_nucleotide_diversity","tip",0.00171654869864569
+"prop_genes2_lower_CI","Intra_species_nucleotide_diversity","units",0.00887231585481388
+"prop_genes2_upper_CI","Generalism_score","Fixed effect",0.01556
+"prop_genes2_upper_CI","Generalism_score","Random effect",0.1242
+"prop_genes2_upper_CI","Generalism_score","Total model",0.13976
+"prop_genes2_upper_CI","Generalism_score","tip",0.00464464268999059
+"prop_genes2_upper_CI","Generalism_score","units",0.0321697603409294
+"prop_genes2_upper_CI","Pangenome_openness","Fixed effect",0.0001285
+"prop_genes2_upper_CI","Pangenome_openness","Random effect",0.1139701
+"prop_genes2_upper_CI","Pangenome_openness","Total model",0.1140986
+"prop_genes2_upper_CI","Pangenome_openness","tip",0.00411375670615629
+"prop_genes2_upper_CI","Pangenome_openness","units",0.0319766425377062
+"prop_genes2_upper_CI","Habitat_count","Fixed effect",0.01401
+"prop_genes2_upper_CI","Habitat_count","Random effect",0.12056
+"prop_genes2_upper_CI","Habitat_count","Total model",0.13456
+"prop_genes2_upper_CI","Habitat_count","tip",0.00449711825444269
+"prop_genes2_upper_CI","Habitat_count","units",0.0322828265730087
+"prop_genes2_upper_CI","Intra_species_nucleotide_diversity","Fixed effect",0.01817
+"prop_genes2_upper_CI","Intra_species_nucleotide_diversity","Random effect",0.12101
+"prop_genes2_upper_CI","Intra_species_nucleotide_diversity","Total model",0.13918
+"prop_genes2_upper_CI","Intra_species_nucleotide_diversity","tip",0.00432858359088143
+"prop_genes2_upper_CI","Intra_species_nucleotide_diversity","units",0.0307916789397247
