@@ -1,0 +1,56 @@
+"y_var","x_model","metric","value"
+"pan_size","Host_or_free","Fixed effect",0.1936
+"pan_size","Host_or_free","Random effect",0.2867
+"pan_size","Host_or_free","Total model",0.4803
+"pan_size","Host_or_free","tip",7271044.8280202
+"pan_size","Host_or_free","units",13177833.9377613
+"pan_size","Category_primary_env","Fixed effect",0.05428
+"pan_size","Category_primary_env","Random effect",0.56628
+"pan_size","Category_primary_env","Total model",0.62056
+"pan_size","Category_primary_env","tip",16513615.8282805
+"pan_size","Category_primary_env","units",11064976.4654913
+"pan_size","Obligate_facultative","Fixed effect",0.1445
+"pan_size","Obligate_facultative","Random effect",0.4276
+"pan_size","Obligate_facultative","Total model",0.5721
+"pan_size","Obligate_facultative","tip",12153594.8729125
+"pan_size","Obligate_facultative","units",12160845.0811828
+"pan_size","Intra_or_extracellular","Fixed effect",0.02616
+"pan_size","Intra_or_extracellular","Random effect",0.60202
+"pan_size","Intra_or_extracellular","Total model",0.62817
+"pan_size","Intra_or_extracellular","tip",18552407.2575094
+"pan_size","Intra_or_extracellular","units",11458526.9426008
+"pan_size","Effect_on_host","Fixed effect",0.08545
+"pan_size","Effect_on_host","Random effect",0.55981
+"pan_size","Effect_on_host","Total model",0.64526
+"pan_size","Effect_on_host","tip",17332097.5431645
+"pan_size","Effect_on_host","units",10983144.8834903
+"pan_size","Motility","Fixed effect",0.1402
+"pan_size","Motility","Random effect",0.4409
+"pan_size","Motility","Total model",0.5812
+"pan_size","Motility","tip",12190167.9437324
+"pan_size","Motility","units",11578777.7382782
+"pan_size","combined","Fixed effect",0.2058
+"pan_size","combined","Random effect",0.4045
+"pan_size","combined","Total model",0.6103
+"pan_size","combined","tip",12172926.4117856
+"pan_size","combined","units",11727514.4435998
+"pan_size","NE","Fixed effect",0.1278
+"pan_size","NE","Random effect",0.6935
+"pan_size","NE","Total model",0.8212
+"pan_size","NE","tip",28315465.8685191
+"pan_size","NE","units",7299716.51963312
+"pan_size","Genome_size","Fixed effect",0.52882
+"pan_size","Genome_size","Random effect",0.09099
+"pan_size","Genome_size","Total model",0.61982
+"pan_size","Genome_size","tip",2375907.05331023
+"pan_size","Genome_size","units",9926644.2308371
+"pan_size","Pangenome_fluidity","Fixed effect",0.1867
+"pan_size","Pangenome_fluidity","Random effect",0.4471
+"pan_size","Pangenome_fluidity","Total model",0.6338
+"pan_size","Pangenome_fluidity","tip",11939720.839894
+"pan_size","Pangenome_fluidity","units",9778287.62340772
+"pan_size","Total_envs","Fixed effect",0.1182
+"pan_size","Total_envs","Random effect",0.51
+"pan_size","Total_envs","Total model",0.6283
+"pan_size","Total_envs","tip",14833909.0592111
+"pan_size","Total_envs","units",10811745.1531139

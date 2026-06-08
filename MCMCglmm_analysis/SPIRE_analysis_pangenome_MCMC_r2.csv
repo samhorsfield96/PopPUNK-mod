@@ -1,0 +1,181 @@
+"y_var","x_model","metric","value"
+"rate_genes1_median","Pangenome_size","Fixed effect",0.002165
+"rate_genes1_median","Pangenome_size","Random effect",0.039149
+"rate_genes1_median","Pangenome_size","Total model",0.041314
+"rate_genes1_median","Pangenome_size","tip",1.44448163156227e-06
+"rate_genes1_median","Pangenome_size","units",3.53728349934819e-05
+"rate_genes1_median","Core_genes","Fixed effect",0.005678
+"rate_genes1_median","Core_genes","Random effect",0.043658
+"rate_genes1_median","Core_genes","Total model",0.049336
+"rate_genes1_median","Core_genes","tip",1.61618240589892e-06
+"rate_genes1_median","Core_genes","units",3.51924808240254e-05
+"rate_genes1_median","Intermediate_genes","Fixed effect",2.062e-05
+"rate_genes1_median","Intermediate_genes","Random effect",0.03776
+"rate_genes1_median","Intermediate_genes","Total model",0.03778
+"rate_genes1_median","Intermediate_genes","tip",1.39337704307617e-06
+"rate_genes1_median","Intermediate_genes","units",3.55064983649696e-05
+"rate_genes1_median","Avg_gene_freq","Fixed effect",0.009886
+"rate_genes1_median","Avg_gene_freq","Random effect",0.036984
+"rate_genes1_median","Avg_gene_freq","Total model",0.04687
+"rate_genes1_median","Avg_gene_freq","tip",1.364569032929e-06
+"rate_genes1_median","Avg_gene_freq","units",3.51670090897505e-05
+"rate_genes1_lower_CI","Pangenome_size","Fixed effect",0.009246
+"rate_genes1_lower_CI","Pangenome_size","Random effect",0.650336
+"rate_genes1_lower_CI","Pangenome_size","Total model",0.659582
+"rate_genes1_lower_CI","Pangenome_size","tip",5.68642193746307e-07
+"rate_genes1_lower_CI","Pangenome_size","units",2.97655413600997e-07
+"rate_genes1_lower_CI","Core_genes","Fixed effect",0.001865
+"rate_genes1_lower_CI","Core_genes","Random effect",0.651214
+"rate_genes1_lower_CI","Core_genes","Total model",0.653079
+"rate_genes1_lower_CI","Core_genes","tip",5.65932830224243e-07
+"rate_genes1_lower_CI","Core_genes","units",3.01489719302971e-07
+"rate_genes1_lower_CI","Intermediate_genes","Fixed effect",0.00146
+"rate_genes1_lower_CI","Intermediate_genes","Random effect",0.64701
+"rate_genes1_lower_CI","Intermediate_genes","Total model",0.64847
+"rate_genes1_lower_CI","Intermediate_genes","tip",5.56833970978914e-07
+"rate_genes1_lower_CI","Intermediate_genes","units",3.02537417458501e-07
+"rate_genes1_lower_CI","Avg_gene_freq","Fixed effect",0.006121
+"rate_genes1_lower_CI","Avg_gene_freq","Random effect",0.662492
+"rate_genes1_lower_CI","Avg_gene_freq","Total model",0.668613
+"rate_genes1_lower_CI","Avg_gene_freq","tip",5.8908420016726e-07
+"rate_genes1_lower_CI","Avg_gene_freq","units",2.94667046346429e-07
+"rate_genes1_upper_CI","Pangenome_size","Fixed effect",4.692e-05
+"rate_genes1_upper_CI","Pangenome_size","Random effect",0.01209
+"rate_genes1_upper_CI","Pangenome_size","Total model",0.01214
+"rate_genes1_upper_CI","Pangenome_size","tip",8.92941084627631e-05
+"rate_genes1_upper_CI","Pangenome_size","units",0.00729376946559647
+"rate_genes1_upper_CI","Core_genes","Fixed effect",2.715e-05
+"rate_genes1_upper_CI","Core_genes","Random effect",0.01156
+"rate_genes1_upper_CI","Core_genes","Total model",0.01159
+"rate_genes1_upper_CI","Core_genes","tip",8.54603287182549e-05
+"rate_genes1_upper_CI","Core_genes","units",0.00730473424923887
+"rate_genes1_upper_CI","Intermediate_genes","Fixed effect",0.002405
+"rate_genes1_upper_CI","Intermediate_genes","Random effect",0.011875
+"rate_genes1_upper_CI","Intermediate_genes","Total model",0.01428
+"rate_genes1_upper_CI","Intermediate_genes","tip",8.77340595697615e-05
+"rate_genes1_upper_CI","Intermediate_genes","units",0.007282693453443
+"rate_genes1_upper_CI","Avg_gene_freq","Fixed effect",0.0001141
+"rate_genes1_upper_CI","Avg_gene_freq","Random effect",0.0111053
+"rate_genes1_upper_CI","Avg_gene_freq","Total model",0.0112194
+"rate_genes1_upper_CI","Avg_gene_freq","tip",8.20184263030803e-05
+"rate_genes1_upper_CI","Avg_gene_freq","units",0.00730265361944716
+"core_mu_median","Pangenome_size","Fixed effect",0.1435
+"core_mu_median","Pangenome_size","Random effect",0.1416
+"core_mu_median","Pangenome_size","Total model",0.2851
+"core_mu_median","Pangenome_size","tip",1.01604031180507e-09
+"core_mu_median","Pangenome_size","units",5.13060932817873e-09
+"core_mu_median","Core_genes","Fixed effect",0.002321
+"core_mu_median","Core_genes","Random effect",0.111026
+"core_mu_median","Core_genes","Total model",0.113347
+"core_mu_median","Core_genes","tip",7.46210027576256e-10
+"core_mu_median","Core_genes","units",5.95922947937058e-09
+"core_mu_median","Intermediate_genes","Fixed effect",0.1836
+"core_mu_median","Intermediate_genes","Random effect",0.1113
+"core_mu_median","Intermediate_genes","Total model",0.2948
+"core_mu_median","Intermediate_genes","tip",7.76930426009906e-10
+"core_mu_median","Intermediate_genes","units",4.9232686364952e-09
+"core_mu_median","Avg_gene_freq","Fixed effect",0.21446
+"core_mu_median","Avg_gene_freq","Random effect",0.05771
+"core_mu_median","Avg_gene_freq","Total model",0.27217
+"core_mu_median","Avg_gene_freq","tip",3.81328624935328e-10
+"core_mu_median","Avg_gene_freq","units",4.80944900775544e-09
+"core_mu_lower_CI","Pangenome_size","Fixed effect",0.08655
+"core_mu_lower_CI","Pangenome_size","Random effect",0.16205
+"core_mu_lower_CI","Pangenome_size","Total model",0.2486
+"core_mu_lower_CI","Pangenome_size","tip",2.66532612317719e-10
+"core_mu_lower_CI","Pangenome_size","units",1.23587900192792e-09
+"core_mu_lower_CI","Core_genes","Fixed effect",0.005692
+"core_mu_lower_CI","Core_genes","Random effect",0.118213
+"core_mu_lower_CI","Core_genes","Total model",0.123905
+"core_mu_lower_CI","Core_genes","tip",1.83704155825647e-10
+"core_mu_lower_CI","Core_genes","units",1.3614540386371e-09
+"core_mu_lower_CI","Intermediate_genes","Fixed effect",0.1349
+"core_mu_lower_CI","Intermediate_genes","Random effect",0.1409
+"core_mu_lower_CI","Intermediate_genes","Total model",0.2758
+"core_mu_lower_CI","Intermediate_genes","tip",2.2859084165053e-10
+"core_mu_lower_CI","Intermediate_genes","units",1.17468516488545e-09
+"core_mu_lower_CI","Avg_gene_freq","Fixed effect",0.15245
+"core_mu_lower_CI","Avg_gene_freq","Random effect",0.09834
+"core_mu_lower_CI","Avg_gene_freq","Total model",0.25079
+"core_mu_lower_CI","Avg_gene_freq","tip",1.52147080445368e-10
+"core_mu_lower_CI","Avg_gene_freq","units",1.15918796101609e-09
+"core_mu_upper_CI","Pangenome_size","Fixed effect",0.13316
+"core_mu_upper_CI","Pangenome_size","Random effect",0.08516
+"core_mu_upper_CI","Pangenome_size","Total model",0.21832
+"core_mu_upper_CI","Pangenome_size","tip",4.13256638518269e-09
+"core_mu_upper_CI","Pangenome_size","units",3.79313618827505e-08
+"core_mu_upper_CI","Core_genes","Fixed effect",0.005671
+"core_mu_upper_CI","Core_genes","Random effect",0.097781
+"core_mu_upper_CI","Core_genes","Total model",0.103452
+"core_mu_upper_CI","Core_genes","tip",4.64213795244032e-09
+"core_mu_upper_CI","Core_genes","units",4.25633584257726e-08
+"core_mu_upper_CI","Intermediate_genes","Fixed effect",0.22519
+"core_mu_upper_CI","Intermediate_genes","Random effect",0.07934
+"core_mu_upper_CI","Intermediate_genes","Total model",0.30453
+"core_mu_upper_CI","Intermediate_genes","tip",3.87260160359189e-09
+"core_mu_upper_CI","Intermediate_genes","units",3.39456174717859e-08
+"core_mu_upper_CI","Avg_gene_freq","Fixed effect",0.19922
+"core_mu_upper_CI","Avg_gene_freq","Random effect",0.03574
+"core_mu_upper_CI","Avg_gene_freq","Total model",0.23496
+"core_mu_upper_CI","Avg_gene_freq","tip",1.65378819279714e-09
+"core_mu_upper_CI","Avg_gene_freq","units",3.54043757088949e-08
+"prop_genes2_median","Pangenome_size","Fixed effect",0.05501
+"prop_genes2_median","Pangenome_size","Random effect",0.15187
+"prop_genes2_median","Pangenome_size","Total model",0.20688
+"prop_genes2_median","Pangenome_size","tip",0.00323328792149444
+"prop_genes2_median","Pangenome_size","units",0.016885772068245
+"prop_genes2_median","Core_genes","Fixed effect",0.0006996
+"prop_genes2_median","Core_genes","Random effect",0.1861288
+"prop_genes2_median","Core_genes","Total model",0.1868283
+"prop_genes2_median","Core_genes","tip",0.00397713203082602
+"prop_genes2_median","Core_genes","units",0.0173755562733927
+"prop_genes2_median","Intermediate_genes","Fixed effect",0.1104
+"prop_genes2_median","Intermediate_genes","Random effect",0.1187
+"prop_genes2_median","Intermediate_genes","Total model",0.229
+"prop_genes2_median","Intermediate_genes","tip",0.00249454955429124
+"prop_genes2_median","Intermediate_genes","units",0.0162038443020731
+"prop_genes2_median","Avg_gene_freq","Fixed effect",0.10686
+"prop_genes2_median","Avg_gene_freq","Random effect",0.09167
+"prop_genes2_median","Avg_gene_freq","Total model",0.19853
+"prop_genes2_median","Avg_gene_freq","tip",0.00187520656285413
+"prop_genes2_median","Avg_gene_freq","units",0.0163946486734102
+"prop_genes2_lower_CI","Pangenome_size","Fixed effect",0.07355
+"prop_genes2_lower_CI","Pangenome_size","Random effect",0.1077
+"prop_genes2_lower_CI","Pangenome_size","Total model",0.18125
+"prop_genes2_lower_CI","Pangenome_size","tip",0.001114003346214
+"prop_genes2_lower_CI","Pangenome_size","units",0.0084687434166805
+"prop_genes2_lower_CI","Core_genes","Fixed effect",0.00553
+"prop_genes2_lower_CI","Core_genes","Random effect",0.14747
+"prop_genes2_lower_CI","Core_genes","Total model",0.153
+"prop_genes2_lower_CI","Core_genes","tip",0.00153415920083712
+"prop_genes2_lower_CI","Core_genes","units",0.00881121493871876
+"prop_genes2_lower_CI","Intermediate_genes","Fixed effect",0.10621
+"prop_genes2_lower_CI","Intermediate_genes","Random effect",0.07979
+"prop_genes2_lower_CI","Intermediate_genes","Total model",0.186
+"prop_genes2_lower_CI","Intermediate_genes","tip",0.000813846687123376
+"prop_genes2_lower_CI","Intermediate_genes","units",0.00830281485646085
+"prop_genes2_lower_CI","Avg_gene_freq","Fixed effect",0.06571
+"prop_genes2_lower_CI","Avg_gene_freq","Random effect",0.10695
+"prop_genes2_lower_CI","Avg_gene_freq","Total model",0.17266
+"prop_genes2_lower_CI","Avg_gene_freq","tip",0.00109080119593489
+"prop_genes2_lower_CI","Avg_gene_freq","units",0.00843851006488773
+"prop_genes2_upper_CI","Pangenome_size","Fixed effect",0.03906
+"prop_genes2_upper_CI","Pangenome_size","Random effect",0.16994
+"prop_genes2_upper_CI","Pangenome_size","Total model",0.20899
+"prop_genes2_upper_CI","Pangenome_size","tip",0.00607835882901087
+"prop_genes2_upper_CI","Pangenome_size","units",0.0282931942675444
+"prop_genes2_upper_CI","Core_genes","Fixed effect",0.007941
+"prop_genes2_upper_CI","Core_genes","Random effect",0.194339
+"prop_genes2_upper_CI","Core_genes","Total model",0.202281
+"prop_genes2_upper_CI","Core_genes","tip",0.00700778305906139
+"prop_genes2_upper_CI","Core_genes","units",0.0287653687578686
+"prop_genes2_upper_CI","Intermediate_genes","Fixed effect",0.1401
+"prop_genes2_upper_CI","Intermediate_genes","Random effect",0.1374
+"prop_genes2_upper_CI","Intermediate_genes","Total model",0.2775
+"prop_genes2_upper_CI","Intermediate_genes","tip",0.00492783415030595
+"prop_genes2_upper_CI","Intermediate_genes","units",0.0259173403515854
+"prop_genes2_upper_CI","Avg_gene_freq","Fixed effect",0.11027
+"prop_genes2_upper_CI","Avg_gene_freq","Random effect",0.08165
+"prop_genes2_upper_CI","Avg_gene_freq","Total model",0.19192
+"prop_genes2_upper_CI","Avg_gene_freq","tip",0.00277590006366348
+"prop_genes2_upper_CI","Avg_gene_freq","units",0.0274727947250535
