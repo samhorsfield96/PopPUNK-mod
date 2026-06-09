@@ -222,6 +222,7 @@ x_var_sets <- list(
   Pangenome_size           = c("pan_genes"),
   Core_genes           = c("core_genes"),
   Intermediate_genes = c("intermediate_genes"),
+  Rare_genes = c("rare_genes"),
   Avg_gene_freq = c("avg_gene_freq")
 )
 
