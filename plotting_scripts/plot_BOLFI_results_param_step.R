@@ -31,7 +31,9 @@ parse_filename <- function(filename) {
     core_mu_v = search_string(filename, "core_mu"),
     competition_strength_v = search_string(filename, "competition_strength"),
     pos_lambda_v = search_string(filename, "pos_lambda"),
-    neg_lambda_v = search_string(filename, "neg_lambda")
+    neg_lambda_v = search_string(filename, "neg_lambda"),
+    pan_genes_v = search_string(filename, "pan_genes"),
+    avg_gene_freq_v = search_string(filename, "avg_gene_freq")
   )
 }
 
@@ -65,7 +67,7 @@ plot_posterior <- function(df, ori.col.names, col.names, outpref, max.values)
   
   # Generate marginal plots for each pair
   idx <- 1
-  no_log <- c("prop_positive", "prop_genes2", "competition_strength")
+  no_log <- c("prop_positive", "prop_genes2", "competition_strength", "pan_genes", "avg_gene_freq")
   
   plots <- lapply(idx_keep, function(idx) {
     xvar <- idx_keep[idx]
@@ -125,7 +127,7 @@ plot_posterior <- function(df, ori.col.names, col.names, outpref, max.values)
     p
   })
   
-  plots[[2]]
+  plots[[1]]
   
   # merge all graphs together
   
@@ -181,25 +183,28 @@ parse_results <- function(df_paths, ori.col.names, col.names, outpref, max.value
 # all
 {
   indir <- "BOLFI_gridsearch/data/param_step/"
-  #df_paths <- Sys.glob(paste0(indir, "*_mcmc_posterior_samples.csv"))
-  df_paths <- c(Sys.glob(paste0(indir, "*prop_genes2*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*HGT_rate*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*HR_rate*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*prop_positive*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*pos_lambda*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*neg_lambda*_mcmc_posterior_samples.csv")),
-                Sys.glob(paste0(indir, "*competition_strength*_mcmc_posterior_samples.csv")))
+  df_paths <- Sys.glob(paste0(indir, "*_mcmc_posterior_samples.csv"))
+  # df_paths <- c(Sys.glob(paste0(indir, "*prop_genes2*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*HGT_rate*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*HR_rate*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*prop_positive*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*pos_lambda*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*neg_lambda*_mcmc_posterior_samples.csv")),
+  #               Sys.glob(paste0(indir, "*competition_strength*_mcmc_posterior_samples.csv")))
   outpref <- "BOLFI_gridsearch/figures/param_step/"
   # get columns which don't have value placeholders and name if required
   ori.col.names <- c("rate_genes1", "core_mu", "prop_positive", 
                      "HR_rate", "HGT_rate", "rate_genes2", "prop_genes2", 
-                     "competition_strength", "pos_lambda", "neg_lambda")
+                     "competition_strength", "pos_lambda", "neg_lambda",
+                     "pan_genes", "avg_gene_freq")
   col.names <- c("Basal gene turnover rate", "Core mutation rate", "Proportion +ve selected genes",
                  "HR rate", "HGT rate", "Fast gene turnover rate", "Proportion fast genes",
-                 "Competition strength", "Gene +ve selection lambda", "Gene -ve selection lambda")
+                 "Competition strength", "Gene +ve selection lambda", "Gene -ve selection lambda",
+                 "Pangenome size", "Average gene frequency")
   max.values <- list(c(1e-5, 1.0), c(1e-10, 1e-2), c(0.0, 1.0), 
                      c(1e-1, 1000), c(1e-7, 10.0), c(10.0, 10.0), c(0.0, 1.0), 
-                     c(0.0, 1000), c(1e-2, 100), c(1e-2, 100))
+                     c(0.0, 1000), c(1e-2, 100), c(1e-2, 100),
+                     c(0.0, 100000), c(0.0, 1.0))
   #max.values <- list(c(NA, NA), c(NA, NA))
   plot_list <- parse_results(df_paths, ori.col.names, col.names, outpref, max.values)
   
