@@ -234,7 +234,7 @@ fitted_params="--param rate_genes1 1e-5 1.0 loguniform --param core_mu 1e-9 1e-3
 python poppunk_mod.py --pansim_exe /path/to/pansim --distfile /path/to/distances.txt --core-threshold ${core_threshold} --rare-threshold ${rare_threshold} --gene-counts "${core_genes},${intermediate_genes},${rare_genes}" --outpref /path/to/outprefix --threads 10 --max_distances 100000  --samples 100000 --init_evidence 150 --n_evidence 600 --update-int 1 --chains 4 --acq-noise-var 0.01 --kernel RBF --gamma 0.25 --workdir /path/to/tmp_dir --covar-scaling ${covar_scaling} ${fixed_params} ${fitted_params}
 ```
 
-5. PopPUNK-mod will now run for a day or two, depending on how complex the likelihood surface is of your dataset (this is likely impossible to know at the start). Upon finishing, you'll get a set of figures and tables:
+5. PopPUNK-mod will now run for a day or two, depending on how complex the likelihood surface is of your dataset (this is likely impossible to know at the start). Upon finishing, you'll get a set of figures and tables (examples can be found [here](./example_outputs/))
 
 - `_contours.png`: core vs. accessory distances with contours.
 - `_curve_fit.png`: exponential decay curve fit to distances.

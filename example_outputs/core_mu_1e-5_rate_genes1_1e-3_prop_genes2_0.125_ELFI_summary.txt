@@ -1,0 +1,10 @@
+Method: BOLFI
+Number of samples: 200000
+Number of simulations: 600
+Threshold: -0.283
+Parameter                Mean               2.5%              97.5%
+rate_genes:              0.303              0.174              0.415
+core_mu:                0.471              0.036              0.950
+prop_genes:              0.115              0.011              0.299
+
+
