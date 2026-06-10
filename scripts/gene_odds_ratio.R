@@ -393,27 +393,27 @@ cog_rank_test <- function(df, min.freq = 0.0, max.freq = 1.0, p.adj.cutoff = 0.0
   results_df
 }
 
-# Example usage: run enrichment for each Significance group
-go_hi <- go_enrichment(df, group = "Hi",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
-go_lo <- go_enrichment(df, group = "Lo",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
-go_ns <- go_enrichment(df, group = "NS",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
-
-total.go.df <- rbind(go_lo, go_ns, go_hi)
-
-write.csv(total.go.df, outfile, row.names = FALSE)
-message("Written: ", outfile)
+# GO term significance only if nothing else specified
+if (is.null(product.patterns) & is.null(eggnog.file)) {
+  total.go.df <- rbind(go_lo, go_ns, go_hi)
+  go_hi <- go_enrichment(df, group = "Hi",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
+  go_lo <- go_enrichment(df, group = "Lo",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
+  go_ns <- go_enrichment(df, group = "NS",  min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
+  # Rank tests on continuous Odds_Ratio values
+  go.rank.df <- go_rank_test(df, min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
+  if (!is.null(go.rank.df) && nrow(go.rank.df) > 0) {
+    write.csv(go.rank.df, go.rank.outfile, row.names = FALSE)
+    message("Written: ", go.rank.outfile)
+  }
+  
+  write.csv(total.go.df, outfile, row.names = FALSE)
+  message("Written: ", outfile)
+}
 
 if (!is.null(product.patterns)) {
   prod.df <- product_enrichment(df, product.patterns, min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
   write.csv(prod.df, product.outfile, row.names = FALSE)
   message("Written: ", product.outfile)
-}
-
-# Rank tests on continuous Odds_Ratio values
-go.rank.df <- go_rank_test(df, min.freq = min.freq, max.freq = max.freq, p.adj.cutoff = p.cutoff)
-if (!is.null(go.rank.df) && nrow(go.rank.df) > 0) {
-  write.csv(go.rank.df, go.rank.outfile, row.names = FALSE)
-  message("Written: ", go.rank.outfile)
 }
 
 if (!is.null(product.patterns)) {
