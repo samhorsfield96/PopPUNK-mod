@@ -40,6 +40,10 @@ Experimental script for fitting a neural network to summary statistcs, mimicking
 
 Runs on directory of PopPUNK mod results, generating summary for each species from MCMC sampling.
 
+## gene_odds_ratio.py & gene_odds_ratio.R
+
+Calculates gene odds ratio using PopPUNK distances and gene presence/absence matrices and calculates enrichment of GO terms, eggnog COG categories or user-specified terms in gene descriptions.
+
 ### get_core_mu.py
 
 Calculates an adjusted core mutation rate using Jukes-Cantor subsitution mode.
