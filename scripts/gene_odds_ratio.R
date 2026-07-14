@@ -69,7 +69,12 @@ if (!is.null(eggnog.file)) {
     df$Product[missing_prod] <- df$Description[missing_prod]
     df$Description <- NULL
   }
+  
+  #write merged output
+  write.csv(df, paste0(outpref, "_all_annotations.csv"), row.names = FALSE)
 }
+
+
 # subset.df <- subset(df, Gene_Frequency > min.freq & Gene_Frequency <= max.freq & Significance != "NS")
 # 
 # df.lo <- subset(subset.df[order(subset.df$Odds_Ratio, decreasing = TRUE),], Significance == "Lo")
