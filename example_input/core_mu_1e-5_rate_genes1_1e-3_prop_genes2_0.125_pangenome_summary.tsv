@@ -1,0 +1,2 @@
+name	pan_genes	core_genes	intermediate_genes	rare_genes	avg_gene_freq	dist_file
+core_mu_1e-5_rate_genes1_1e-3_prop_genes2_0.125	5000	1195	1139	2666	0.25	core_mu_1e-5_rate_genes1_1e-3_prop_genes2_0.125.tsv
