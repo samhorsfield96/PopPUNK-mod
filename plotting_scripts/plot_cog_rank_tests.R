@@ -126,14 +126,6 @@ make_plot <- function(data, test_label, x_label) {
                linetype   = "solid",
                colour     = "grey40",
                linewidth  = 0.4) +
-    annotate("text",
-             x      = Inf,
-             y      = sig_line,
-             hjust  = 1,
-             vjust  = -0.4,
-             label  = "p = 0.05",
-             size   = 3,
-             colour = "black") +
     facet_grid(Species ~ ., scales = "free") +
     scale_colour_manual(
       values = c(species_colours, "ns" = "grey70"),
